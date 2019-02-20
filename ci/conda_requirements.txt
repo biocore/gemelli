@@ -1,0 +1,14 @@
+pip
+nose
+pep8
+flake8
+IPython>4.0.0
+notebook
+scikit-bio
+scikit-learn
+biom-format
+numpy>=1.12.1
+scipy
+matplotlib
+pandas
+seaborn

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, gemelli development team.
+# Copyright (c) 2019--, gemelli development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -85,9 +85,9 @@ setup(name='gemelli',
       description=description,
       long_description=long_description,
       author="gemelli development team",
-      author_email="cameronmartino@gmail.com",
+      author_email="cmartino@eng.ucsd.edu",
       maintainer="gemelli development team",
-      maintainer_email="cameronmartino@gmail.com",
+      maintainer_email="cmartino@eng.ucsd.edu",
       packages=find_packages(),
       ext_modules=extensions,
       install_requires=[
@@ -99,12 +99,10 @@ setup(name='gemelli',
           'scikit-learn >= 0.18.1',
           'scikit-bio > 0.5.3',
           'biom-format',
-          'h5py',],
+          'h5py',
+          'deicode',],
       classifiers=classifiers,
-      #entry_points={
-      #    'qiime2.plugins': ['q2-gemelli=gemelli.q2.plugin_setup:plugin'],
-      #    'console_scripts': ['gemelli=gemelli.scripts._rpca:RPCA']
-      #},
+      entry_points={},
       package_data={},
       cmdclass={'install': CustomInstallCommand,
                 'develop': CustomDevelopCommand,

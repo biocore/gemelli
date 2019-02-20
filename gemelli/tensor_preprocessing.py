@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from .utils import match
+from .base import _BaseTransform
 from deicode.preprocessing import rclr
 
 
@@ -39,7 +40,7 @@ class table_to_tensor(_BaseTransform):
         self.min_sample_count = min_sample_count
         self.min_feature_count = min_feature_count
         self._fit()
-        return self.T, (self.tensor_columns self.tensor_index, elf.tensor_time), self.mapping_time
+        return self.T, (self.tensor_columns, self.tensor_index, elf.tensor_time), self.mapping_time
         
     def _fit(self):
         """
@@ -137,6 +138,22 @@ def tensor_rclr(T):
     """ 
     Tensor wrapped for deicode rclr transform
     """
+
+    if len(T.shape) != 3:
+        raise ValueError('Array Contains Negative Values')
+
+    if (T < 0).any():
+        raise ValueError('Array Contains Negative Values')
+
+    if np.count_nonzero(np.isinf(T)) != 0:
+        raise ValueError('Data-table contains either np.inf or -np.inf')
+
+    if np.count_nonzero(np.isnan(T)) != 0:
+        raise ValueError('Data-table contains nans')
+
+    if np.count_nonzero(T) == 0:
+        warnings.warn("Data-table contains no zeros.", RuntimeWarning)
+
     # flatten, transform, and reshape 
     T_rclr = np.concatenate([T[i,:,:].T 
                              for i in range(T.shape[0])],axis=0)
