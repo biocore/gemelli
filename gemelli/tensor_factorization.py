@@ -73,6 +73,7 @@ class TenAls(_BaseImpute):
         self.feature_loading = V
         self.sample_loading = U
         self.s = s_
+        self.dist = dist
 
     def fit_transform(self, X):
         """
@@ -82,4 +83,4 @@ class TenAls(_BaseImpute):
         X_sparse = X.copy().astype(np.float64)
         self.X_sparse = X_sparse
         self._fit()
-        return self.sample_loading, self.feature_loading, self.time_loading, self.s
+        return self.sample_loading, self.feature_loading, self.time_loading, self.s, self.dist

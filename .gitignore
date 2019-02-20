@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -24,6 +25,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.DS_Store
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
