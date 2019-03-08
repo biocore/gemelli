@@ -40,7 +40,7 @@ class table_to_tensor(_BaseTransform):
         self.min_sample_count = min_sample_count
         self.min_feature_count = min_feature_count
         self._fit()
-        return self.T, (self.tensor_columns, self.tensor_index, elf.tensor_time), self.mapping_time
+        return self.T, (self.tensor_columns, self.tensor_index, self.tensor_time), self.mapping_time
         
     def _fit(self):
         """
@@ -94,7 +94,7 @@ class table_to_tensor(_BaseTransform):
                             ' consider increasing the feature'
                             ' read count cutoff')
         # if passed zero check
-        self.tensor = T
+        self.T = T
         self.mapping_time = mapping_time
         self.tensor_columns = table_tmp.columns
         self.tensor_index = table_tmp.index
@@ -136,7 +136,7 @@ def reshape_tensor(table,mapping,timecol,IDcol):
 
 def tensor_rclr(T):
     """ 
-    Tensor wrapped for deicode rclr transform
+    Tensor wrapped for rclr transform
     """
 
     if len(T.shape) != 3:
@@ -157,8 +157,14 @@ def tensor_rclr(T):
     # flatten, transform, and reshape 
     T_rclr = np.concatenate([T[i,:,:].T 
                              for i in range(T.shape[0])],axis=0)
+    # add one to zero index (could be any) for fully missing
+    T_rclr[T_rclr.sum(axis=1)==0,0]+=1
+    T_rclr[0,T_rclr.sum(axis=0)==0]+=1
+    # transform flat
     T_rclr = rclr().fit_transform(T_rclr)
+    # re-build tensor 
     T_rclr = np.dstack([T_rclr[(i-1)*T.shape[-1]:(i)*T.shape[-1]] 
                         for i in range(1,T.shape[0]+1)])
+    # fill nan with zero
     T_rclr[np.isnan(T_rclr)] = 0 
     return T_rclr
