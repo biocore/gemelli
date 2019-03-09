@@ -134,9 +134,18 @@ def reshape_tensor(table,mapping,timecol,IDcol):
     # return both tensor and time_metadata dict, table for ref.
     return np.dstack(tensor_stack).T,mapping_time,table_tmp
 
-def tensor_rclr(T):
+def tensor_rclr(T, pseudocount=1):
+
     """ 
     Tensor wrapped for rclr transform
+    will add pseudocount where samples
+    are completely missing. The transform
+    of those samples will be zero again.
+    
+    Input numpy 3D tensor of shape: 
+    
+    (condition, features, samples)
+    
     """
 
     if len(T.shape) != 3:
@@ -154,15 +163,20 @@ def tensor_rclr(T):
     if np.count_nonzero(T) == 0:
         warnings.warn("Data-table contains no zeros.", RuntimeWarning)
 
-    # flatten, transform, and reshape 
+    # remove any totally zero features
+    T[:,T.sum(axis=0).sum(axis=1)!=0,:]+=pseudocount
+    # remove any totally zero timepoint (should not happen!)
+    T[T.sum(axis=2).sum(axis=1)!=0,:,:]+=pseudocount
+    # +1 totally missing samp: 
+    # sum of all feat (time,samp)==0
+    for i,j in np.argwhere(T.sum(axis=1) == 0):
+        T[i,:,j]+=pseudocount
+    # flatten
     T_rclr = np.concatenate([T[i,:,:].T 
                              for i in range(T.shape[0])],axis=0)
-    # add one to zero index (could be any) for fully missing
-    T_rclr[T_rclr.sum(axis=1)==0,0]+=1
-    T_rclr[0,T_rclr.sum(axis=0)==0]+=1
     # transform flat
     T_rclr = rclr().fit_transform(T_rclr)
-    # re-build tensor 
+    # re-shape tensor 
     T_rclr = np.dstack([T_rclr[(i-1)*T.shape[-1]:(i)*T.shape[-1]] 
                         for i in range(1,T.shape[0]+1)])
     # fill nan with zero
