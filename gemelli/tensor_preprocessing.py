@@ -1,184 +1,299 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import numpy as np
 import pandas as pd
 from .utils import match
 from .base import _BaseTransform
 from deicode.preprocessing import rclr
 
+@experimental(as_of="0.0.0")
+class Build(_BaseTransform):
 
-class table_to_tensor(_BaseTransform):
+    def __init__(self, pseudocount=1):
 
-    def __init__(self):
         """
-        TODO
+
+        Parameters
+        ----------
+        pseudocount : float, optional
+            A pseudocount used in the
+            case that a sample, feature,
+             and/or condition is completely
+             missing from a vector slice in 
+             the tensor formed.
+
         """
 
-    def fit(self,table,mapping,IDcol,timecol,
-            filter_timepoints=True,filter_samples=False,
-            min_sample_count = 0,min_feature_count = 0):
-        """  TODO """
+        self.pseudocount = pseudocount
+
+    @property
+    def pseudocount(self):
+
+        """
+
+        pseudocount property
+        allows pseudocount to
+        be set explictly.
+
+        """
+
+        return self.pseudocount
+
+    @pseudocount.setter
+    def pseudocount(self, value):
+
+        """
+
+        Set pseudocount value
+        for property.
+
+        Parameters
+        ----------
+        value : float
+            pseudocount value
+
+        Raises
+        ------
+        ValueError
+            Raises an error if value is less than zero.
+
+        Examples
+        --------
+        >>> c = Celsius()
+        >>> c.temperature
+        >>> c.temperature = 37
+
+        """
+
+        if value < 0.0:
+            raise ValueError("pseudocount should be larger than one")
+        self.pseudocount = value
+
+    def fit(self,table,mapping,ID_col,cond_col):
+
+        """
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+ 
+        Examples
+        --------
+
+        """
+
+
         self.table = table.copy()
         self.mapping = mapping.copy()
-        self.IDcol = IDcol
-        self.timecol = timecol
-        self.filter_timepoints = filter_timepoints
-        self.filter_samples = filter_samples
-        self.min_sample_count = min_sample_count
-        self.min_feature_count = min_feature_count
+        self.ID_col = ID_col
+        self.cond_col = cond_col
         self._fit()
+
         return self
 
-    def fit_transform(self,table,mapping,IDcol,timecol,
-                      filter_timepoints=True,filter_samples=False,
-                      min_sample_count = 0,min_feature_count = 0):
-        """ TODO  """
+    def fit_transform(self,table,mapping,ID_col,cond_col):
+
+        """
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+ 
+        Examples
+        --------
+
+        """
+
+
         self.table = table.copy()
         self.mapping = mapping.copy()
-        self.IDcol = IDcol
-        self.timecol = timecol
-        self.filter_timepoints = filter_timepoints
-        self.filter_samples = filter_samples
-        self.min_sample_count = min_sample_count
-        self.min_feature_count = min_feature_count
+        self.ID_col = ID_col
+        self.cond_col = cond_col
         self._fit()
-        return self.T, (self.tensor_columns, self.tensor_index, self.tensor_time), self.mapping_time
-        
+
+        return self.T , self.TRCLR, self.ID_order, self.feature_order, self.cond_order
+
     def _fit(self):
+
         """
-        TODO
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+ 
+        Examples
+        --------
+
         """
-        # cannot have both
-        if sum([self.filter_timepoints,self.filter_samples])>1:
-            raise ValueError('Must choose to replace samples by (t-1),'
-                            ' filter by missing samples or timepoints'
-                            ' not multiple.')
-        # filter cutoffs
-        self.table = self.table.T[self.table.sum() > self.min_feature_count]
-        self.table = self.table.T[self.table.sum() > self.min_sample_count]
 
-        # filter setup 
-        # table by timepoint
-        mapping_time = {k:df for k,df in self.mapping.groupby(self.timecol)}
-        # remove timepoint with missing samples
-        drop = {k_:[v_ 
-                for v_ in list(set(self.mapping[self.IDcol])-set(df_[self.IDcol]))] 
-                for k_,df_ in mapping_time.items()}
+        # check that all indicies match & are unqiue 
+        self.table,self.mapping = match(self.table,self.mapping)
 
-        # sample-removal
-        if self.filter_samples==True:
-            self.mapping = self.mapping[~self.mapping[self.IDcol].isin([v_ 
-                                                    for k,v in drop.items() 
-                                                    for v_ in v])]
-        # timepoint-removal
-        elif self.filter_timepoints==True:
-            self.mapping = self.mapping[~self.mapping[self.timecol].isin([k for k,v in drop.items() 
-                                                    if len(v)!=0])]
-        else:
-            raise ValueError('Must choose to replace samples by (t-1),'
-                            ' filter by missing samples or timepoints.'
-                            ' All of them can _not_ be False')  
+        # order ids, cond, feats
+        ID_order = sorted(set(self.mapping[self.ID_col]))
+        cond_order = sorted(set(self.mapping[self.cond_col]))
 
-        # remove zero sum features across flattened tensor b4 rclr
-        T, mapping_time,table_tmp = reshape_tensor(self.table.copy(),self.mapping,self.timecol,self.IDcol)
-        T_filter = np.concatenate([T[i,:,:].T for i in range(T.shape[0])],axis=0)
-        sum_zero = [table_tmp.columns[i] for i, x in enumerate(list(T_filter.sum(axis=0))) if x == 0]
-        self.table = self.table.drop(sum_zero,axis=1)
-        T, mapping_time,table_tmp = reshape_tensor(self.table.copy(),self.mapping,self.timecol,self.IDcol)
+        # empty Tensor to fill 
+        Tensor = np.zeros((len(cond_order),
+                           len(self.table.columns),
+                           len(ID_order)))
 
-        #test for zeros
-        if any(~(np.concatenate([T[i,:,:].T for i in range(T.shape[0])],axis=0).sum(axis=1) > 0)):
-            raise ValueError('Some samples sum to zero,'
-                            ' consider increasing the sample'
-                            ' read count cutoff')
-        elif any(~(np.concatenate([T[i,:,:].T for i in range(T.shape[0])],axis=0).sum(axis=0) > 0)):
-            raise ValueError('Some features sum to zero,'
-                            ' consider increasing the feature'
-                            ' read count cutoff')
-        # if passed zero check
-        self.T = T
-        self.mapping_time = mapping_time
-        self.tensor_columns = table_tmp.columns
-        self.tensor_index = table_tmp.index
-        self.tensor_time = sorted(list(mapping_time.keys()))
+        # fill tensor where possible
+        table_index = np.array(self.table.index)
+        table_array = self.table.values
+        num_missing = 0 # check if fully missing samples
+        for i,c_i in enumerate(cond_order):
+            for j,ID_j in enumerate(ID_order):
+                # get index ID assoc. in cond.
+                idx = set(self.mapping[(self.mapping[self.ID_col].isin([ID_j])) \
+                                & (self.mapping[self.cond_col].isin([c_i]))].index)
+                if len(idx)>1:
+                    warnings.warn('',join(["Condition ",str(c_i),
+                                        " has multiple sample ",
+                                        "with the same IDs ",
+                                        str(ID_j)]), RuntimeWarning)
+                elif len(idx)==0:
+                    num_missing+=1
+                    continue 
+                # fill slice 
+                Tensor[i,:,j] = table_array[table_index == list(idx),:].sum(axis=0)
+                
+        # find percent totally missing samples
+        self.perc_missing = num_missing/(len(cond_order)*len(ID_order))
+        if self.perc_missing > 0.50:
+            warnings.warn(''.join(["Total Missing Sample Exceeds 50% ",
+                        "some conditions or samples may ",
+                        "need to be removed."]), RuntimeWarning)
 
-def reshape_tensor(table,mapping,timecol,IDcol):
-    """ 
-    Restructure dataframe into tensor 
-    by metadata IDs and timepoints
-    """
-    # table by timepoint
-    mapping_time = {k:df for k,df in mapping.groupby(timecol)}
-    # create tensor
-    tensor_stack = []
-    # wort in numerical order
-    for timepoint in sorted(mapping_time.keys()):
-        # get table timepoint
-        table_tmp,meta_tmp = match(table,mapping_time[timepoint])
-        # fix ID cols
-        meta_tmp.set_index(IDcol,inplace=True,drop=True)
-        # sort so all ID match
-        table_tmp = table_tmp.T.sort_index().T
-        # check to make sure id's are unique to each time
-        if len(meta_tmp.index.get_duplicates()):
-            idrep = [str(idrep) for idrep in meta_tmp.index.get_duplicates()]
-            idrep = ', '.join(idrep)
-            raise ValueError('At timepoint '+str(timepoint)+
-                             'The ids '+idrep+' are repeated.'
-                            ' Please provide unique IDs to each time.')
-        # index match
-        table_tmp.index = meta_tmp.index
-        table_tmp.sort_index(inplace=True)
-        meta_tmp.sort_index(inplace=True)
-        # update mapping time
-        mapping_time[timepoint] = meta_tmp
-        tensor_stack.append(table_tmp)
-    # return both tensor and time_metadata dict, table for ref.
-    return np.dstack(tensor_stack).T,mapping_time,table_tmp
+        # perform RCLR transformation
+        self.Tensor = Tensor
+        self.tensor_rclr()
 
-def tensor_rclr(T, pseudocount=1):
+        # save intermediates
+        self.ID_order  = ID_order
+        self.feature_order  = self.table.columns
+        self.cond_order  = cond_order
 
-    """ 
-    Tensor wrapped for rclr transform
-    will add pseudocount where samples
-    are completely missing. The transform
-    of those samples will be zero again.
-    
-    Input numpy 3D tensor of shape: 
-    
-    (condition, features, samples)
-    
-    """
+    def tensor_rclr(self):
 
-    if len(T.shape) != 3:
-        raise ValueError('Array Contains Negative Values')
+        """
 
-    if (T < 0).any():
-        raise ValueError('Array Contains Negative Values')
+        Tensor wrapped for rclr transform
+        will add pseudocount where samples
+        are completely missing. The transform
+        of those samples will be zero again.
 
-    if np.count_nonzero(np.isinf(T)) != 0:
-        raise ValueError('Data-table contains either np.inf or -np.inf')
+        Parameters
+        ----------
 
-    if np.count_nonzero(np.isnan(T)) != 0:
-        raise ValueError('Data-table contains nans')
+        self.Tensor array-like
+            (condition, features, samples)
 
-    if np.count_nonzero(T) == 0:
-        warnings.warn("Data-table contains no zeros.", RuntimeWarning)
+        Returns
+        -------
 
-    # remove any totally zero features
-    T[:,T.sum(axis=0).sum(axis=1)!=0,:]+=pseudocount
-    # remove any totally zero timepoint (should not happen!)
-    T[T.sum(axis=2).sum(axis=1)!=0,:,:]+=pseudocount
-    # +1 totally missing samp: 
-    # sum of all feat (time,samp)==0
-    for i,j in np.argwhere(T.sum(axis=1) == 0):
-        T[i,:,j]+=pseudocount
-    # flatten
-    T_rclr = np.concatenate([T[i,:,:].T 
-                             for i in range(T.shape[0])],axis=0)
-    # transform flat
-    T_rclr = rclr().fit_transform(T_rclr)
-    # re-shape tensor 
-    T_rclr = np.dstack([T_rclr[(i-1)*T.shape[-1]:(i)*T.shape[-1]] 
-                        for i in range(1,T.shape[0]+1)])
-    # fill nan with zero
-    T_rclr[np.isnan(T_rclr)] = 0 
-    return T_rclr
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+ 
+        Examples
+        --------
+
+        """
+
+        if len(self.Tensor.shape) != 3:
+            raise ValueError('Array Contains Negative Values')
+
+        if (self.Tensor < 0).any():
+            raise ValueError('Array Contains Negative Values')
+
+        if np.count_nonzero(np.isinf(self.Tensor)) != 0:
+            raise ValueError('Data-table contains either np.inf or -np.inf')
+
+        if np.count_nonzero(np.isnan(self.Tensor)) != 0:
+            raise ValueError('Data-table contains nans')
+
+        if np.count_nonzero(self.Tensor) == 0:
+            warnings.warn("Data-table contains no zeros.", RuntimeWarning)
+        
+        # copy tensor to transform
+        TRCLR = self.Tensor.copy()
+
+        # pseudocount totally missing samp: 
+        # sum of all feat (time,samp)==0
+        if self.perc_missing > 0.0:
+            for i,j in np.argwhere(self.Tensor.sum(axis=1) == 0):
+                self.Tensor[i,:,j]+=self.pseudocount
+        # add for any totally zero features (should not occur)
+        if sum(self.Tensor.sum(axis=0).sum(axis=1)==0) > 0:
+            self.Tensor[:,self.Tensor.sum(axis=0).sum(axis=1)==0,:] += self.pseudocount
+        # add for any totally zero timepoint (should not occur)
+        if sum(self.Tensor.sum(axis=2).sum(axis=1)==0) > 0:
+            self.Tensor[self.Tensor.sum(axis=2).sum(axis=1)==0,:,:] += self.pseudocount
+
+        # flatten
+        TRCLR = np.concatenate([self.Tensor[i,:,:].T 
+                                for i in range(self.Tensor.shape[0])],axis=0)
+
+        # transform flat
+        TRCLR = rclr().fit_transform(TRCLR)
+
+        # re-shape tensor
+        TRCLR = np.dstack([TRCLR[(i-1)*self.Tensor.shape[-1]\
+                                  :(i)*self.Tensor.shape[-1]] 
+                           for i in range(1,self.Tensor.shape[0]+1)])
+
+        # fill nan with zero
+        TRCLR[np.isnan(TRCLR)] = 0 
+
+        self.TRCLR = TRCLR

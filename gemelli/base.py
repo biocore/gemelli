@@ -1,3 +1,11 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
 from abc import abstractmethod
 
 class _BaseImpute(object):
@@ -29,6 +37,6 @@ class _BaseTransform(object):
         should be implemetned by sub-method"""
 
     def transform(self):
-        """ TODO
+        """ return transformed
         """
-        return self.X_sp
+        return self.TRCLR

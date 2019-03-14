@@ -1,13 +1,45 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
+import warnings
 import numpy as np
 import pandas as pd
 from deicode.preprocessing import rclr
 
-def match(table, metadata):
-    """ Match on dense pandas tables,
-        taken from gneiss (now dep.)
-        https://github.com/biocore/
-        gneiss/blob/master/gneiss/util.py
+def match(table, metadata, warn=False):
+
     """
+
+    Match on dense pandas tables,
+    taken from gneiss (now dep.)
+    https://github.com/biocore/
+    gneiss/blob/master/gneiss/util.py
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Raises
+    ------
+    ValueError
+
+    Warning
+
+    References
+    ----------
+
+    Examples
+    --------
+
+    """
+
     subtableids = set(table.index)
     submetadataids = set(metadata.index)
     if len(subtableids) != len(table.index):
@@ -20,6 +52,12 @@ def match(table, metadata):
         raise ValueError(("No more samples left.  Check to make sure that "
                           "the sample names between `metadata` and `table` "
                           "are consistent"))
+    if (len(idx)!=len(subtableids) or \
+        len(idx)!=len(subtableids)) and warn==True:
+        warnings.warn(str(len(idx)-len(subtableids))\
+                      +" sample(s) did not match.")
+
     subtable = table.loc[idx]
     submetadata = metadata.loc[idx]
+    
     return subtable, submetadata

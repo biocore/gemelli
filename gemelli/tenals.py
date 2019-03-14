@@ -1,9 +1,42 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import norm
 
+@experimental(as_of="0.0.0")
 def tenals(TE, E, r = 3, ninit = 50, nitr = 50, tol = 1e-8):
-    
+
+    """
+
+    Description.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Raises
+    ------
+    ValueError
+
+    Warning
+
+    References
+    ----------
+
+    Examples
+    --------
+
+    """
+  
     #start
     n1,n2,n3 = TE.shape
     p = np.count_nonzero(TE)
@@ -82,6 +115,31 @@ def tenals(TE, E, r = 3, ninit = 50, nitr = 50, tol = 1e-8):
     return V1[:,::-1], V2[:,::-1], V3[:,::-1], np.diag(S.flatten()), dist
 
 def CPcomp(S,U1,U2,U3):
+
+    """
+
+    Description.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Raises
+    ------
+    ValueError
+
+    Warning
+
+    References
+    ----------
+
+    Examples
+    --------
+
+    """
+  
     ns, rs = S.shape
     n1, r1 = U1.shape
     n2, r2 = U2.shape
@@ -94,6 +152,31 @@ def CPcomp(S,U1,U2,U3):
     return T
 
 def TenProj(T, U1, U2, U3):
+
+    """
+
+    Description.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Raises
+    ------
+    ValueError
+
+    Warning
+
+    References
+    ----------
+
+    Examples
+    --------
+
+    """
+
     n1, r1 = U1.shape
     n2, r2 = U2.shape
     n3, r3 = U3.shape
@@ -106,6 +189,31 @@ def TenProj(T, U1, U2, U3):
     return M
 
 def RTPM(T, max_iter):
+
+    """
+
+    Description.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    Raises
+    ------
+    ValueError
+
+    Warning
+
+    References
+    ----------
+
+    Examples
+    --------
+
+    """
+
     #RTPM
     n1, n2, n3 = T.shape
     u1 = randn(n1,1)/norm(randn(n1,1))

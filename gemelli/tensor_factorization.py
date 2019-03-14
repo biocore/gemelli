@@ -1,16 +1,42 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
 import numpy as np
 from .base import _BaseImpute
 from .tenals import  tenals
 from scipy.spatial import distance
 import warnings
 
-
+@experimental(as_of="0.0.0")
 class TenAls(_BaseImpute):
 
     def __init__(self, rank=3, iteration=50, ninit=50, tol=1e-8):
         """
 
-        TODO
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+
+        Examples
+        --------
 
         """
 
@@ -22,8 +48,29 @@ class TenAls(_BaseImpute):
         return
 
     def fit(self, X):
+
         """
-        Fit the model to X_sparse
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+
+        Examples
+        --------
+
         """
 
         X_sparse = X.copy().astype(np.float64)
@@ -32,6 +79,30 @@ class TenAls(_BaseImpute):
         return self
 
     def _fit(self):
+
+        """
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+
+        Examples
+        --------
+
+        """
 
         # make copy for imputation, check type
         X_sparse = self.X_sparse
@@ -76,10 +147,31 @@ class TenAls(_BaseImpute):
         self.dist = dist
 
     def fit_transform(self, X):
-        """
-        TODO
 
         """
+
+        Description.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Raises
+        ------
+        ValueError
+
+        Warning
+
+        References
+        ----------
+
+        Examples
+        --------
+
+        """
+    
         X_sparse = X.copy().astype(np.float64)
         self.X_sparse = X_sparse
         self._fit()
