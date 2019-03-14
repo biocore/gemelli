@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 from deicode.preprocessing import rclr
-from gemelli.tensor_preprocessing import tensor_rclr
+from gemelli.preprocessing import Build
 from skbio.stats.composition import closure, clr
 
 
@@ -40,10 +40,13 @@ class Testpreprocessing(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._rclr.fit_transform(self.bad1)
    
-    def test_tensor_rclr(self):
+    def test_transform(self):
 
+        t = Build()
         # test flat clr works the same if there are no zeros
-        T_cmat = tensor_rclr(np.stack([self.cdata1 for i in range(3)]))
+        t.tensor = np.stack([self.cdata1 for i in range(3)])
+        t.transform()
+        T_cmat = t.TRCLR
         test_T = np.stack([self.cdata1 for i in range(3)])
         clr_test_T = clr(np.concatenate([test_T[i,:,:].T 
                                           for i in range(test_T.shape[0])],axis=0))
@@ -52,8 +55,11 @@ class Testpreprocessing(unittest.TestCase):
         npt.assert_allclose(T_cmat, clr_test_T)
         
         # test a case with zeros
-        T_cmat = tensor_rclr(np.stack([self.cdata2 for i in range(3)]))
+        t.tensor = np.stack([self.cdata2 for i in range(3)])
+        t.transform()
+        T_cmat = t.TRCLR 
         npt.assert_allclose(T_cmat, self.T_true2)
 
         with self.assertRaises(ValueError):
-            tensor_rclr(np.stack([self.bad1 for i in range(3)]))
+            t.tensor = np.stack([self.bad1 for i in range(3)])
+            t.transform()

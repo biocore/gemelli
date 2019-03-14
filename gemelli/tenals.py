@@ -10,7 +10,6 @@ import numpy as np
 from numpy.random import randn
 from numpy.linalg import norm
 
-@experimental(as_of="0.0.0")
 def tenals(TE, E, r = 3, ninit = 50, nitr = 50, tol = 1e-8):
 
     """

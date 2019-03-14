@@ -12,7 +12,6 @@ from .tenals import  tenals
 from scipy.spatial import distance
 import warnings
 
-@experimental(as_of="0.0.0")
 class TenAls(_BaseImpute):
 
     def __init__(self, rank=3, iteration=50, ninit=50, tol=1e-8):
