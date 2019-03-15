@@ -62,7 +62,7 @@ class Build(_BaseTransform):
         second dimension = features
         third dimension = samples
 
-    Returns
+    Attributes
     -------
     ID_order : list
         order of IDs in tensor array

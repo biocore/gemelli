@@ -24,7 +24,6 @@ class _BaseImpute(object):
         """
         return self.sample_loading, self.feature_loading, self.time_loading
 
-
 class _BaseTransform(object):
 
     """Base class for transformation/norm methods.

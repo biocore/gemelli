@@ -16,29 +16,107 @@ import warnings
 
 class TenAls(_BaseImpute):
 
-    def __init__(self, rank=3, iteration=50, ninit=50, tol=1e-8):
+    def __init__(self, rank = 3, iteration = 50, ninit = 50, tol = 1e-8):
         """
 
-        Description.
+        This class performs a low-rank 3rd order 
+        tensor factorization for partially observered
+        non-symmetric sets. This method relies on a
+        CANDECOMP/PARAFAC (CP) tensor decomposition.
+        Missing values are handled by an alternating
+        least squares (ALS) minimization between
+        TE and TE_hat.
 
         Parameters
         ----------
+        Tensor : array-like
+            A 3rd order tensor, often 
+            compositionally transformed, 
+            with missing values. The missing
+            values must be zeros. Tensor must
+            be of the shape: 
+            first dimension = samples
+            second dimension = features
+            third dimension = conditions
+        r : int, optional
+            The underlying low-rank, will be
+            equal to the number of rank 1
+            components that are output. The
+            higher the rank given, the more
+            expensive the computation will
+            be.
+        ninit : int, optional
+            The number of initialization
+            vectors. Larger values will
+            give more accurate factorization
+            but will be more computationally
+            expensive.
+        iteration : int, optional
+            Max number of iterations.
+        tol : float, optional
+            The stopping point in the minimization
+            of TE and the factorization between
+            each iteration.
 
-        Returns
+        Attributes
         -------
-
-        Raises
-        ------
-        ValueError
-
-        Warning
+        eigenvalues : array-like
+            The singular value vectors (1,r)
+        explained_variance_ratio : array-like
+            The percent explained by each
+            rank-1 factor. (1,r)
+        sample_distance : array-like
+            The euclidean distance between
+            the sample_loading and it'self
+            transposed of shape (samples, samples)
+        conditional_loading  : array-like
+            The conditional loading vectors
+            of shape (conditions, r)
+        feature_loading : array-like
+            The feature loading vectors
+            of shape (features, r)
+        sample_loading : array-like
+            The sample loading vectors
+            of shape (samples, r)
+        s : array-like
+            The r-dimension vector.
+        dist : array-like
+            A absolute distance vector
+            between TE and TE_hat.
 
         References
         ----------
+        .. [1] A. Anandkumar, R. Ge, D. Hsu, S. M. Kakade, M. Telgarsky, 
+            Tensor Decompositions for Learning Latent Variable Models
+            (A Survey for ALT). Lecture Notes in Computer Science
+            (2015), pp. 19–38.
+        .. [2] P. Jain, S. Oh, in Advances in Neural Information Processing
+            Systems 27, Z. Ghahramani, M. Welling, C. Cortes, N. D. Lawrence,
+            K. Q. Weinberger, Eds. (Curran Associates, Inc., 2014), pp. 1431–1439.
 
         Examples
         --------
-
+        >>> r = 3 # rank is 2
+        >>> n1 = 10
+        >>> n2 = 10
+        >>> n3 = 10
+        >>> U01 = np.random.rand(n1,r)
+        >>> U02 = np.random.rand(n2,r)
+        >>> U03 = np.random.rand(n3,r)
+        >>> U1, temp = qr(U01)
+        >>> U2, temp = qr(U02)
+        >>> U3, temp = qr(U03)
+        >>> U1=U1[:,0:r]
+        >>> U2=U2[:,0:r]
+        >>> U3=U3[:,0:r]
+        >>> T = np.zeros((n1,n2,n3))
+        >>> for i in range(n3): 
+        >>>     T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
+        >>> p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
+        >>> E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
+        >>> E = T*E
+        >>> TF = TenAls()
+        >>> TF.fit(TE_noise)
         """
 
         self.rank = rank
@@ -46,137 +124,79 @@ class TenAls(_BaseImpute):
         self.ninit = ninit
         self.tol = tol
 
-        return
-
-    def fit(self, X):
+    def fit(self, Tensor):
 
         """
 
-        Description.
+        Run _fit() a wrapper
+        for the tenals helper.
 
         Parameters
         ----------
-
-        Returns
-        -------
-
-        Raises
-        ------
-        ValueError
-
-        Warning
-
-        References
-        ----------
-
-        Examples
-        --------
-
+        Tensor : array-like
+            A 3rd order tensor, often 
+            compositionally transformed, 
+            with missing values. The missing
+            values must be zeros. Tensor must
+            be of the shape: 
+            first dimension = samples
+            second dimension = features
+            third dimension = conditions
         """
 
-        X_sparse = X.copy().astype(np.float64)
-        self.X_sparse = X_sparse
+        self.sparse_tensor = Tensor.copy()
         self._fit()
         return self
 
     def _fit(self):
 
         """
-
-        Description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-
-        Raises
-        ------
-        ValueError
-
-        Warning
-
-        References
-        ----------
-
-        Examples
-        --------
+        This function runs the
+        tenals helper.
 
         """
 
         # make copy for imputation, check type
-        X_sparse = self.X_sparse
+        sparse_tensor = self.sparse_tensor
 
-        if not isinstance(X_sparse, np.ndarray):
-            X_sparse = np.array(X_sparse)
-            if not isinstance(X_sparse, np.ndarray):
+        if not isinstance(sparse_tensor, np.ndarray):
+            sparse_tensor = np.array(sparse_tensor)
+            if not isinstance(sparse_tensor, np.ndarray):
                 raise ValueError('Input data is should be type numpy.ndarray')
-            if len(X_sparse.shape) < 3 or len(X_sparse.shape) > 3:
+            if len(sparse_tensor.shape) < 3 or len(sparse_tensor.shape) > 3:
                 raise ValueError('Input data is should be 3rd-order tensor',
                                  ' with shape (samples, features, time)')
 
-        if (np.count_nonzero(X_sparse) == 0 and
-                np.count_nonzero(~np.isnan(X_sparse)) == 0):
+        if (np.count_nonzero(sparse_tensor) == 0 and
+                np.count_nonzero(~np.isnan(sparse_tensor)) == 0):
             raise ValueError('No missing data in the format np.nan or 0')
 
-        if np.count_nonzero(np.isinf(X_sparse)) != 0:
+        if np.count_nonzero(np.isinf(sparse_tensor)) != 0:
             raise ValueError('Contains either np.inf or -np.inf')
 
-        if self.rank > np.min(X_sparse.shape):
+        if self.rank > np.min(sparse_tensor.shape):
             raise ValueError('rank must be less than the minimum shape')
 
         
         # return tensor decomp 
-        E = np.zeros(X_sparse.shape)
-        E[abs(X_sparse)>0] = 1
-        U, V, UV_time, s_, dist = tenals(X_sparse,E, r = self.rank, 
+        E = np.zeros(sparse_tensor.shape)
+        E[abs(sparse_tensor)>0] = 1
+        U, V, UV_cond, s_, dist = tenals(sparse_tensor,E, r = self.rank, 
                                          ninit = self.ninit, 
                                          nitr = self.iteration, 
                                          tol = self.tol)
 
-        explained_variance_ = (np.diag(s_) ** 2) / (X_sparse.shape[0] - 1)
+        explained_variance_ = (np.diag(s_) ** 2) / (sparse_tensor.shape[0] - 1)
         ratio = explained_variance_.sum()
         explained_variance_ratio_ = sorted(explained_variance_ / ratio)
         self.eigenvalues = np.diag(s_)
         self.explained_variance_ratio = list(explained_variance_ratio_)[::-1]
-        self.distance = distance.cdist(U, U)
-        self.time_loading = UV_time
+        self.sample_distance = distance.cdist(U, U)
+        self.conditional_loading = UV_cond
         self.feature_loading = V
         self.sample_loading = U
         self.s = s_
         self.dist = dist
-
-    def fit_transform(self, X):
-
-        """
-
-        Description.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-
-        Raises
-        ------
-        ValueError
-
-        Warning
-
-        References
-        ----------
-
-        Examples
-        --------
-
-        """
-    
-        X_sparse = X.copy().astype(np.float64)
-        self.X_sparse = X_sparse
-        self._fit()
-        return self.sample_loading, self.feature_loading, self.time_loading, self.s, self.dist
 
 def tenals(TE, E, r = 3, ninit = 50, nitr = 50, tol = 1e-8):
 
