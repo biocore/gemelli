@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.tensor_factorization import TenAls
+from gemelli.factorization import TenAls
 
 
 class TestTenAls(unittest.TestCase):
