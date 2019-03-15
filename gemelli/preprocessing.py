@@ -8,7 +8,6 @@
 
 import warnings
 import numpy as np
-import pandas as pd
 from .utils import match
 from .base import _BaseTransform
 from deicode.preprocessing import rclr
@@ -19,8 +18,8 @@ class build(_BaseTransform):
     """
     This class can both build and RCLR
     transform tensors from 2D dataframes
-    given count and mapping data. 
-    
+    given count and mapping data.
+
     A conditional measurement is given
     that identifies conditions measured
     multiple times over the same sample
@@ -42,7 +41,7 @@ class build(_BaseTransform):
         A pseudocount used in the
         case that a sample, feature,
             and/or condition is completely
-            missing from a vector slice in 
+            missing from a vector slice in
             the tensor formed.
     table : DataFrame
         table of non-negative count data
@@ -155,7 +154,6 @@ class build(_BaseTransform):
     """
 
     def __init__(self, pseudocount=1):
-
         """
         Parameters
         ----------
@@ -163,7 +161,7 @@ class build(_BaseTransform):
             A pseudocount used in the
             case that a sample, feature,
              and/or condition is completely
-             missing from a vector slice in 
+             missing from a vector slice in
              the tensor formed.
 
         """
@@ -174,7 +172,6 @@ class build(_BaseTransform):
 
     @property
     def pseudocount(self):
-
         """
         Pseudocount property
         allows pseudocount to
@@ -186,7 +183,6 @@ class build(_BaseTransform):
 
     @pseudocount.setter
     def pseudocount(self, value):
-
         """
         Set pseudocount value
         for property.
@@ -215,7 +211,6 @@ class build(_BaseTransform):
 
     @property
     def tensor(self):
-
         """
         pseudocount property
         allows pseudocount to
@@ -227,7 +222,6 @@ class build(_BaseTransform):
 
     @tensor.setter
     def tensor(self, tensor):
-
         """
         Set a tensor directly.
 
@@ -271,12 +265,10 @@ class build(_BaseTransform):
 
         if np.count_nonzero(tensor) == 0:
             warnings.warn("tensor contains no zeros.", RuntimeWarning)
-        
+
         self._tensor = tensor
 
-
-    def fit(self,table,mapping,ID_col,cond_col):
-
+    def fit(self, table, mapping, ID_col, cond_col):
         """
         This function transforms a 2D table
         into a 3rd-Order tensor in CLR space.
@@ -354,7 +346,6 @@ class build(_BaseTransform):
         return self
 
     def _fit(self):
-
         """
         This function forms a tensor
         with missing samples left as
@@ -376,14 +367,14 @@ class build(_BaseTransform):
 
         """
 
-        # check that all indicies match & are unqiue 
-        self.table,self.mapping = match(self.table,self.mapping)
+        # check that all indicies match & are unqiue
+        self.table, self.mapping = match(self.table, self.mapping)
 
         # order ids, cond, feats
         ID_order = sorted(set(self.mapping[self.ID_col]))
         cond_order = sorted(set(self.mapping[self.cond_col]))
 
-        # empty tensor to fill 
+        # empty tensor to fill
         tensor = np.zeros((len(cond_order),
                            len(self.table.columns),
                            len(ID_order)))
@@ -391,41 +382,42 @@ class build(_BaseTransform):
         # fill tensor where possible
         table_index = np.array(self.table.index)
         table_array = self.table.values
-        num_missing = 0 # check if fully missing samples
-        for i,c_i in enumerate(cond_order):
-            for j,ID_j in enumerate(ID_order):
+        num_missing = 0  # check if fully missing samples
+        for i, c_i in enumerate(cond_order):
+            for j, ID_j in enumerate(ID_order):
                 # get index ID assoc. in cond.
-                idx = set(self.mapping[(self.mapping[self.ID_col].isin([ID_j])) \
-                                & (self.mapping[self.cond_col].isin([c_i]))].index)
-                if len(idx)>1:
-                    warnings.warn('',join(["Condition ",str(c_i),
-                                        " has multiple sample ",
-                                        "with the same IDs ",
-                                        str(ID_j)]), RuntimeWarning)
-                elif len(idx)==0:
-                    num_missing+=1
-                    continue 
-                # fill slice 
-                tensor[i,:,j] = table_array[table_index == list(idx),:].sum(axis=0)
-                
+                idx1 = (self.mapping[self.ID_col].isin([ID_j]))
+                idx2 = (self.mapping[self.cond_col].isin([c_i]))
+                idx = set(self.mapping[idx1 & idx2].index)
+                if len(idx) > 1:
+                    warnings.warn(''.join(["Condition ", str(c_i),
+                                           " has multiple sample ",
+                                           "with the same IDs ",
+                                           str(ID_j)]), RuntimeWarning)
+                elif len(idx) == 0:
+                    num_missing += 1
+                    continue
+                # fill slice
+                tensor[i, :, j] = table_array[table_index ==
+                                              list(idx), :].sum(axis=0)
+
         # find percent totally missing samples
-        self.perc_missing = num_missing/(len(cond_order)*len(ID_order))
+        self.perc_missing = num_missing / (len(cond_order) * len(ID_order))
         if self.perc_missing > 0.50:
             warnings.warn(''.join(["Total Missing Sample Exceeds 50% ",
-                        "some conditions or samples may ",
-                        "need to be removed."]), RuntimeWarning)
+                                   "some conditions or samples may ",
+                                   "need to be removed."]), RuntimeWarning)
 
         # perform RCLR transformation
         self._tensor = tensor
         self.transform()
 
         # save intermediates
-        self.ID_order  = ID_order
-        self.feature_order  = self.table.columns
-        self.cond_order  = cond_order
+        self.ID_order = ID_order
+        self.feature_order = self.table.columns
+        self.cond_order = cond_order
 
     def transform(self):
-
         """
         tensor wrapped for rclr transform
         will add pseudocount where samples
@@ -447,11 +439,16 @@ class build(_BaseTransform):
 
         References
         ----------
-        .. [1] V. Pawlowsky-Glahn, J. J. Egozcue, R. Tolosana-Delgado (2015),
-        Modeling and Analysis of Compositional Data, Wiley, Chichester, UK
+        .. [1] V. Pawlowsky-Glahn, J. J. Egozcue,
+               R. Tolosana-Delgado (2015),
+               Modeling and Analysis of
+               Compositional Data, Wiley,
+               Chichester, UK
 
-        .. [2] C. Martino et al., A Novel Sparse Compositional Technique Reveals
-        Microbial Perturbations. mSystems. 4 (2019), doi:10.1128/mSystems.00016-19.
+        .. [2] C. Martino et al., A Novel Sparse
+               Compositional Technique Reveals
+               Microbial Perturbations. mSystems.
+               4 (2019), doi:10.1128/mSystems.00016-19.
 
         Examples
         --------
@@ -486,34 +483,37 @@ class build(_BaseTransform):
 
         if np.count_nonzero(self._tensor) == 0:
             warnings.warn("tensor contains no zeros.", RuntimeWarning)
-        
+
         # copy tensor to transform
         TRCLR = self._tensor.copy()
 
-        # pseudocount totally missing samp: 
+        # pseudocount totally missing samp:
         # sum of all feat (time,samp)==0
-        for i,j in np.argwhere(self._tensor.sum(axis=1) == 0):
-            self._tensor[i,:,j] += self._pseudocount
+        for i, j in np.argwhere(self._tensor.sum(axis=1) == 0):
+            self._tensor[i, :, j] += self._pseudocount
         # add for any totally zero features (should not occur)
-        if sum(self._tensor.sum(axis=0).sum(axis=1)==0) > 0:
-            self._tensor[:,self._tensor.sum(axis=0).sum(axis=1)==0,:] += self._pseudocount
+        if sum(self._tensor.sum(axis=0).sum(axis=1) == 0) > 0:
+            self._tensor[:, self._tensor.sum(axis=0).sum(
+                axis=1) == 0, :] += self._pseudocount
         # add for any totally zero timepoint (should not occur)
-        if sum(self._tensor.sum(axis=2).sum(axis=1)==0) > 0:
-            self._tensor[self._tensor.sum(axis=2).sum(axis=1)==0,:,:] += self._pseudocount
+        if sum(self._tensor.sum(axis=2).sum(axis=1) == 0) > 0:
+            self._tensor[self._tensor.sum(axis=2).sum(
+                axis=1) == 0, :, :] += self._pseudocount
 
         # flatten
-        TRCLR = np.concatenate([self._tensor[i,:,:].T 
-                                for i in range(self._tensor.shape[0])],axis=0)
+        TRCLR = np.concatenate([self._tensor[i, :, :].T
+                                for i in range(self._tensor.shape[0])], axis=0)
 
         # transform flat
         TRCLR = rclr().fit_transform(TRCLR)
 
         # re-shape tensor
-        TRCLR = np.dstack([TRCLR[(i-1)*self._tensor.shape[-1]\
-                                  :(i)*self._tensor.shape[-1]] 
-                           for i in range(1,self._tensor.shape[0]+1)])
+        TRCLR = np.dstack([TRCLR[(i - 1) *
+                           self._tensor.shape[-1]:(i) *
+                           self._tensor.shape[-1]]
+                           for i in range(1, self._tensor.shape[0] + 1)])
 
         # fill nan with zero
-        TRCLR[np.isnan(TRCLR)] = 0 
+        TRCLR[np.isnan(TRCLR)] = 0
 
         self.TRCLR = TRCLR

@@ -8,6 +8,7 @@
 
 from abc import abstractmethod
 
+
 class _BaseImpute(object):
 
     """Base class for imputation methods.
@@ -23,6 +24,7 @@ class _BaseImpute(object):
         """ TODO
         """
         return self.sample_loading, self.feature_loading, self.time_loading
+
 
 class _BaseTransform(object):
 

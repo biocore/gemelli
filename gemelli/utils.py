@@ -7,37 +7,15 @@
 # ----------------------------------------------------------------------------
 
 import warnings
-import numpy as np
-import pandas as pd
-from deicode.preprocessing import rclr
+
 
 def match(table, metadata, warn=False):
-
     """
 
     Match on dense pandas tables,
     taken from gneiss (now dep.)
     https://github.com/biocore/
     gneiss/blob/master/gneiss/util.py
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-
-    Raises
-    ------
-    ValueError
-
-    Warning
-
-    References
-    ----------
-
-    Examples
-    --------
-
     """
 
     subtableids = set(table.index)
@@ -52,12 +30,12 @@ def match(table, metadata, warn=False):
         raise ValueError(("No more samples left.  Check to make sure that "
                           "the sample names between `metadata` and `table` "
                           "are consistent"))
-    if (len(idx)!=len(subtableids) or \
-        len(idx)!=len(subtableids)) and warn==True:
-        warnings.warn(str(len(idx)-len(subtableids))\
-                      +" sample(s) did not match.")
+    if (len(idx) != len(subtableids) or
+            len(idx) != len(subtableids)) and warn:
+        warnings.warn(str(len(idx) - len(subtableids))
+                      + " sample(s) did not match.")
 
     subtable = table.loc[idx]
     submetadata = metadata.loc[idx]
-    
+
     return subtable, submetadata
