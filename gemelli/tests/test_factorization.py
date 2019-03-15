@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.tensor_factorization import TenAls
+from gemelli.factorization import TenAls
 
 
 class TestTenAls(unittest.TestCase):
@@ -38,7 +38,12 @@ class TestTenAls(unittest.TestCase):
     
     def test_TenAls_noiseless(self):
         # TenAls no noise
-        L1,L2,L3,s,dist = TenAls().fit_transform(self.TE)
+        TF = TenAls().fit(self.TE)
+        L1 = TF.sample_loading
+        L2 = TF.feature_loading
+        L3 = TF.conditional_loading
+        s = TF.s
+        dist = TF.dist
         s = np.diag(s)
         # test accruacy 
         rmse=0
@@ -54,7 +59,12 @@ class TestTenAls(unittest.TestCase):
         
     def test_TenAls_noise(self):
         # TenAls no noise
-        L1,L2,L3,s,dist = TenAls().fit_transform(self.TE_noise)
+        TF = TenAls().fit(self.TE_noise)
+        L1 = TF.sample_loading
+        L2 = TF.feature_loading
+        L3 = TF.conditional_loading
+        s = TF.s
+        dist = TF.dist
         s = np.diag(s)
         # test accruacy 
         rmse=0
