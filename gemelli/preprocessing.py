@@ -6,11 +6,13 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import warnings
 import numpy as np
 import pandas as pd
 from .utils import match
 from .base import _BaseTransform
 from deicode.preprocessing import rclr
+
 
 class Build(_BaseTransform):
 
@@ -20,7 +22,7 @@ class Build(_BaseTransform):
     given count and mapping data. 
     
     A conditional measurement is given
-    that identfies conditions measured
+    that identifies conditions measured
     multiple times over the same sample
     ID. Additionally a set of sample IDs
     must be provided. Any samples that are
@@ -31,7 +33,7 @@ class Build(_BaseTransform):
 
     The tensor is the RCLR transformed along
     each conditional slice. The output RCLR
-    tansor is of the shape (samples, features,
+    tensor is of the shape (samples, features,
     conditions).
 
     Parameters
@@ -56,9 +58,9 @@ class Build(_BaseTransform):
         category of conditional in metadata
     tensor : array-like, optional
         A premade tensor to RCLR transform.
-        first dimention = conditions
-        second dimention = features
-        third dimention = samples
+        first dimension = conditions
+        second dimension = features
+        third dimension = samples
 
     Returns
     -------
@@ -70,15 +72,15 @@ class Build(_BaseTransform):
         order of conditions in tensor array
     tensor : array-like
         3rd order tensor of shape
-        first dimention = conditions
-        second dimention = features
-        third dimention = samples
+        first dimension = conditions
+        second dimension = features
+        third dimension = samples
     TRCLR : array-like
         RCLR transformed 3rd order tensor
         of shape (transpose of input tensor).
-        first dimention = samples
-        second dimention = features
-        third dimention = conditions
+        first dimension = samples
+        second dimension = features
+        third dimension = conditions
 
     Raises
     ------
@@ -90,7 +92,7 @@ class Build(_BaseTransform):
     ValueError
         if cond_col not in mapping cols
     ValueError
-        Table is not 2-dimentions
+        Table is not 2-dimension
     ValueError
         Table contains negative values
     ValueError
@@ -98,7 +100,7 @@ class Build(_BaseTransform):
     ValueError
         Table contains nans
     ValueError
-        tensor is not 3-dimentions
+        tensor is not 3-dimension
     ValueError
         tensor contains negative values
     ValueError
@@ -176,7 +178,7 @@ class Build(_BaseTransform):
         """
         Pseudocount property
         allows pseudocount to
-        be set explictly.
+        be set explicitly.
 
         """
 
@@ -217,7 +219,7 @@ class Build(_BaseTransform):
         """
         pseudocount property
         allows pseudocount to
-        be set explictly.
+        be set explicitly.
 
         """
 
@@ -232,9 +234,9 @@ class Build(_BaseTransform):
         Parameters
         ----------
         tensor : array-like
-            first dimention = conditions
-            second dimention = features
-            third dimention = samples
+            first dimension = conditions
+            second dimension = features
+            third dimension = samples
 
         Raises
         ------
@@ -256,7 +258,7 @@ class Build(_BaseTransform):
         """
 
         if len(tensor.shape) != 3:
-            raise ValueError('tensor is not 3-dimentional')
+            raise ValueError('tensor is not 3-dimension')
 
         if (tensor < 0).any():
             raise ValueError('tensor Contains Negative Values')
@@ -305,7 +307,7 @@ class Build(_BaseTransform):
         ValueError
             if cond_col not in mapping cols
         ValueError
-            Table is not 2-dimentions
+            Table is not 2-dimensions
         ValueError
             Table contains negative values
         ValueError
@@ -329,7 +331,7 @@ class Build(_BaseTransform):
             raise ValueError("Conditional category not in metadata columns")
 
         if len(table.values.shape) != 2:
-            raise ValueError('Table is not 2-dimentions')
+            raise ValueError('Table is not 2-dimensions')
 
         if (table.values < 0).any():
             raise ValueError('Table Contains Negative Values')
@@ -433,7 +435,7 @@ class Build(_BaseTransform):
         Raises
         ------
         ValueError
-            tensor is not 3-dimentions
+            tensor is not 3-dimensions
         ValueError
             tensor contains negative values
         ValueError
