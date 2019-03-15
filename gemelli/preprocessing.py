@@ -14,7 +14,7 @@ from .base import _BaseTransform
 from deicode.preprocessing import rclr
 
 
-class Build(_BaseTransform):
+class build(_BaseTransform):
 
     """
     This class can both build and RCLR
@@ -493,7 +493,7 @@ class Build(_BaseTransform):
         # pseudocount totally missing samp: 
         # sum of all feat (time,samp)==0
         for i,j in np.argwhere(self._tensor.sum(axis=1) == 0):
-            self._tensor[i,:,j]+=self._pseudocount
+            self._tensor[i,:,j] += self._pseudocount
         # add for any totally zero features (should not occur)
         if sum(self._tensor.sum(axis=0).sum(axis=1)==0) > 0:
             self._tensor[:,self._tensor.sum(axis=0).sum(axis=1)==0,:] += self._pseudocount

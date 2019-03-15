@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
+import pandas as pd
 import numpy.testing as npt
 from deicode.preprocessing import rclr
-from gemelli.preprocessing import Build
+from gemelli.preprocessing import build
 from skbio.stats.composition import closure, clr
 
 
@@ -25,8 +26,55 @@ class Testpreprocessing(unittest.TestCase):
                         [[ 0. , 0. , 0. ],[ 0.,  0. , 0. ]]]
 
         self.bad1 = np.array([1, 2, -1])
+
+        self.tenres = np.array([[[1, 2, 3],
+                                [4, 5, 6]],
+                            [[7, 8, 9],
+                                [10, 11, 12]],
+                            [[13 , 14 , 15],
+                                [16,  17, 18]]])
+
+        self.clrres = np.array([[[-1.76959918],
+                                [-1.076452  ],
+                                [-0.67098689],
+                                [ 0.17631097],
+                                [ 0.30984236],
+                                [ 0.4276254 ],
+                                [ 0.79535018],
+                                [ 0.86945815],
+                                [ 0.93845102]],
+                            [[-0.88804481],
+                                [-0.66490126],
+                                [-0.48257971],
+                                [ 0.02824592],
+                                [ 0.1235561 ],
+                                [ 0.21056747],
+                                [ 0.49824955],
+                                [ 0.55887417],
+                                [ 0.61603258]]])
+        self.t = build()
         self._rclr = rclr()
         pass
+
+    def test_build(self):
+
+        shape_ = self.tenres.shape[0]
+        M_counts = np.concatenate([self.tenres[i,:,:].T 
+                                for i in range(shape_)],
+                                axis=0).T
+        mapping = np.array([[0,0,1,1,2,2],
+                            [0,1,2,0,1,2]])
+        mapping =pd.DataFrame(mapping.T,
+                            columns=['Cond','ID'])
+        table = pd.DataFrame(M_counts)
+        
+        self.t.fit(table,mapping,'ID','Cond')
+        npt.assert_allclose(self.t.tensor.astype(float).reshape(1, 9, 2),
+                            M_counts.T.astype(float).reshape(1, 9, 2))
+        self.t.transform()
+        npt.assert_allclose(np.around(self.t.TRCLR.astype(float),3),
+                            np.around(self.clrres.astype(float),3))
+
     
     def test_matrix_rclr(self):
 
@@ -43,7 +91,7 @@ class Testpreprocessing(unittest.TestCase):
    
     def test_transform(self):
 
-        t = Build()
+        t = build()
         # test flat clr works the same if there are no zeros
         t.tensor = np.stack([self.cdata1 for i in range(3)])
         t.transform()
