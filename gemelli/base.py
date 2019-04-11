@@ -23,7 +23,7 @@ class _BaseImpute(object):
     def transform(self):
         """ TODO
         """
-        return self.sample_loading, self.feature_loading, self.time_loading
+        return self.sample_loading, self.feature_loading, self.conditional_loading
 
 
 class _BaseTransform(object):

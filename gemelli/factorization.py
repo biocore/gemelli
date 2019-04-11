@@ -179,8 +179,8 @@ class TenAls(_BaseImpute):
         if np.count_nonzero(np.isinf(sparse_tensor)) != 0:
             raise ValueError('Contains either np.inf or -np.inf')
 
-        if self.rank > np.min(sparse_tensor.shape):
-            raise ValueError('rank must be less than the minimum shape')
+        if self.rank > np.max(sparse_tensor.shape):
+            raise ValueError('rank must be less than the maximum shape')
 
         # return tensor decomp
         E = np.zeros(sparse_tensor.shape)
