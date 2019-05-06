@@ -190,11 +190,8 @@ class TenAls(_BaseImpute):
                                          nitr=self.iteration,
                                          tol=self.tol)
 
-        explained_variance_ = (np.diag(s_) ** 2) / (sparse_tensor.shape[0] - 1)
-        ratio = explained_variance_.sum()
-        explained_variance_ratio_ = sorted(explained_variance_ / ratio)
         self.eigenvalues = np.diag(s_)
-        self.explained_variance_ratio = list(explained_variance_ratio_)[::-1]
+        self.explained_variance_ratio = list(self.eigenvalues / self.eigenvalues.sum())
         self.sample_distance = distance.cdist(U, U)
         self.conditional_loading = UV_cond
         self.feature_loading = V
@@ -366,11 +363,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                 V2[:,
                    q] = V2[:,
                            q] + np.multiply(v3[i3],
-                                            np.matmul((TE[:,
-                                                          :,
-                                                          i3] - A[:,
-                                                                  :,
-                                                                  i3]).T,
+                                            np.matmul((TE[:,:,i3]
+                                                       - A[:,:,i3]).T,
                                                       v1)).flatten()
                 den2 = den2 + \
                     np.multiply(v3[i3]**2, np.matmul(E[:, :, i3].T,
@@ -402,7 +396,16 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
 
-    return V1[:, ::-1], V2[:, ::-1], V3[:, ::-1], np.diag(S.flatten()), dist
+    S = np.diag(S.flatten())
+    # sort the eigenvalues
+    idx = np.argsort(np.diag(S))[::-1]
+    S = S[idx, :][:, idx]
+    # sort loadings
+    V1 = V1[:, idx]
+    V2 = V2[:, idx]
+    V3 = V3[:, idx]
+
+    return V1, V2, V3, S, dist
 
 
 def RTPM(T, max_iter=50):
