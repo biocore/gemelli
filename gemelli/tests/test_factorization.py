@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.factorization import TenAls
+from gemelli.factorization import TenAls, unfold
 
 
 class TestTenAls(unittest.TestCase):
@@ -10,8 +10,8 @@ class TestTenAls(unittest.TestCase):
         # generate random noiseless low-rank orthogonal tensor
         r = 3 # rank is 2
         n1 = 10
-        n2 = 10
-        n3 = 10
+        n2 = 12
+        n3 = 8
         U01 = np.random.rand(n1,r)
         U02 = np.random.rand(n2,r)
         U03 = np.random.rand(n3,r)
@@ -30,12 +30,34 @@ class TestTenAls(unittest.TestCase):
         self.TE = T*self.E
         self.TE_noise = self.TE+(0.0001/np.sqrt(n1*n2*n3)\
                                  *np.random.randn(n1,n2,n3)*self.E)
+        self.n1 = n1
+        self.n2 = n2
         self.n3 = n3
         self.U1 = U1
         self.U2 = U2
         self.U3 = U3
         pass
-    
+
+    def test_unfold(self):
+        self.assertEqual(unfold(self.TE, 0).shape, (self.n1, self.n2 *
+                                                    self.n3))
+        self.assertEqual(unfold(self.TE, 1).shape, (self.n2, self.n1 *
+                                                    self.n3))
+        self.assertEqual(unfold(self.TE, 2).shape, (self.n3, self.n1 *
+                                                    self.n2))
+        uf0 = unfold(self.TE, 0)
+        self.assertTrue((uf0[:, np.arange(self.n2 * self.n3, step=self.n3)] ==
+                         self.TE[:, :, 0]).all())
+        self.assertTrue((uf0[:, :self.n3] == self.TE[:, 0, :]).all())
+
+        uf1 = unfold(self.TE, 1)
+        self.assertTrue((uf1[:, :self.n3] == self.TE[0, :, :]).all())
+
+        self.assertTrue((uf1[:, np.arange(self.n1 * self.n3,
+                                          step=self.n3)].T ==
+                         self.TE[:, :, 0]).all())
+        # TODO test the last axis but I think you get the idea
+
     def test_TenAls_noiseless(self):
         # TenAls no noise
         TF = TenAls().fit(self.TE)
@@ -66,7 +88,7 @@ class TestTenAls(unittest.TestCase):
         s = TF.s
         dist = TF.dist
         s = np.diag(s)
-        # test accruacy 
+        # test accuracy
         rmse=0
         for i3 in range(self.n3): 
             A1 = self.U1
@@ -77,6 +99,3 @@ class TestTenAls(unittest.TestCase):
                    np.trace(np.matmul(np.matmul(B1.T,B1),np.matmul(B2.T,B2))) + \
                    -2*np.trace(np.matmul(np.matmul(B1.T,A1),np.matmul(A2.T,B2)))
         self.assertTrue(1e-8>abs(rmse))
-        
-
-

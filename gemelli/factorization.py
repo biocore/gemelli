@@ -185,11 +185,12 @@ class TenAls(_BaseImpute):
         # return tensor decomp
         E = np.zeros(sparse_tensor.shape)
         E[abs(sparse_tensor) > 0] = 1
-        U, V, UV_cond, s_, dist = tenals(sparse_tensor, E, r=self.rank,
+        loadings, s_, dist = tenals(sparse_tensor, E, r=self.rank,
                                          ninit=self.ninit,
                                          nitr=self.iteration,
                                          tol=self.tol)
 
+        U, V, UV_cond = loadings
         self.eigenvalues = np.diag(s_)
         self.explained_variance_ratio = list(self.eigenvalues / self.eigenvalues.sum())
         self.sample_distance = distance.cdist(U, U)
@@ -299,100 +300,150 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     # start
     n1, n2, n3 = TE.shape
+    dims = TE.shape
 
-    normTE = 0
-    for i3 in range(n3):
-        normTE = normTE + norm(TE[:, :, i3])**2
+    # normTE = 0
+    # for i3 in range(n3):
+    #     normTE = normTE + norm(TE[:, :, i3])**2
+    normTE = norm(TE)**2
 
     # initialization by Robust Tensor Power Method (modified for non-symmetric
     # tensors)
-    U01 = np.zeros((n1, r))
-    U02 = np.zeros((n2, r))
-    U03 = np.zeros((n3, r))
+    # U01 = np.zeros((n1, r))
+    # U02 = np.zeros((n2, r))
+    # U03 = np.zeros((n3, r))
+    U = [np.zeros((n, r)) for n in dims]
+    U01, U02, U03 = U
     S0 = np.zeros((r, 1))
     for i in range(r):
-        tU1 = np.zeros((n1, ninit))
-        tU2 = np.zeros((n2, ninit))
-        tU3 = np.zeros((n3, ninit))
+        tU = [np.zeros((n, ninit)) for n in dims]
+        # tU1 = np.zeros((n1, ninit))
+        # tU2 = np.zeros((n2, ninit))
+        # tU3 = np.zeros((n3, ninit))
+
+        tU1, tU2, tU3 = tU
         tS = np.zeros((ninit, 1))
         for init in range(ninit):
-            [tU1[:, init], tU2[:, init], tU3[:, init]] = RTPM(
-                TE - CPcomp(S0, U01, U02, U03), max_iter=nitr)
-            tU1[:, init] = tU1[:, init] / norm(tU1[:, init])
-            tU2[:, init] = tU2[:, init] / norm(tU2[:, init])
-            tU3[:, init] = tU3[:, init] / norm(tU3[:, init])
-            tS[init] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-                               tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
+            # [tU1[:, init], tU2[:, init], tU3[:, init]] = RTPM(
+            #     TE - CPcomp(S0, U1, U2, U3), max_iter=nitr)
+            initializations = RTPM(
+                TE - CPcomp(S0, *U), max_iter=nitr)
+
+            for tUn_idx, tUn in enumerate(tU):
+                tUn[:, init] = initializations[tUn_idx]
+                tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
+            tU1, tU2, tU3 = tU
+
+            # tU1[:, init] = tU1[:, init] / norm(tU1[:, init])
+            # tU2[:, init] = tU2[:, init] / norm(tU2[:, init])
+            # tU3[:, init] = tU3[:, init] / norm(tU3[:, init])
+            # tS[init] = TenProj(TE - CPcomp(S0, U01, U02, U03),
+            #                   tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
+            tS[init] = TenProj(TE - CPcomp(S0, *U),
+                               *[tUn[:, [init]] for tUn in tU])
+
         idx = np.argmax(tS, axis=0)[0]
-        U01[:, i] = tU1[:, idx] / norm(tU1[:, idx])
-        U02[:, i] = tU2[:, idx] / norm(tU2[:, idx])
-        U03[:, i] = tU3[:, idx] / norm(tU3[:, idx])
-        S0[i] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-                        U01[:, [i]], U02[:, [i]], U03[:, [i]])
+        for tUn, Un in zip(tU, U):
+            Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
+        U01, U02, U03 = U
+
+        # U01[:, i] = tU1[:, idx] / norm(tU1[:, idx])
+        # U02[:, i] = tU2[:, idx] / norm(tU2[:, idx])
+        # U03[:, i] = tU3[:, idx] / norm(tU3[:, idx])
+        # S0[i] = TenProj(TE - CPcomp(S0, U01, U02, U03),
+        #                 U01[:, [i]], U02[:, [i]], U03[:, [i]])
+        S0[i] = TenProj(TE - CPcomp(S0, *U),
+                        *[Un[:, [i]] for Un in U])
 
     # apply alternating least squares
-    V1 = U01.copy()
-    V2 = U02.copy()
-    V3 = U03.copy()
+    # V1 = U01.copy()
+    # V2 = U02.copy()
+    # V3 = U03.copy()
+    V = [Un.copy() for Un in U]
+    V1, V2, V3 = V
     S = S0.copy()
+    # corresponds to line 5 of pseudo code
     for itrs in range(nitr):
+        # corresponds to line 7 of pseudo code
         for q in range(r):
             S_ = S.copy()
             S_[q] = 0
-            A = np.multiply(CPcomp(S_, V1, V2, V3), E)
-            v1 = V1[:, q].copy()
-            v2 = V2[:, q].copy()
-            v3 = V3[:, q].copy()
-            V1[:, q] = 0
-            V2[:, q] = 0
-            V3[:, q] = 0
+            A = np.multiply(CPcomp(S_, *V), E)
+            # v1 = V1[:, q].copy()
+            # v2 = V2[:, q].copy()
+            # v3 = V3[:, q].copy()
+            v = [Vn[:, q].copy() for Vn in V]
+            v1, v2, v3 = v
+            for Vn in V:
+                Vn[:, q] = 0
+            # V1[:, q] = 0
+            # V2[:, q] = 0
+            # V3[:, q] = 0
+
+            # n1 and n2 are components of shape
             den1 = np.zeros((n1, 1))
             den2 = np.zeros((n2, 1))
+
             for i3 in range(n3):
+                # REMINDER np.multiply is element-wise
+                # `A` is CPD reconstruction of TE
+                # TODO use tensordot like in RTPM
                 V1[:, q] = V1[:, q] + \
                     np.multiply(v3[i3],
                                 np.matmul((TE[:, :, i3]
-                                           - A[:, :, i3]), v2))
+                                           - A[:, :, i3]),
+                                          v2)).flatten()
                 den1 = den1 + \
-                    np.multiply(v3[i3]**2,
-                                np.matmul(E[:, :, i3],
-                                          v2 * v2)).reshape(den1.shape[0], 1)
-            v1 = V1[:, q].reshape(den1.shape[0], 1) / den1
+                    np.multiply(v3[i3]**2, np.matmul(E[:, :, i3],
+                                                     v2**2)).reshape(
+                                            dims[0], 1)
+            v1 = V1[:, q].reshape(dims[0], 1) / den1
             v1 = v1 / norm(v1)
+
+            # TODO use tensordot like in RTPM
             for i3 in range(n3):
-                V2[:,
-                   q] = V2[:,
-                           q] + np.multiply(v3[i3],
-                                            np.matmul((TE[:,:,i3]
-                                                       - A[:,:,i3]).T,
-                                                      v1)).flatten()
+                V2[:, q] = V2[:, q] + \
+                    np.multiply(v3[i3],
+                                np.matmul((TE[:, :, i3]
+                                           - A[:, :, i3]).T,
+                                          v1)).flatten()
                 den2 = den2 + \
                     np.multiply(v3[i3]**2, np.matmul(E[:, :, i3].T,
-                                                     np.multiply(v1, v1)))
-            v2 = V2[:, q].reshape(den2.shape[0], 1) / den2
+                                                     v1**2)).reshape(
+                                            dims[1], 1)
+            v2 = V2[:, q].reshape(dims[1], 1) / den2
             v2 = v2 / norm(v2)
+
+            # TODO np.moveaxis and unfold will be handy
             for i3 in range(n3):
                 V3[i3, q] = (np.matmul(v1.T,
                                        np.matmul(TE[:, :, i3]
                                                  - A[:, :, i3], v2)) /
-                             np.matmul(np.matmul((v1 * v1).T,
+                             np.matmul(np.matmul((v1**2).T,
                                                  (E[:, :, i3])),
-                                       (v2 * v2))).flatten()
+                                       (v2**2))).flatten()
+
             V1[:, q] = v1.flatten()
             V2[:, q] = v2.flatten()
             S[q] = norm(V3[:, q])
             V3[:, q] = V3[:, q] / norm(V3[:, q])
+
         ERR = TE - E * CPcomp(S, V1, V2, V3)
-        normERR = 0
-        for i3 in range(n3):
-            normERR = normERR + norm(ERR[:, :, i3])**2
+
+        # normERR = 0
+        # for i3 in range(n3):
+        #    normERR = normERR + norm(ERR[:, :, i3])**2
+
+        normERR = norm(ERR)**2
         if np.sqrt(normERR / normTE) < tol:
             break
     dist = np.sqrt(normERR / normTE)
+    V = V1, V2, V3
     # check that the fact. converged
-    if sum(sum(np.isnan(V1))) > 0 or\
-       sum(sum(np.isnan(V2))) > 0 or\
-       sum(sum(np.isnan(V3))) > 0:
+#    if sum(sum(np.isnan(V1))) > 0 or\
+#       sum(sum(np.isnan(V2))) > 0 or\
+#       sum(sum(np.isnan(V3))) > 0:
+    if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
 
@@ -401,15 +452,18 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     idx = np.argsort(np.diag(S))[::-1]
     S = S[idx, :][:, idx]
     # sort loadings
-    V1 = V1[:, idx]
-    V2 = V2[:, idx]
-    V3 = V3[:, idx]
+    loadings = [Vn[:, idx] for Vn in V]
+    # V1 = V1[:, idx]
+    # V2 = V2[:, idx]
+    # V3 = V3[:, idx]
+    # loadings = [V1, V2, V3]
 
-    return V1, V2, V3, S, dist
+    return loadings, S, dist
 
 
 def RTPM(T, max_iter=50):
     """
+    TODO finish generalization
 
     The Robust Tensor Power Method
     (RTPM). Is a generalization of
@@ -453,30 +507,80 @@ def RTPM(T, max_iter=50):
             K. Q. Weinberger, Eds.
             (Curran Associates, Inc., 2014),
             pp. 1431–1439.
+    TODO cite Guaranteed Non-Orthogonal Tensor Decomposition via
+     Alternating Rank-1 Updates
 
     """
 
     # RTPM
     n1, n2, n3 = T.shape
+    n_dims = len(T.shape)
     u1 = randn(n1, 1) / norm(randn(n1, 1))
     u2 = randn(n2, 1) / norm(randn(n2, 1))
     u3 = randn(n3, 1) / norm(randn(n3, 1))
     # conv
     for itr in range(max_iter):
+        all_u = [u1, u2, u3]
         v1 = np.zeros((n1, 1))
         v2 = np.zeros((n2, 1))
         v3 = np.zeros((n3, 1))
         for i3 in range(n3):
             v3[i3] = np.matmul(np.matmul(u1.T, T[:, :, i3]), u2)
+            # unfold along
             v1 = v1 + np.matmul(u3[i3][0] * T[:, :, i3], u2)
             v2 = v2 + np.matmul(u3[i3][0] * T[:, :, i3].T, u1)
+
+        # showing that we can do the same operations with tensordot
+        p1 = np.tensordot(T, u2, axes=(1,0))
+        v1_alt = np.tensordot(p1, u3, axes=(1,0))
+        assert np.allclose(v1.flatten(), v1_alt.flatten())
+
+        p2 = np.tensordot(T, u1, axes=(0, 0))
+        v2_alt = np.tensordot(p2, u3, axes=(1,0))
+        assert np.allclose(v2.flatten(), v2_alt.flatten())
+
+        v3_alt = np.tensordot(p2, u2, axes=(0,0))
+        assert np.allclose(v3.flatten(), v3_alt.flatten())
+
+        # tensordot generalization to higher dims
+        v = []
+        dims = np.arange(n_dims)
+        for dim in dims:
+            dot_across = dims[dims != dim]
+            v_dim = np.tensordot(T,
+                                 all_u[dot_across[0]],
+                                 axes=(1 if dim == 0 else 0, 0))
+            for inner_dim in dot_across[1:]:
+                v_dim = np.tensordot(v_dim,
+                                     all_u[inner_dim],
+                                     axes=(1 if inner_dim > dim else 0, 0))
+            v.append(v_dim)
+
+        # print(v1_alt.flatten(), v[0].flatten())
+
+        assert np.allclose(v1_alt.flatten(), v[0].flatten())
+        assert np.allclose(v2_alt, v[1])
+        assert np.allclose(v3_alt, v[2])
+        v1, v2, v3 = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
+
+        # is v1[i] = sum(T[i, j, k] * u2[j] * u3[k] for j in range(n2)
+        #                for k in range(n3)) ?
+        # for i in range(n1):
+        #     print(v1[i] - sum(T[i, j, k] * u2[j] * u3[k] for
+        #                         j in range(n2) for k in range(n3)))
+        # for j in range(n2):
+
+        # assert np.allclose(v2, [sum(T[i, j, k] * u1[i] * u3[k] for
+        #                               i in range(n1) for k in range(n3)) for
+        #                            j in range(n2)])
+
         u10 = u1
         u1 = v1 / norm(v1)
         u20 = u2
         u2 = v2 / norm(v2)
         u30 = u3
         u3 = v3 / norm(v3)
-        if(norm(u10 - u1) + norm(u20 - u2) + norm(u30 - u3) < 1e-7):
+        if (norm(u10 - u1) + norm(u20 - u2) + norm(u30 - u3)) < 1e-7:
             break
 
     return u1.flatten(), u2.flatten(), u3.flatten()
@@ -484,6 +588,7 @@ def RTPM(T, max_iter=50):
 
 def CPcomp(S, U1, U2, U3):
     """
+    TODO generalize
     This function takes the
     CP decomposition of a 3rd
     order tensor and outputs
@@ -524,6 +629,7 @@ def CPcomp(S, U1, U2, U3):
 
 def TenProj(D, U1, U2, U3):
     """
+    TODO generalize
     The Orthogonal tensor
     projection created by
     the TE - TE_hat distance.

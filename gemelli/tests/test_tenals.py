@@ -10,8 +10,8 @@ class Testtenals(unittest.TestCase):
         # generate random noiseless low-rank orthogonal tensor
         r = 3 # rank is 2
         n1 = 10
-        n2 = 10
-        n3 = 10
+        n2 = 12
+        n3 = 8
         U01 = np.random.rand(n1,r)
         U02 = np.random.rand(n2,r)
         U03 = np.random.rand(n3,r)
@@ -38,7 +38,8 @@ class Testtenals(unittest.TestCase):
     
     def test_tenals_noiseless(self):
         # TenAls no noise
-        L1,L2,L3,s,dist = tenals(self.TE,self.E)
+        loadings, s, dist = tenals(self.TE,self.E)
+        L1, L2, L3 = loadings
         s = np.diag(s)
         # test accruacy 
         rmse=0
@@ -54,7 +55,8 @@ class Testtenals(unittest.TestCase):
         
     def test_tenals_noise(self):
         # TenAls no noise
-        L1,L2,L3,s,dist = tenals(self.TE_noise,self.E)
+        loadings, s, dist = tenals(self.TE_noise,self.E)
+        L1, L2, L3 = loadings
         s = np.diag(s)
         # test accruacy 
         rmse=0
