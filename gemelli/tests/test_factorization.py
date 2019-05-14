@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.factorization import TenAls, unfold
+from gemelli.factorization import TenAls#, unfold
 
 
 class TestTenAls(unittest.TestCase):
@@ -38,25 +38,25 @@ class TestTenAls(unittest.TestCase):
         self.U3 = U3
         pass
 
-    def test_unfold(self):
-        self.assertEqual(unfold(self.TE, 0).shape, (self.n1, self.n2 *
-                                                    self.n3))
-        self.assertEqual(unfold(self.TE, 1).shape, (self.n2, self.n1 *
-                                                    self.n3))
-        self.assertEqual(unfold(self.TE, 2).shape, (self.n3, self.n1 *
-                                                    self.n2))
-        uf0 = unfold(self.TE, 0)
-        self.assertTrue((uf0[:, np.arange(self.n2 * self.n3, step=self.n3)] ==
-                         self.TE[:, :, 0]).all())
-        self.assertTrue((uf0[:, :self.n3] == self.TE[:, 0, :]).all())
+    # def test_unfold(self):
+    #     self.assertEqual(unfold(self.TE, 0).shape, (self.n1, self.n2 *
+    #                                                 self.n3))
+    #     self.assertEqual(unfold(self.TE, 1).shape, (self.n2, self.n1 *
+    #                                                 self.n3))
+    #     self.assertEqual(unfold(self.TE, 2).shape, (self.n3, self.n1 *
+    #                                                 self.n2))
+    #     uf0 = unfold(self.TE, 0)
+    #     self.assertTrue((uf0[:, np.arange(self.n2 * self.n3, step=self.n3)] ==
+    #                      self.TE[:, :, 0]).all())
+    #     self.assertTrue((uf0[:, :self.n3] == self.TE[:, 0, :]).all())
 
-        uf1 = unfold(self.TE, 1)
-        self.assertTrue((uf1[:, :self.n3] == self.TE[0, :, :]).all())
+    #     uf1 = unfold(self.TE, 1)
+    #     self.assertTrue((uf1[:, :self.n3] == self.TE[0, :, :]).all())
 
-        self.assertTrue((uf1[:, np.arange(self.n1 * self.n3,
-                                          step=self.n3)].T ==
-                         self.TE[:, :, 0]).all())
-        # TODO test the last axis but I think you get the idea
+    #     self.assertTrue((uf1[:, np.arange(self.n1 * self.n3,
+    #                                       step=self.n3)].T ==
+    #                      self.TE[:, :, 0]).all())
+    #     # TODO test the last axis but I think you get the idea
 
     def test_TenAls_noiseless(self):
         # TenAls no noise

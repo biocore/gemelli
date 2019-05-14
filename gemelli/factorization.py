@@ -384,6 +384,26 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             den1 = np.zeros((n1, 1))
             den2 = np.zeros((n2, 1))
 
+            # for dim in dims:
+            #     dot_across = dims[dims != dim]
+            #     v_dim = np.tensordot(TE - A,
+            #                          v[dot_across[0]],
+            #                          axes=(1 if dim == 0 else 0, 0))
+            #     den_dim = np.tensordot(E,
+            #                            v[dot_across[0]]**2,
+            #                            axes=(1 if dim == 0 else 0, 0))
+
+            #     for inner_dim in dot_across[1:]:
+            #         v_dim = np.tensordot(v_dim,
+            #                              v[inner_dim],
+            #                              axes=(1 if inner_dim > dim else 0, 0))
+            #         den_dim = np.tensordot(den_dim,
+            #                                v[inner_dim]**2,
+            #                                axes=(1 if inner_dim > dim else
+            #                                      0, 0))
+
+            #     v[dim] = v_dim
+
             for i3 in range(n3):
                 # REMINDER np.multiply is element-wise
                 # `A` is CPD reconstruction of TE
@@ -414,7 +434,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             v2 = V2[:, q].reshape(dims[1], 1) / den2
             v2 = v2 / norm(v2)
 
-            # TODO np.moveaxis and unfold will be handy
+            # TODO use tensordot like in RTPM
             for i3 in range(n3):
                 V3[i3, q] = (np.matmul(v1.T,
                                        np.matmul(TE[:, :, i3]
@@ -427,6 +447,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             V2[:, q] = v2.flatten()
             S[q] = norm(V3[:, q])
             V3[:, q] = V3[:, q] / norm(V3[:, q])
+
+            V = V1, V2, V3
 
         ERR = TE - E * CPcomp(S, V1, V2, V3)
 
