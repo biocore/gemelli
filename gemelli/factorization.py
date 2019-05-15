@@ -374,6 +374,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             # v3 = V3[:, q].copy()
             v = [Vn[:, q].copy() for Vn in V]
             v1, v2, v3 = v
+            v_alt = [Vn[:,q].copy() for Vn in V]
             for Vn in V:
                 Vn[:, q] = 0
             # V1[:, q] = 0
@@ -384,25 +385,29 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             den1 = np.zeros((n1, 1))
             den2 = np.zeros((n2, 1))
 
-            # for dim in dims:
-            #     dot_across = dims[dims != dim]
-            #     v_dim = np.tensordot(TE - A,
-            #                          v[dot_across[0]],
-            #                          axes=(1 if dim == 0 else 0, 0))
-            #     den_dim = np.tensordot(E,
-            #                            v[dot_across[0]]**2,
-            #                            axes=(1 if dim == 0 else 0, 0))
+            # den should en up as a list of np.zeros((dim_i, 1))
+            den = [0 for dim in dims]#np.zeros((dim, 1)) for dim in dims]
 
-            #     for inner_dim in dot_across[1:]:
-            #         v_dim = np.tensordot(v_dim,
-            #                              v[inner_dim],
-            #                              axes=(1 if inner_dim > dim else 0, 0))
-            #         den_dim = np.tensordot(den_dim,
-            #                                v[inner_dim]**2,
-            #                                axes=(1 if inner_dim > dim else
-            #                                      0, 0))
+            for dim, dim_size in enumerate(dims):
+                dims_np = np.arange(len(dims))
+                dot_across = dims_np[dims_np != dim]
+                v_dim = np.tensordot(TE - A,
+                                     v[dot_across[0]],
+                                     axes=(1 if dim == 0 else 0, 0))
+                den[dim] = np.tensordot(E,
+                                        v[dot_across[0]]**2,
+                                        axes=(1 if dim == 0 else 0, 0))
 
-            #     v[dim] = v_dim
+                for inner_dim in dot_across[1:]:
+                    v_dim = np.tensordot(v_dim,
+                                         v[inner_dim],
+                                         axes=(1 if inner_dim > dim else 0, 0))
+                    den[dim] = np.tensordot(den[dim],
+                                            v[inner_dim]**2,
+                                            axes=(1 if inner_dim > dim else
+                                                  0, 0))
+
+                v_alt[dim] = V[dim][:, q] + v_dim.flatten()
 
             for i3 in range(n3):
                 # REMINDER np.multiply is element-wise
@@ -417,6 +422,9 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                     np.multiply(v3[i3]**2, np.matmul(E[:, :, i3],
                                                      v2**2)).reshape(
                                             dims[0], 1)
+            # TODO code kind of words to here
+            assert np.allclose(v_alt[0], V1[:, q])
+
             v1 = V1[:, q].reshape(dims[0], 1) / den1
             v1 = v1 / norm(v1)
 
@@ -450,7 +458,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
             V = V1, V2, V3
 
-        ERR = TE - E * CPcomp(S, V1, V2, V3)
+        ERR = TE - E * CPcomp(S, *V)
 
         # normERR = 0
         # for i3 in range(n3):
