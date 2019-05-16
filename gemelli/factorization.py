@@ -379,6 +379,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             S_alt = S.copy()
             S_alt[q] = 0
             A = np.multiply(CPcomp(S_, V), E)
+            A_alt = np.multiply(CPcomp(S_alt, V_alt), E)
             # v1 = V1[:, q].copy()
             # v2 = V2[:, q].copy()
             # v3 = V3[:, q].copy()
@@ -401,7 +402,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             for dim, dim_size in enumerate(dims):
                 dims_np = np.arange(len(dims))
                 dot_across = dims_np[dims_np != dim]
-                v_dim = np.tensordot(TE - A,
+                v_dim = np.tensordot(TE - A_alt,
                                      v_alt[dot_across[0]],
                                      axes=(1 if dim == 0 else 0, 0))
                 den[dim] = np.tensordot(E,
@@ -482,43 +483,34 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             S[q] = norm(V3[:, q])
             V3[:, q] = V3[:, q] / norm(V3[:, q])
 
-            #print(V_alt[2][:,q], V3[:,q])
-            assert np.allclose(v_alt[2], V3[:, q])
-            #print(V_alt[2][:,q], V3[:,q])
-            #print(S_alt[q], S[q])
+            for i, V_alt_i in enumerate(V_alt):
+                V_alt_i[:, q] = v_alt[i]
+
+            assert np.allclose(V_alt[2][:, q], V3[:, q])
             assert np.allclose(S_alt[q], S[q])
 
 
             V = V1, V2, V3
 
-        ERR = TE - E * CPcomp(S, V)
-
-        # normERR = 0
-        # for i3 in range(n3):
-        #    normERR = normERR + norm(ERR[:, :, i3])**2
+        ERR = TE - E * CPcomp(S_alt, V_alt)
 
         normERR = norm(ERR)**2
         if np.sqrt(normERR / normTE) < tol:
             break
     dist = np.sqrt(normERR / normTE)
-    V = V1, V2, V3
     # check that the factorization converged
-    if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V):
+    if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V_alt):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
 
-    S = np.diag(S.flatten())
+    S_alt = np.diag(S_alt.flatten())
     # sort the eigenvalues
-    idx = np.argsort(np.diag(S))[::-1]
-    S = S[idx, :][:, idx]
+    idx = np.argsort(np.diag(S_alt))[::-1]
+    S_alt = S_alt[idx, :][:, idx]
     # sort loadings
-    loadings = [Vn[:, idx] for Vn in V]
-    # V1 = V1[:, idx]
-    # V2 = V2[:, idx]
-    # V3 = V3[:, idx]
-    # loadings = [V1, V2, V3]
+    loadings = [Vn[:, idx] for Vn in V_alt]
 
-    return loadings, S, dist
+    return loadings, S_alt, dist
 
 
 def RTPM(tensor, max_iter=50):
