@@ -502,10 +502,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             break
     dist = np.sqrt(normERR / normTE)
     V = V1, V2, V3
-    # check that the fact. converged
-#    if sum(sum(np.isnan(V1))) > 0 or\
-#       sum(sum(np.isnan(V2))) > 0 or\
-#       sum(sum(np.isnan(V3))) > 0:
+    # check that the factorization converged
     if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
@@ -524,7 +521,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     return loadings, S, dist
 
 
-def RTPM(T, max_iter=50):
+def RTPM(tensor, max_iter=50):
     """
     TODO finish generalization
 
@@ -538,7 +535,8 @@ def RTPM(T, max_iter=50):
 
     Parameters
     ----------
-    T : array-like
+    TODO generalize tensor
+    tensor : array-like
         tensor of shape
         (n1, n2, n3).
     max_iter : int
@@ -546,6 +544,7 @@ def RTPM(T, max_iter=50):
 
     Returns
     -------
+    TODO generalize output
     u1 : array-like
         The singular vectors n1
     u2 : array-like
@@ -576,41 +575,17 @@ def RTPM(T, max_iter=50):
     """
 
     # RTPM
-    n1, n2, n3 = T.shape
-    n_dims = len(T.shape)
-    u1 = randn(n1, 1) / norm(randn(n1, 1))
-    u2 = randn(n2, 1) / norm(randn(n2, 1))
-    u3 = randn(n3, 1) / norm(randn(n3, 1))
-    # conv
-    all_u = [u1, u2, u3]
+    n_dims = len(tensor.shape)
+
+    all_u = [randn(n, 1) for n in tensor.shape]
+    all_u = [vec / norm(vec) for vec in all_u]
     for itr in range(max_iter):
-        v1 = np.zeros((n1, 1))
-        v2 = np.zeros((n2, 1))
-        v3 = np.zeros((n3, 1))
-        for i3 in range(n3):
-            v3[i3] = np.matmul(np.matmul(u1.T, T[:, :, i3]), u2)
-            # unfold along
-            v1 = v1 + np.matmul(u3[i3][0] * T[:, :, i3], u2)
-            v2 = v2 + np.matmul(u3[i3][0] * T[:, :, i3].T, u1)
-
-        # showing that we can do the same operations with tensordot
-        p1 = np.tensordot(T, u2, axes=(1,0))
-        v1_alt = np.tensordot(p1, u3, axes=(1,0))
-        assert np.allclose(v1.flatten(), v1_alt.flatten())
-
-        p2 = np.tensordot(T, u1, axes=(0, 0))
-        v2_alt = np.tensordot(p2, u3, axes=(1,0))
-        assert np.allclose(v2.flatten(), v2_alt.flatten())
-
-        v3_alt = np.tensordot(p2, u2, axes=(0,0))
-        assert np.allclose(v3.flatten(), v3_alt.flatten())
-
         # tensordot generalization to higher dims
         v = []
         dims = np.arange(n_dims)
         for dim in dims:
             dot_across = dims[dims != dim]
-            v_dim = np.tensordot(T,
+            v_dim = np.tensordot(tensor,
                                  all_u[dot_across[0]],
                                  axes=(1 if dim == 0 else 0, 0))
             for inner_dim in dot_across[1:]:
@@ -619,32 +594,12 @@ def RTPM(T, max_iter=50):
                                      axes=(1 if inner_dim > dim else 0, 0))
             v.append(v_dim)
 
-        # print(v1_alt.flatten(), v[0].flatten())
-
-        assert np.allclose(v1_alt.flatten(), v[0].flatten())
-        assert np.allclose(v2_alt, v[1])
-        assert np.allclose(v3_alt, v[2])
-        #v1, v2, v3 = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
         v = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
 
-        # is v1[i] = sum(T[i, j, k] * u2[j] * u3[k] for j in range(n2)
-        #                for k in range(n3)) ?
-        # for i in range(n1):
-        #     print(v1[i] - sum(T[i, j, k] * u2[j] * u3[k] for
-        #                         j in range(n2) for k in range(n3)))
-        # for j in range(n2):
-
-        # assert np.allclose(v2, [sum(T[i, j, k] * u1[i] * u3[k] for
-        #                               i in range(n1) for k in range(n3)) for
-        #                            j in range(n2)])
-
-        u1 = v[0] / norm(v[0])
-        u2 = v[1] / norm(v[1])
-        u3 = v[2] / norm(v[2])
-        all_u0 = [u for u in all_u]
+        all_u_previous = [u for u in all_u]
         all_u = [v_i / norm(v_i) for v_i in v]
 
-        if sum(norm(u0 - u) for u0, u in zip(all_u0, all_u)) < 1e-7:
+        if sum(norm(u0 - u) for u0, u in zip(all_u_previous, all_u)) < 1e-7:
             break
 
     return tuple(u.flatten() for u in all_u)
