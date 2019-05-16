@@ -328,7 +328,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             # [tU1[:, init], tU2[:, init], tU3[:, init]] = RTPM(
             #     TE - CPcomp(S0, U1, U2, U3), max_iter=nitr)
             initializations = RTPM(
-                TE - CPcomp(S0, *U), max_iter=nitr)
+                TE - CPcomp(S0, U), max_iter=nitr)
 
             for tUn_idx, tUn in enumerate(tU):
                 tUn[:, init] = initializations[tUn_idx]
@@ -341,11 +341,9 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             # tU3[:, init] = tU3[:, init] / norm(tU3[:, init])
             # tS[init] = TenProj(TE - CPcomp(S0, U01, U02, U03),
             #                   tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
-            tS[init] = TenProj(TE - CPcomp(S0, *U),
-                               *[tUn[:, [init]] for tUn in tU])
-            tS_oneoff_alt = TenProjAlt(TE - CPcomp(S0, *U),
-                               [tUn[:, [init]] for tUn in tU])
-            assert np.allclose(tS[init], tS_oneoff_alt)
+            tS[init] = TenProjAlt(TE - CPcomp(S0, U),
+                                  [tUn[:, [init]] for tUn in tU])
+            # assert np.allclose(tS[init], tS_oneoff_alt)
             # print(tS[init])
 
         idx = np.argmax(tS, axis=0)[0]
@@ -358,8 +356,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
         # U03[:, i] = tU3[:, idx] / norm(tU3[:, idx])
         # S0[i] = TenProj(TE - CPcomp(S0, U01, U02, U03),
         #                 U01[:, [i]], U02[:, [i]], U03[:, [i]])
-        S0[i] = TenProj(TE - CPcomp(S0, *U),
-                        *[Un[:, [i]] for Un in U])
+        S0[i] = TenProjAlt(TE - CPcomp(S0, U),
+                           [Un[:, [i]] for Un in U])
         # print(S0[i])
         # print(TenProj(TE - CPcomp(S0, *U),
         #                *[Un[:, [i]] for Un in U]))
@@ -380,7 +378,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             S_[q] = 0
             S_alt = S.copy()
             S_alt[q] = 0
-            A = np.multiply(CPcomp(S_, *V), E)
+            A = np.multiply(CPcomp(S_, V), E)
             # v1 = V1[:, q].copy()
             # v2 = V2[:, q].copy()
             # v3 = V3[:, q].copy()
@@ -493,7 +491,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
             V = V1, V2, V3
 
-        ERR = TE - E * CPcomp(S, *V)
+        ERR = TE - E * CPcomp(S, V)
 
         # normERR = 0
         # for i3 in range(n3):
@@ -584,8 +582,8 @@ def RTPM(T, max_iter=50):
     u2 = randn(n2, 1) / norm(randn(n2, 1))
     u3 = randn(n3, 1) / norm(randn(n3, 1))
     # conv
+    all_u = [u1, u2, u3]
     for itr in range(max_iter):
-        all_u = [u1, u2, u3]
         v1 = np.zeros((n1, 1))
         v2 = np.zeros((n2, 1))
         v3 = np.zeros((n3, 1))
@@ -626,7 +624,8 @@ def RTPM(T, max_iter=50):
         assert np.allclose(v1_alt.flatten(), v[0].flatten())
         assert np.allclose(v2_alt, v[1])
         assert np.allclose(v3_alt, v[2])
-        v1, v2, v3 = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
+        #v1, v2, v3 = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
+        v = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
 
         # is v1[i] = sum(T[i, j, k] * u2[j] * u3[k] for j in range(n2)
         #                for k in range(n3)) ?
@@ -639,21 +638,21 @@ def RTPM(T, max_iter=50):
         #                               i in range(n1) for k in range(n3)) for
         #                            j in range(n2)])
 
-        u10 = u1
-        u1 = v1 / norm(v1)
-        u20 = u2
-        u2 = v2 / norm(v2)
-        u30 = u3
-        u3 = v3 / norm(v3)
-        if (norm(u10 - u1) + norm(u20 - u2) + norm(u30 - u3)) < 1e-7:
+        u1 = v[0] / norm(v[0])
+        u2 = v[1] / norm(v[1])
+        u3 = v[2] / norm(v[2])
+        all_u0 = [u for u in all_u]
+        all_u = [v_i / norm(v_i) for v_i in v]
+
+        if sum(norm(u0 - u) for u0, u in zip(all_u0, all_u)) < 1e-7:
             break
 
-    return u1.flatten(), u2.flatten(), u3.flatten()
+    return tuple(u.flatten() for u in all_u)
 
 
-def CPcomp(S, U1, U2, U3):
+def CPcomp(S, U):
     """
-    TODO generalize
+    TODO variable names
     This function takes the
     CP decomposition of a 3rd
     order tensor and outputs
@@ -662,15 +661,9 @@ def CPcomp(S, U1, U2, U3):
 
     Parameters
     ----------
-    U1 : array-like
-        The factorization of shape
-        (n1, r).
-    U2 : array-like
-        The factorization of shape
-        (n2, r).
-    U3 : array-like
-        The factorization of shape
-        (n3, r).
+    U : list of array-like
+        Element i is a factor of shape
+        (n[i], r).
     S : array-like
         The r-dimension vector.
 
@@ -678,37 +671,20 @@ def CPcomp(S, U1, U2, U3):
     -------
     T : array-like
         TE_hat of shape
-        (n1, n2, n3).
+        tuple(n[i] for i in range(len(U))).
     """
 
-    # ns, rs = S.shape
-    # n1, r1 = U1.shape
-    # n2, r2 = U2.shape
-    # n3, r3 = U3.shape
-    # T = np.zeros((n1, n2, n3))
-    # for i in range(n3):
-    #     t_i = np.diag(np.multiply(U3[i, :], S.T)[0])
-    #     T[:, :, i] = np.matmul(np.matmul(U1, t_i), U2.T)
-
-    U = [U1, U2, U3]
     output_shape = tuple(u.shape[0] for u in U)
-    to_multiply = [S.T*u if i== 0 else u for i, u in enumerate(U)]
+    to_multiply = [S.T*u if i == 0 else u for i, u in enumerate(U)]
     product = khatri_rao(to_multiply)
     T = product.sum(1).reshape(output_shape)
-    # assert np.allclose(T, T_alt)
+
     return T
 
 
 def TenProjAlt(D, U_list):
-    current = D
-    for u in U_list:
-        current = np.tensordot(current, u, axes=(0, 0))
-    return current
-
-
-def TenProj(D, U1, U2, U3):
     """
-    TODO generalize
+    TODO make documentation better
     The Orthogonal tensor
     projection created by
     the TE - TE_hat distance.
@@ -719,44 +695,19 @@ def TenProj(D, U1, U2, U3):
     ----------
     D : array-like
         shape (n1,n2,n3)
-    U1 : array-like
-        The factorization of shape
-        (n1, r).
-    U2 : array-like
-        The factorization of shape
-        (n2, r).
-    U3 : array-like
-        The factorization of shape
-        (n3, r).
+    U_list : list of array-like
+        Element i is a factor of shape
+        (n[i], r).
 
     Returns
     -------
-    M : array-like
-        Projection.
+    M : float
+        TODO ???.
     """
-
-    n1, r1 = U1.shape
-    n2, r2 = U2.shape
-    n3, r3 = U3.shape
-    M = np.zeros((r1, r2, r3))
-    # print(M.shape)
-    for i in range(r3):
-        A = np.zeros((n1, n2))
-        for j in range(n3):
-            A = A + D[:, :, j] * U3[j, i]
-        M[:, :, i] = np.matmul(np.matmul(U1.T, A), U2)
-
-       #  v1 = np.zeros((n1, 1))
-       #  v2 = np.zeros((n2, 1))
-       #  v3 = np.zeros((n3, 1))
-       #  for i3 in range(n3):
-       #      v3[i3] = np.matmul(np.matmul(u1.T, T[:, :, i3]), u2)
-       #      # unfold along
-       #      v1 = v1 + np.matmul(u3[i3][0] * T[:, :, i3], u2)
-       #      v2 = v2 + np.matmul(u3[i3][0] * T[:, :, i3].T, u1)
-    # M_alt =
-
-    return M
+    current = D
+    for u in U_list:
+        current = np.tensordot(current, u, axes=(0, 0))
+    return current
 
 
 def khatri_rao(matrices):
