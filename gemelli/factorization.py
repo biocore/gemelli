@@ -130,6 +130,7 @@ class TenAls(_BaseImpute):
         self.iteration = iteration
         self.ninit = ninit
         self.tol = tol
+        self.sparse_tensor = None
 
     def fit(self, Tensor):
         """
@@ -332,6 +333,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             for tUn_idx, tUn in enumerate(tU):
                 tUn[:, init] = initializations[tUn_idx]
                 tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
+                assert tUn is tU[tUn_idx]
             tU1, tU2, tU3 = tU
 
             # tU1[:, init] = tU1[:, init] / norm(tU1[:, init])
@@ -341,6 +343,10 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             #                   tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
             tS[init] = TenProj(TE - CPcomp(S0, *U),
                                *[tUn[:, [init]] for tUn in tU])
+            tS_oneoff_alt = TenProjAlt(TE - CPcomp(S0, *U),
+                               [tUn[:, [init]] for tUn in tU])
+            assert np.allclose(tS[init], tS_oneoff_alt)
+            # print(tS[init])
 
         idx = np.argmax(tS, axis=0)[0]
         for tUn, Un in zip(tU, U):
@@ -354,12 +360,16 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
         #                 U01[:, [i]], U02[:, [i]], U03[:, [i]])
         S0[i] = TenProj(TE - CPcomp(S0, *U),
                         *[Un[:, [i]] for Un in U])
+        # print(S0[i])
+        # print(TenProj(TE - CPcomp(S0, *U),
+        #                *[Un[:, [i]] for Un in U]))
 
     # apply alternating least squares
     # V1 = U01.copy()
     # V2 = U02.copy()
     # V3 = U03.copy()
     V = [Un.copy() for Un in U]
+    V_alt = [Un.copy() for Un in U]
     V1, V2, V3 = V
     S = S0.copy()
     # corresponds to line 5 of pseudo code
@@ -368,13 +378,15 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
         for q in range(r):
             S_ = S.copy()
             S_[q] = 0
+            S_alt = S.copy()
+            S_alt[q] = 0
             A = np.multiply(CPcomp(S_, *V), E)
             # v1 = V1[:, q].copy()
             # v2 = V2[:, q].copy()
             # v3 = V3[:, q].copy()
             v = [Vn[:, q].copy() for Vn in V]
             v1, v2, v3 = v
-            v_alt = [Vn[:,q].copy() for Vn in V]
+            v_alt = [Vn[:,q].copy() for Vn in V_alt]
             for Vn in V:
                 Vn[:, q] = 0
             # V1[:, q] = 0
@@ -386,28 +398,37 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             den2 = np.zeros((n2, 1))
 
             # den should en up as a list of np.zeros((dim_i, 1))
-            den = [0 for dim in dims]#np.zeros((dim, 1)) for dim in dims]
+            den = [np.zeros(dim) for dim in dims]
 
             for dim, dim_size in enumerate(dims):
                 dims_np = np.arange(len(dims))
                 dot_across = dims_np[dims_np != dim]
                 v_dim = np.tensordot(TE - A,
-                                     v[dot_across[0]],
+                                     v_alt[dot_across[0]],
                                      axes=(1 if dim == 0 else 0, 0))
                 den[dim] = np.tensordot(E,
-                                        v[dot_across[0]]**2,
+                                        v_alt[dot_across[0]]**2,
                                         axes=(1 if dim == 0 else 0, 0))
 
                 for inner_dim in dot_across[1:]:
                     v_dim = np.tensordot(v_dim,
-                                         v[inner_dim],
+                                         v_alt[inner_dim],
                                          axes=(1 if inner_dim > dim else 0, 0))
                     den[dim] = np.tensordot(den[dim],
-                                            v[inner_dim]**2,
+                                            v_alt[inner_dim]**2,
                                             axes=(1 if inner_dim > dim else
                                                   0, 0))
 
+                #den[dim]#.reshape(dims[dim], 1)
+
                 v_alt[dim] = V[dim][:, q] + v_dim.flatten()
+                v_alt[dim] = v_alt[dim] / den[dim]
+
+                if dim == len(dims) - 1:
+                    S_alt[q] = norm(v_alt[dim])
+
+                v_alt[dim] = v_alt[dim] / norm(v_alt[dim])
+                V_alt[dim][:, q] = v_alt[dim]
 
             for i3 in range(n3):
                 # REMINDER np.multiply is element-wise
@@ -422,11 +443,15 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                     np.multiply(v3[i3]**2, np.matmul(E[:, :, i3],
                                                      v2**2)).reshape(
                                             dims[0], 1)
-            # TODO code kind of words to here
-            assert np.allclose(v_alt[0], V1[:, q])
+            # TODO code kind of works to here
+            assert np.allclose(den[0], den1.flatten())
+            # assert np.allclose(v_alt[0], V1[:, q])
+            # assert den[dim].shape == (n1, 1)
 
             v1 = V1[:, q].reshape(dims[0], 1) / den1
             v1 = v1 / norm(v1)
+
+            assert np.allclose(v_alt[0], v1.flatten())
 
             # TODO use tensordot like in RTPM
             for i3 in range(n3):
@@ -442,6 +467,9 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             v2 = V2[:, q].reshape(dims[1], 1) / den2
             v2 = v2 / norm(v2)
 
+            assert np.allclose(den[1], den2.flatten())
+            assert np.allclose(v_alt[1], v2.flatten())
+
             # TODO use tensordot like in RTPM
             for i3 in range(n3):
                 V3[i3, q] = (np.matmul(v1.T,
@@ -455,6 +483,13 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
             V2[:, q] = v2.flatten()
             S[q] = norm(V3[:, q])
             V3[:, q] = V3[:, q] / norm(V3[:, q])
+
+            #print(V_alt[2][:,q], V3[:,q])
+            assert np.allclose(v_alt[2], V3[:, q])
+            #print(V_alt[2][:,q], V3[:,q])
+            #print(S_alt[q], S[q])
+            assert np.allclose(S_alt[q], S[q])
+
 
             V = V1, V2, V3
 
@@ -646,15 +681,29 @@ def CPcomp(S, U1, U2, U3):
         (n1, n2, n3).
     """
 
-    ns, rs = S.shape
-    n1, r1 = U1.shape
-    n2, r2 = U2.shape
-    n3, r3 = U3.shape
-    T = np.zeros((n1, n2, n3))
-    for i in range(n3):
-        t_i = np.diag(np.multiply(U3[i, :], S.T)[0])
-        T[:, :, i] = np.matmul(np.matmul(U1, t_i), U2.T)
+    # ns, rs = S.shape
+    # n1, r1 = U1.shape
+    # n2, r2 = U2.shape
+    # n3, r3 = U3.shape
+    # T = np.zeros((n1, n2, n3))
+    # for i in range(n3):
+    #     t_i = np.diag(np.multiply(U3[i, :], S.T)[0])
+    #     T[:, :, i] = np.matmul(np.matmul(U1, t_i), U2.T)
+
+    U = [U1, U2, U3]
+    output_shape = tuple(u.shape[0] for u in U)
+    to_multiply = [S.T*u if i== 0 else u for i, u in enumerate(U)]
+    product = khatri_rao(to_multiply)
+    T = product.sum(1).reshape(output_shape)
+    # assert np.allclose(T, T_alt)
     return T
+
+
+def TenProjAlt(D, U_list):
+    current = D
+    for u in U_list:
+        current = np.tensordot(current, u, axes=(0, 0))
+    return current
 
 
 def TenProj(D, U1, U2, U3):
@@ -669,7 +718,7 @@ def TenProj(D, U1, U2, U3):
     Parameters
     ----------
     D : array-like
-        shape (n1,n2,3)
+        shape (n1,n2,n3)
     U1 : array-like
         The factorization of shape
         (n1, r).
@@ -690,9 +739,36 @@ def TenProj(D, U1, U2, U3):
     n2, r2 = U2.shape
     n3, r3 = U3.shape
     M = np.zeros((r1, r2, r3))
+    # print(M.shape)
     for i in range(r3):
         A = np.zeros((n1, n2))
         for j in range(n3):
             A = A + D[:, :, j] * U3[j, i]
         M[:, :, i] = np.matmul(np.matmul(U1.T, A), U2)
+
+       #  v1 = np.zeros((n1, 1))
+       #  v2 = np.zeros((n2, 1))
+       #  v3 = np.zeros((n3, 1))
+       #  for i3 in range(n3):
+       #      v3[i3] = np.matmul(np.matmul(u1.T, T[:, :, i3]), u2)
+       #      # unfold along
+       #      v1 = v1 + np.matmul(u3[i3][0] * T[:, :, i3], u2)
+       #      v2 = v2 + np.matmul(u3[i3][0] * T[:, :, i3].T, u1)
+    # M_alt =
+
     return M
+
+
+def khatri_rao(matrices):
+    # TODO document and cite
+    # FROM TENSORLY
+    n_columns = matrices[0].shape[1]
+    n_factors = len(matrices)
+
+    start = ord('a')
+    common_dim = 'z'
+    target = ''.join(chr(start + i) for i in range(n_factors))
+    source = ','.join(i + common_dim for i in target)
+    operation = source + '->' + target + common_dim
+
+    return np.einsum(operation, *matrices).reshape((-1, n_columns))
