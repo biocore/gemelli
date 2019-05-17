@@ -472,10 +472,10 @@ def RTPM_single(tensor, max_iter=50):
                 v_dim = np.tensordot(v_dim,
                                      all_u[inner_dim],
                                      axes=(1 if inner_dim > dim else 0, 0))
-            # TODO shape of v_dim for general tensors
-            v.append(v_dim)  # .reshape(v_dim.shape[:-1]))
+            v.append(v_dim)
 
-        v = [v_n.reshape(v_n.shape[:(-1 * (len(dims) - 2))]) for v_n in v]
+        new_shapes = [v_n.shape[:(-1 * (len(dims) - 2))] for v_n in v]
+        v = [v_n.reshape(new_shape) for v_n, new_shape in zip(v, new_shapes)]
 
         all_u_previous = [u for u in all_u]
         all_u = [v_i / norm(v_i) for v_i in v]

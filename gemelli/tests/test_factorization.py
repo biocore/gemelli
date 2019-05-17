@@ -92,6 +92,7 @@ class TestTenAls(unittest.TestCase):
         self.assertTrue(1e-10 > abs(rmse))
 
     def test_TenAls_mode4_noiseless(self):
+        # TODO check values
         TF = TenAls().fit(self.TE4)
         L1, L2, L3, L4 = TF.loadings
         s = TF.eigenvalues
@@ -112,6 +113,7 @@ class TestTenAls(unittest.TestCase):
         # self.assertTrue(1e-10 > abs(rmse))
 
     def test_TenAls_mode5_noiseless(self):
+        # TODO check values
         TF = TenAls().fit(self.TE5)
         L1, L2, L3, L4, L5 = TF.loadings
         s = TF.eigenvalues
@@ -137,6 +139,20 @@ class TestTenAls(unittest.TestCase):
                 -2 * np.trace(np.matmul(np.matmul(B1.T, A1), np.matmul(A2.T,
                                                                        B2)))
         self.assertTrue(1e-8 > abs(rmse))
+
+    def test_TenAls_mode4_noise(self):
+        # TODO check values
+        TF = TenAls().fit(self.TE_noise4)
+        L1, L2, L3, L4 = TF.loadings
+        s = TF.eigenvalues
+        s = np.diag(s)
+
+    def test_TenAls_mode5_noise(self):
+        # TODO check values
+        TF = TenAls().fit(self.TE_noise5)
+        L1, L2, L3, L4, L5 = TF.loadings
+        s = TF.eigenvalues
+        s = np.diag(s)
 
     def test_khatri_rao(self):
         multiply_2 = khatri_rao([self.U1, self.U2])

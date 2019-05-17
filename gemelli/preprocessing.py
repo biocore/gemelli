@@ -213,7 +213,7 @@ class build(_BaseTransform):
     def tensor(self):
         """
         pseudocount property
-        allows pseudocount to
+        allows tensor to
         be set explicitly.
 
         """
