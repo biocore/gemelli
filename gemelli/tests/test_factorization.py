@@ -98,19 +98,6 @@ class TestTenAls(unittest.TestCase):
         s = TF.eigenvalues
         s = np.diag(s)
         # test accuracy
-        rmse = 0
-        # for i3 in range(self.n3):
-        #     A1 = self.U1
-        #     A2 = np.matmul(self.U2, np.diag(self.U3[i3, :]))
-        #     B1 = L1
-        #     B2 = np.matmul(L2, np.diag(L3[i3, :]*s.T.flatten()))
-        #     rmse += np.trace(np.matmul(np.matmul(A1.T, A1), np.matmul(A2.T,
-        #                                                               A2))) + \
-        #             np.trace(np.matmul(np.matmul(B1.T, B1), np.matmul(B2.T,
-        #                                                               B2))) + \
-        #             -2 * np.trace(np.matmul(np.matmul(B1.T, A1), np.matmul(A2.T,
-        #                                                                    B2)))
-        # self.assertTrue(1e-10 > abs(rmse))
 
     def test_TenAls_mode5_noiseless(self):
         # TODO check values

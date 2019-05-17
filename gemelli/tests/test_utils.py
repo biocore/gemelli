@@ -1,8 +1,8 @@
 import unittest
-import numpy as np
 import pandas as pd
 from gemelli.utils import match
 import pandas.util.testing as pdt
+
 
 class TestMatch(unittest.TestCase):
 
@@ -56,5 +56,3 @@ class TestMatch(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             match(table, metadata)
-
-
