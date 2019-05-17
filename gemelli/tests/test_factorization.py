@@ -14,17 +14,19 @@ class TestTenAls(unittest.TestCase):
         n2 = 12
         n3 = 8
         n4 = 6
-        n5 = 3
+        n5 = 2
         U01 = np.random.rand(n1, r)
         U02 = np.random.rand(n2, r)
         U03 = np.random.rand(n3, r)
         U04 = np.random.rand(n4, r)
         U05 = np.random.rand(n5, r)
+
+        # QR factorization ensures component factors are orthogonal
         U1, temp = qr(U01)
         U2, temp = qr(U02)
         U3, temp = qr(U03)
         U4, temp = qr(U04)
-        U5, temp = qr(U05)
+        U5 = U05
         U1 = U1[:, 0:r]
         U2 = U2[:, 0:r]
         U3 = U3[:, 0:r]
@@ -33,31 +35,31 @@ class TestTenAls(unittest.TestCase):
         T = np.zeros((n1, n2, n3))
         for i in range(n3):
             T[:, :, i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
-        to_multiply = [U1, U2, U3, U4]
-        to_multiply5 = [U1, U2, U3, U4, U5]
+        to_multiply = [U5, U5, U4, U5]
+        to_multiply5 = [U5, U5, U4, U5, U5]
         product = khatri_rao(to_multiply)
         product5 = khatri_rao(to_multiply5)
-        T4 = product.sum(1).reshape((n1, n2, n3, n4))
-        T5 = product5.sum(1).reshape((n1, n2, n3, n4, n5))
+        T4 = product.sum(1).reshape((n5, n5, n4, n5))
+        T5 = product5.sum(1).reshape((n5, n5, n4, n5, n5))
         # sample entries
         p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3))/np.sqrt(n1 * n2 * n3)
-        p4 = 2 * (r ** 0.5 * np.log(n1 * n2 * n3 * n4))/np.sqrt(n1 * n2 * n3
-                                                                * n4)
-        p5 = 2 * (r ** 0.5 * np.log(n1 * n2 * n3 * n4 * n5))/np.sqrt(n1 * n2
-                                                                     * n3
-                                                                     * n4 * n5)
+        p4 = 2 * (r ** 0.5 * np.log(n5 * n5 * n4 * n5))/np.sqrt(n5 * n5 * n4
+                                                                * n5)
+        p5 = 2 * (r ** 0.5 * np.log(n5 * n5 * n4 * n5 * n5))/np.sqrt(n5 * n5
+                                                                     * n4
+                                                                     * n5 * n5)
         self.E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
-        self.E4 = abs(np.ceil(np.random.rand(n1, n2, n3, n4) - 1 + p4))
-        self.E5 = abs(np.ceil(np.random.rand(n1, n2, n3, n4, n5) - 1 + p5))
+        self.E4 = abs(np.ceil(np.random.rand(n5, n5, n4, n5) - 1 + p4))
+        self.E5 = abs(np.ceil(np.random.rand(n5, n5, n4, n5, n5) - 1 + p5))
         self.TE = T * self.E
         self.TE4 = T4 * self.E4
         self.TE5 = T5 * self.E5
         self.TE_noise = self.TE+(0.0001 / np.sqrt(n1 * n2 * n3)
                                  * np.random.randn(n1, n2, n3) * self.E)
-        self.TE_noise4 = self.TE4+(0.0001 / np.sqrt(n1 * n2 * n3 * n4)
-                                   * np.random.randn(n1, n2, n3, n4) * self.E4)
-        self.TE_noise5 = self.TE5+(0.0001 / np.sqrt(n1 * n2 * n3 * n4 * n5)
-                                   * np.random.randn(n1, n2, n3, n4, n5
+        self.TE_noise4 = self.TE4+(0.0001 / np.sqrt(n5 * n5 * n4 * n5)
+                                   * np.random.randn(n5, n5, n4, n5) * self.E4)
+        self.TE_noise5 = self.TE5+(0.0001 / np.sqrt(n5 * n5 * n4 * n5 * n5)
+                                   * np.random.randn(n5, n5, n4, n5, n5
                                                      ) * self.E5)
         self.n1 = n1
         self.n2 = n2
@@ -109,7 +111,10 @@ class TestTenAls(unittest.TestCase):
     def test_TenAls_noise(self):
         # TenAls no noise
         TF = TenAls().fit(self.TE_noise)
-        L1, L2, L3 = TF.loadings
+        # L1, L2, L3 = TF.loadings
+        L1 = TF.sample_loading
+        L2 = TF.feature_loading
+        L3 = TF.conditional_loading
         s = TF.eigenvalues
         s = np.diag(s)
         # test accuracy

@@ -198,7 +198,7 @@ class TenAls(_BaseImpute):
         self.sample_distance = distance.cdist(loadings[0], loadings[0])
         self.sample_loading = loadings[0]
         self.feature_loading = loadings[1]
-        self.conditional_loading = loadings[2] if len(loadings[2:] == 1) \
+        self.conditional_loading = loadings[2] if len(loadings[2:]) == 1 \
             else loadings[2:]
         self.distances = [distance.cdist(loading, loading) for loading in
                           loadings]
