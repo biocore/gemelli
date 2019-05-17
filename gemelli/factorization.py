@@ -186,10 +186,12 @@ class TenAls(_BaseImpute):
         # return tensor decomp
         E = np.zeros(sparse_tensor.shape)
         E[abs(sparse_tensor) > 0] = 1
-        loadings, s_, dist = tenals(sparse_tensor, E, r=self.rank,
-                                         ninit=self.ninit,
-                                         nitr=self.iteration,
-                                         tol=self.tol)
+        loadings, s_, dist = tenals(sparse_tensor,
+                                    E,
+                                    r=self.rank,
+                                    ninit=self.ninit,
+                                    nitr=self.iteration,
+                                    tol=self.tol)
 
         U, V, UV_cond = loadings
         self.eigenvalues = np.diag(s_)
@@ -243,6 +245,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     Returns
     -------
+    TODO generalize docs
     V1 : array-like
         The factorization of shape
         (n1, r).
@@ -300,33 +303,18 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     """
 
     # start
-    n1, n2, n3 = TE.shape
     dims = TE.shape
 
-    # normTE = 0
-    # for i3 in range(n3):
-    #     normTE = normTE + norm(TE[:, :, i3])**2
     normTE = norm(TE)**2
 
     # initialization by Robust Tensor Power Method (modified for non-symmetric
     # tensors)
-    # U01 = np.zeros((n1, r))
-    # U02 = np.zeros((n2, r))
-    # U03 = np.zeros((n3, r))
     U = [np.zeros((n, r)) for n in dims]
-    U01, U02, U03 = U
     S0 = np.zeros((r, 1))
     for i in range(r):
         tU = [np.zeros((n, ninit)) for n in dims]
-        # tU1 = np.zeros((n1, ninit))
-        # tU2 = np.zeros((n2, ninit))
-        # tU3 = np.zeros((n3, ninit))
-
-        tU1, tU2, tU3 = tU
         tS = np.zeros((ninit, 1))
         for init in range(ninit):
-            # [tU1[:, init], tU2[:, init], tU3[:, init]] = RTPM(
-            #     TE - CPcomp(S0, U1, U2, U3), max_iter=nitr)
             initializations = RTPM(
                 TE - CPcomp(S0, U), max_iter=nitr)
 
@@ -334,69 +322,33 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                 tUn[:, init] = initializations[tUn_idx]
                 tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
                 assert tUn is tU[tUn_idx]
-            tU1, tU2, tU3 = tU
 
-            # tU1[:, init] = tU1[:, init] / norm(tU1[:, init])
-            # tU2[:, init] = tU2[:, init] / norm(tU2[:, init])
-            # tU3[:, init] = tU3[:, init] / norm(tU3[:, init])
-            # tS[init] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-            #                   tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
             tS[init] = TenProjAlt(TE - CPcomp(S0, U),
                                   [tUn[:, [init]] for tUn in tU])
-            # assert np.allclose(tS[init], tS_oneoff_alt)
-            # print(tS[init])
 
         idx = np.argmax(tS, axis=0)[0]
         for tUn, Un in zip(tU, U):
             Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
-        U01, U02, U03 = U
 
-        # U01[:, i] = tU1[:, idx] / norm(tU1[:, idx])
-        # U02[:, i] = tU2[:, idx] / norm(tU2[:, idx])
-        # U03[:, i] = tU3[:, idx] / norm(tU3[:, idx])
-        # S0[i] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-        #                 U01[:, [i]], U02[:, [i]], U03[:, [i]])
         S0[i] = TenProjAlt(TE - CPcomp(S0, U),
                            [Un[:, [i]] for Un in U])
-        # print(S0[i])
-        # print(TenProj(TE - CPcomp(S0, *U),
-        #                *[Un[:, [i]] for Un in U]))
 
     # apply alternating least squares
-    # V1 = U01.copy()
-    # V2 = U02.copy()
-    # V3 = U03.copy()
     V = [Un.copy() for Un in U]
     V_alt = [Un.copy() for Un in U]
-    V1, V2, V3 = V
-    S = S0.copy()
+    S_alt = S0.copy()
     # corresponds to line 5 of pseudo code
     for itrs in range(nitr):
         # corresponds to line 7 of pseudo code
         for q in range(r):
-            S_ = S.copy()
-            S_[q] = 0
-            S_alt = S.copy()
+            S_alt = S_alt.copy()
             S_alt[q] = 0
-            A = np.multiply(CPcomp(S_, V), E)
             A_alt = np.multiply(CPcomp(S_alt, V_alt), E)
-            # v1 = V1[:, q].copy()
-            # v2 = V2[:, q].copy()
-            # v3 = V3[:, q].copy()
-            v = [Vn[:, q].copy() for Vn in V]
-            v1, v2, v3 = v
             v_alt = [Vn[:,q].copy() for Vn in V_alt]
             for Vn in V:
                 Vn[:, q] = 0
-            # V1[:, q] = 0
-            # V2[:, q] = 0
-            # V3[:, q] = 0
 
-            # n1 and n2 are components of shape
-            den1 = np.zeros((n1, 1))
-            den2 = np.zeros((n2, 1))
-
-            # den should en up as a list of np.zeros((dim_i, 1))
+            # den should end up as a list of np.zeros((dim_i, 1))
             den = [np.zeros(dim) for dim in dims]
 
             for dim, dim_size in enumerate(dims):
@@ -418,8 +370,6 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                                             axes=(1 if inner_dim > dim else
                                                   0, 0))
 
-                #den[dim]#.reshape(dims[dim], 1)
-
                 v_alt[dim] = V[dim][:, q] + v_dim.flatten()
                 v_alt[dim] = v_alt[dim] / den[dim]
 
@@ -429,74 +379,14 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                 v_alt[dim] = v_alt[dim] / norm(v_alt[dim])
                 V_alt[dim][:, q] = v_alt[dim]
 
-            for i3 in range(n3):
-                # REMINDER np.multiply is element-wise
-                # `A` is CPD reconstruction of TE
-                # TODO use tensordot like in RTPM
-                V1[:, q] = V1[:, q] + \
-                    np.multiply(v3[i3],
-                                np.matmul((TE[:, :, i3]
-                                           - A[:, :, i3]),
-                                          v2)).flatten()
-                den1 = den1 + \
-                    np.multiply(v3[i3]**2, np.matmul(E[:, :, i3],
-                                                     v2**2)).reshape(
-                                            dims[0], 1)
-            # TODO code kind of works to here
-            assert np.allclose(den[0], den1.flatten())
-            # assert np.allclose(v_alt[0], V1[:, q])
-            # assert den[dim].shape == (n1, 1)
-
-            v1 = V1[:, q].reshape(dims[0], 1) / den1
-            v1 = v1 / norm(v1)
-
-            assert np.allclose(v_alt[0], v1.flatten())
-
-            # TODO use tensordot like in RTPM
-            for i3 in range(n3):
-                V2[:, q] = V2[:, q] + \
-                    np.multiply(v3[i3],
-                                np.matmul((TE[:, :, i3]
-                                           - A[:, :, i3]).T,
-                                          v1)).flatten()
-                den2 = den2 + \
-                    np.multiply(v3[i3]**2, np.matmul(E[:, :, i3].T,
-                                                     v1**2)).reshape(
-                                            dims[1], 1)
-            v2 = V2[:, q].reshape(dims[1], 1) / den2
-            v2 = v2 / norm(v2)
-
-            assert np.allclose(den[1], den2.flatten())
-            assert np.allclose(v_alt[1], v2.flatten())
-
-            # TODO use tensordot like in RTPM
-            for i3 in range(n3):
-                V3[i3, q] = (np.matmul(v1.T,
-                                       np.matmul(TE[:, :, i3]
-                                                 - A[:, :, i3], v2)) /
-                             np.matmul(np.matmul((v1**2).T,
-                                                 (E[:, :, i3])),
-                                       (v2**2))).flatten()
-
-            V1[:, q] = v1.flatten()
-            V2[:, q] = v2.flatten()
-            S[q] = norm(V3[:, q])
-            V3[:, q] = V3[:, q] / norm(V3[:, q])
-
             for i, V_alt_i in enumerate(V_alt):
                 V_alt_i[:, q] = v_alt[i]
 
-            assert np.allclose(V_alt[2][:, q], V3[:, q])
-            assert np.allclose(S_alt[q], S[q])
-
-
-            V = V1, V2, V3
-
         ERR = TE - E * CPcomp(S_alt, V_alt)
-
         normERR = norm(ERR)**2
         if np.sqrt(normERR / normTE) < tol:
             break
+
     dist = np.sqrt(normERR / normTE)
     # check that the factorization converged
     if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V_alt):
@@ -658,8 +548,31 @@ def TenProjAlt(D, U_list):
 
 
 def khatri_rao(matrices):
-    # TODO document and cite
-    # FROM TENSORLY
+    """Returns the Khatri Rao product of a list of matrices
+
+    Modified from TensorLy
+
+    Parameters
+    ----------
+
+    matrices : list of array-like
+        Matrices to take the Khatri Rao Product of
+
+
+    Returns
+    -------
+
+    array-like
+        The Khatri Rao Product of the matrices in `matrices`
+
+
+    References
+    ----------
+    .. [1] Jean Kossaifi, Yannis Panagakis, Anima Anandkumar and Maja
+            Pantic, TensorLy: Tensor Learning in Python,
+            https://arxiv.org/abs/1610.09555.
+    """
+
     n_columns = matrices[0].shape[1]
     n_factors = len(matrices)
 

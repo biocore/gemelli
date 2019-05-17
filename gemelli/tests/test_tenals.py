@@ -34,8 +34,7 @@ class Testtenals(unittest.TestCase):
         self.U1 = U1
         self.U2 = U2
         self.U3 = U3
-        pass
-    
+
     def test_tenals_noiseless(self):
         # TenAls no noise
         loadings, s, dist = tenals(self.TE,self.E)
