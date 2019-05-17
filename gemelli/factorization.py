@@ -195,7 +195,8 @@ class TenAls(_BaseImpute):
 
         U, V, UV_cond = loadings
         self.eigenvalues = np.diag(s_)
-        self.explained_variance_ratio = list(self.eigenvalues / self.eigenvalues.sum())
+        self.explained_variance_ratio = \
+            list(self.eigenvalues / self.eigenvalues.sum())
         self.sample_distance = distance.cdist(U, U)
         self.conditional_loading = UV_cond
         self.feature_loading = V
@@ -217,10 +218,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     Parameters
     ----------
     TE : array-like
-        A sparse 3rd order tensor with zeros
-        in place of missing values. Tensor is
-        given in the shape (n1, n2, n3). Where
-        n1, n2, and n3 may or may not be equal.
+        A sparse `n` order tensor with zeros
+        in place of missing values.
     E : array-like
         A masking array of missing values.
     r : int, optional
@@ -245,18 +244,11 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     Returns
     -------
-    TODO generalize docs
-    V1 : array-like
-        The factorization of shape
-        (n1, r).
-    V2 : array-like
-        The factorization of shape
-        (n2, r).
-    V3 : array-like
-        The factorization of shape
-        (n3, r).
+    loadings : list array-like
+        The factors of TE. The `i`th entry of loadings corresponds to
+        the mode-`i` factors of TE and hase shape (TE.shape[i], r).
     S : array-like
-        The r-dimension vector.
+        The r-dimension vector of eigenvalues.
     dist : array-like
         A absolute distance vector
         between TE and TE_hat.
@@ -279,6 +271,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     Examples
     --------
+    # TODO generalize examples
     >>> r = 3 # rank is 2
     >>> n1 = 10
     >>> n2 = 10
@@ -309,43 +302,18 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     # initialization by Robust Tensor Power Method (modified for non-symmetric
     # tensors)
-    U = [np.zeros((n, r)) for n in dims]
-    S0 = np.zeros((r, 1))
-    for i in range(r):
-        tU = [np.zeros((n, ninit)) for n in dims]
-        tS = np.zeros((ninit, 1))
-        for init in range(ninit):
-            initializations = RTPM(
-                TE - CPcomp(S0, U), max_iter=nitr)
-
-            for tUn_idx, tUn in enumerate(tU):
-                tUn[:, init] = initializations[tUn_idx]
-                tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
-                assert tUn is tU[tUn_idx]
-
-            tS[init] = TenProjAlt(TE - CPcomp(S0, U),
-                                  [tUn[:, [init]] for tUn in tU])
-
-        idx = np.argmax(tS, axis=0)[0]
-        for tUn, Un in zip(tU, U):
-            Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
-
-        S0[i] = TenProjAlt(TE - CPcomp(S0, U),
-                           [Un[:, [i]] for Un in U])
+    S0, U = RTPM(TE, r, ninit, nitr)
 
     # apply alternating least squares
-    V = [Un.copy() for Un in U]
     V_alt = [Un.copy() for Un in U]
     S_alt = S0.copy()
-    # corresponds to line 5 of pseudo code
     for itrs in range(nitr):
-        # corresponds to line 7 of pseudo code
         for q in range(r):
             S_alt = S_alt.copy()
             S_alt[q] = 0
             A_alt = np.multiply(CPcomp(S_alt, V_alt), E)
-            v_alt = [Vn[:,q].copy() for Vn in V_alt]
-            for Vn in V:
+            v_alt = [Vn[:, q].copy() for Vn in V_alt]
+            for Vn in V_alt:
                 Vn[:, q] = 0
 
             # den should end up as a list of np.zeros((dim_i, 1))
@@ -370,7 +338,7 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                                             axes=(1 if inner_dim > dim else
                                                   0, 0))
 
-                v_alt[dim] = V[dim][:, q] + v_dim.flatten()
+                v_alt[dim] = V_alt[dim][:, q] + v_dim.flatten()
                 v_alt[dim] = v_alt[dim] / den[dim]
 
                 if dim == len(dims) - 1:
@@ -403,12 +371,53 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     return loadings, S_alt, dist
 
 
-def RTPM(tensor, max_iter=50):
+def RTPM(TE, r, ninit, nitr):
     """
-    TODO finish generalization
+    TODO document
+    Parameters
+    ----------
+    r :
+    ninit :
+    nitr :
+    TE :
 
+    Returns
+    -------
+    S0 :
+    U :
+
+    """
+    dims = TE.shape
+    U = [np.zeros((n, r)) for n in dims]
+    S0 = np.zeros((r, 1))
+    for i in range(r):
+        tU = [np.zeros((n, ninit)) for n in dims]
+        tS = np.zeros((ninit, 1))
+        for init in range(ninit):
+            initializations = RTPM_single(
+                TE - CPcomp(S0, U), max_iter=nitr)
+
+            for tUn_idx, tUn in enumerate(tU):
+                tUn[:, init] = initializations[tUn_idx]
+                tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
+
+            tS[init] = TenProjAlt(TE - CPcomp(S0, U),
+                                  [tUn[:, [init]] for tUn in tU])
+
+        idx = np.argmax(tS, axis=0)[0]
+        for tUn, Un in zip(tU, U):
+            Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
+
+        S0[i] = TenProjAlt(TE - CPcomp(S0, U),
+                           [Un[:, [i]] for Un in U])
+
+    return S0, U
+
+
+def RTPM_single(tensor, max_iter=50):
+    """
     The Robust Tensor Power Method
-    (RTPM). Is a generalization of
+    (RTPM_single). Is a generalization of
     the widely used power method for
     computing lead singular values
     of a matrix and can approximate
@@ -417,22 +426,16 @@ def RTPM(tensor, max_iter=50):
 
     Parameters
     ----------
-    TODO generalize tensor
     tensor : array-like
-        tensor of shape
-        (n1, n2, n3).
+        an `n` order tensor
     max_iter : int
         maximum iterations.
 
     Returns
     -------
-    TODO generalize output
-    u1 : array-like
-        The singular vectors n1
-    u2 : array-like
-        The singular vectors n2
-    u3 : array-like
-        The singular vectors n3
+    list of array-like
+        entry `i` of list is a single vector corresponding to the `i`th
+        mode of `tensor`
 
     References
     ----------
@@ -456,7 +459,7 @@ def RTPM(tensor, max_iter=50):
 
     """
 
-    # RTPM
+    # RTPM_single
     n_dims = len(tensor.shape)
 
     all_u = [randn(n, 1) for n in tensor.shape]
@@ -484,12 +487,11 @@ def RTPM(tensor, max_iter=50):
         if sum(norm(u0 - u) for u0, u in zip(all_u_previous, all_u)) < 1e-7:
             break
 
-    return tuple(u.flatten() for u in all_u)
+    return [u.flatten() for u in all_u]
 
 
 def CPcomp(S, U):
     """
-    TODO variable names
     This function takes the
     CP decomposition of a 3rd
     order tensor and outputs
@@ -498,11 +500,11 @@ def CPcomp(S, U):
 
     Parameters
     ----------
+    S : array-like
+        The r-dimension vector.
     U : list of array-like
         Element i is a factor of shape
         (n[i], r).
-    S : array-like
-        The r-dimension vector.
 
     Returns
     -------
@@ -526,7 +528,7 @@ def TenProjAlt(D, U_list):
     projection created by
     the TE - TE_hat distance.
     Used in the initialization
-    step with RTPM.
+    step with RTPM_single.
 
     Parameters
     ----------
@@ -554,17 +556,13 @@ def khatri_rao(matrices):
 
     Parameters
     ----------
-
     matrices : list of array-like
         Matrices to take the Khatri Rao Product of
 
-
     Returns
     -------
-
     array-like
         The Khatri Rao Product of the matrices in `matrices`
-
 
     References
     ----------
