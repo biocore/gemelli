@@ -1,35 +1,35 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.factorization import TenAls#, unfold
+from gemelli.factorization import TenAls
 
 
 class TestTenAls(unittest.TestCase):
 
     def setUp(self):
         # generate random noiseless low-rank orthogonal tensor
-        r = 3 # rank is 2
+        r = 3  # rank is 2
         n1 = 10
         n2 = 12
         n3 = 8
-        U01 = np.random.rand(n1,r)
-        U02 = np.random.rand(n2,r)
-        U03 = np.random.rand(n3,r)
+        U01 = np.random.rand(n1, r)
+        U02 = np.random.rand(n2, r)
+        U03 = np.random.rand(n3, r)
         U1, temp = qr(U01)
         U2, temp = qr(U02)
         U3, temp = qr(U03)
-        U1=U1[:,0:r]
-        U2=U2[:,0:r]
-        U3=U3[:,0:r]
-        T = np.zeros((n1,n2,n3))
+        U1 = U1[:, 0:r]
+        U2 = U2[:, 0:r]
+        U3 = U3[:, 0:r]
+        T = np.zeros((n1, n2, n3))
         for i in range(n3):
-            T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
-        # sample entries 
-        p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
-        self.E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
-        self.TE = T*self.E
-        self.TE_noise = self.TE+(0.0001/np.sqrt(n1*n2*n3)\
-                                 *np.random.randn(n1,n2,n3)*self.E)
+            T[:, :, i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
+        # sample entries
+        p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3))/np.sqrt(n1 * n2 * n3)
+        self.E = abs(np.ceil(np.random.rand(n1, n2, n3)-1+p))
+        self.TE = T * self.E
+        self.TE_noise = self.TE+(0.0001 / np.sqrt(n1 * n2 * n3)
+                                 * np.random.randn(n1, n2, n3) * self.E)
         self.n1 = n1
         self.n2 = n2
         self.n3 = n3
@@ -44,20 +44,22 @@ class TestTenAls(unittest.TestCase):
         L2 = TF.feature_loading
         L3 = TF.conditional_loading
         s = TF.s
-        dist = TF.dist
         s = np.diag(s)
-        # test accruacy 
-        rmse=0
-        for i3 in range(self.n3): 
+        # test accuracy
+        rmse = 0
+        for i3 in range(self.n3):
             A1 = self.U1
-            A2 = np.matmul(self.U2,np.diag(self.U3[i3,:]))
+            A2 = np.matmul(self.U2, np.diag(self.U3[i3, :]))
             B1 = L1
-            B2 = np.matmul(L2,np.diag(L3[i3,:]*s.T.flatten()))
-            rmse+= np.trace(np.matmul(np.matmul(A1.T,A1),np.matmul(A2.T,A2))) + \
-                   np.trace(np.matmul(np.matmul(B1.T,B1),np.matmul(B2.T,B2))) + \
-                   -2*np.trace(np.matmul(np.matmul(B1.T,A1),np.matmul(A2.T,B2)))
-        self.assertTrue(1e-10>abs(rmse))
-        
+            B2 = np.matmul(L2, np.diag(L3[i3, :]*s.T.flatten()))
+            rmse += np.trace(np.matmul(np.matmul(A1.T, A1), np.matmul(A2.T,
+                                                                      A2))) + \
+                np.trace(np.matmul(np.matmul(B1.T, B1), np.matmul(B2.T,
+                                                                  B2))) + \
+                -2 * np.trace(np.matmul(np.matmul(B1.T, A1), np.matmul(A2.T,
+                                                                       B2)))
+        self.assertTrue(1e-10 > abs(rmse))
+
     def test_TenAls_noise(self):
         # TenAls no noise
         TF = TenAls().fit(self.TE_noise)
@@ -65,16 +67,18 @@ class TestTenAls(unittest.TestCase):
         L2 = TF.feature_loading
         L3 = TF.conditional_loading
         s = TF.s
-        dist = TF.dist
         s = np.diag(s)
         # test accuracy
-        rmse=0
-        for i3 in range(self.n3): 
+        rmse = 0
+        for i3 in range(self.n3):
             A1 = self.U1
-            A2 = np.matmul(self.U2,np.diag(self.U3[i3,:]))
+            A2 = np.matmul(self.U2, np.diag(self.U3[i3, :]))
             B1 = L1
-            B2 = np.matmul(L2,np.diag(L3[i3,:]*s.T.flatten()))
-            rmse+= np.trace(np.matmul(np.matmul(A1.T,A1),np.matmul(A2.T,A2))) + \
-                   np.trace(np.matmul(np.matmul(B1.T,B1),np.matmul(B2.T,B2))) + \
-                   -2*np.trace(np.matmul(np.matmul(B1.T,A1),np.matmul(A2.T,B2)))
-        self.assertTrue(1e-8>abs(rmse))
+            B2 = np.matmul(L2, np.diag(L3[i3, :] * s.T.flatten()))
+            rmse += np.trace(np.matmul(np.matmul(A1.T, A1), np.matmul(A2.T,
+                                                                      A2))) + \
+                np.trace(np.matmul(np.matmul(B1.T, B1), np.matmul(B2.T,
+                                                                  B2))) + \
+                -2 * np.trace(np.matmul(np.matmul(B1.T, A1), np.matmul(A2.T,
+                                                                       B2)))
+        self.assertTrue(1e-8 > abs(rmse))
