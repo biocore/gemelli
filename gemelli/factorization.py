@@ -28,16 +28,7 @@ class TenAls(_BaseImpute):
 
         Parameters
         ----------
-        Tensor : array-like
-            A 3rd order tensor, often
-            compositionally transformed,
-            with missing values. The missing
-            values must be zeros. Tensor must
-            be of the shape:
-            first dimension = samples
-            second dimension = features
-            third dimension = conditions
-        r : int, optional
+        rank : int, optional
             The underlying low-rank, will be
             equal to the number of rank 1
             components that are output. The
@@ -58,7 +49,8 @@ class TenAls(_BaseImpute):
             each iteration.
 
         Attributes
-        -------
+        ----------
+        TODO add `loadings`
         eigenvalues : array-like
             The singular value vectors (1,r)
         explained_variance_ratio : array-like
@@ -103,25 +95,28 @@ class TenAls(_BaseImpute):
 
         Examples
         --------
+        >>> from scipy.linalg import qr
         >>> r = 3 # rank is 2
         >>> n1 = 10
         >>> n2 = 10
         >>> n3 = 10
-        >>> U01 = np.random.rand(n1,r)
-        >>> U02 = np.random.rand(n2,r)
-        >>> U03 = np.random.rand(n3,r)
+        >>> U01 = np.random.rand(n1, r)
+        >>> U02 = np.random.rand(n2, r)
+        >>> U03 = np.random.rand(n3, r)
         >>> U1, temp = qr(U01)
         >>> U2, temp = qr(U02)
         >>> U3, temp = qr(U03)
-        >>> U1=U1[:,0:r]
-        >>> U2=U2[:,0:r]
-        >>> U3=U3[:,0:r]
-        >>> T = np.zeros((n1,n2,n3))
+        >>> U1 = U1[:, 0:r]
+        >>> U2 = U2[:, 0:r]
+        >>> U3 = U3[:, 0:r]
+        >>> T = np.zeros((n1, n2, n3))
         >>> for i in range(n3):
-        >>>     T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
-        >>> p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
-        >>> E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
-        >>> E = T*E
+        >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
+        >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
+        >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
+        >>> E = T * E
+        >>> noise = np.random.randn(n1, n2, n3)
+        >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
         >>> TF = TenAls()
         >>> TF.fit(TE_noise)
         """
@@ -141,14 +136,14 @@ class TenAls(_BaseImpute):
         Parameters
         ----------
         Tensor : array-like
-            A 3rd order tensor, often
+            A tensor, often
             compositionally transformed,
             with missing values. The missing
-            values must be zeros. Tensor must
-            be of the shape:
+            values must be zeros. Canonically,
+            Tensor must be of the shape:
             first dimension = samples
             second dimension = features
-            third dimension = conditions
+            rest dimensions = types of conditions
         """
 
         self.sparse_tensor = Tensor.copy()
@@ -193,15 +188,14 @@ class TenAls(_BaseImpute):
                                     nitr=self.iteration,
                                     tol=self.tol)
 
-        U, V, UV_cond = loadings
+        self.loadings = loadings
         self.eigenvalues = np.diag(s_)
         self.explained_variance_ratio = \
             list(self.eigenvalues / self.eigenvalues.sum())
-        self.sample_distance = distance.cdist(U, U)
-        self.conditional_loading = UV_cond
-        self.feature_loading = V
-        self.sample_loading = U
-        self.s = s_
+        self.sample_distance = distance.cdist(loadings[0], loadings[0])
+        self.distances = [distance.cdist(loading, loading) for loading in
+                          loadings]
+        self.eigenvalues = s_
         self.dist = dist
 
 
@@ -271,27 +265,28 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     Examples
     --------
-    # TODO generalize examples
     >>> r = 3 # rank is 2
     >>> n1 = 10
     >>> n2 = 10
     >>> n3 = 10
-    >>> U01 = np.random.rand(n1,r)
-    >>> U02 = np.random.rand(n2,r)
-    >>> U03 = np.random.rand(n3,r)
+    >>> U01 = np.random.rand(n1, r)
+    >>> U02 = np.random.rand(n2, r)
+    >>> U03 = np.random.rand(n3, r)
     >>> U1, temp = qr(U01)
     >>> U2, temp = qr(U02)
     >>> U3, temp = qr(U03)
-    >>> U1=U1[:,0:r]
-    >>> U2=U2[:,0:r]
-    >>> U3=U3[:,0:r]
-    >>> T = np.zeros((n1,n2,n3))
+    >>> U1 = U1[:, 0:r]
+    >>> U2 = U2[:, 0:r]
+    >>> U3 = U3[:, 0:r]
+    >>> T = np.zeros((n1, n2, n3))
     >>> for i in range(n3):
-    >>>     T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
-    >>> p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
-    >>> E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
-    >>> E = T*E
-    >>> L1,L2,L3,s,dist = tenals(TE_noise,E)
+    >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
+    >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
+    >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
+    >>> E = T * E
+    >>> noise = np.random.randn(n1, n2, n3)
+    >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
+    >>> loadings, eigenvalues, dist = tenals(TE_noise, E)
 
     """
 
@@ -477,9 +472,10 @@ def RTPM_single(tensor, max_iter=50):
                 v_dim = np.tensordot(v_dim,
                                      all_u[inner_dim],
                                      axes=(1 if inner_dim > dim else 0, 0))
-            v.append(v_dim)
+            # TODO shape of v_dim for general tensors
+            v.append(v_dim)  # .reshape(v_dim.shape[:-1]))
 
-        v = [v_n.reshape(v_n.shape[:-1]) for v_n in v]
+        v = [v_n.reshape(v_n.shape[:(-1 * (len(dims) - 2))]) for v_n in v]
 
         all_u_previous = [u for u in all_u]
         all_u = [v_i / norm(v_i) for v_i in v]
