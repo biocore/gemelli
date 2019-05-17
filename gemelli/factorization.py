@@ -50,7 +50,6 @@ class TenAls(_BaseImpute):
 
         Attributes
         ----------
-        TODO add `loadings`
         eigenvalues : array-like
             The singular value vectors (1,r)
         explained_variance_ratio : array-like
@@ -60,15 +59,20 @@ class TenAls(_BaseImpute):
             The euclidean distance between
             the sample_loading and it'self
             transposed of shape (samples, samples)
-        conditional_loading  : array-like
+        conditional_loading  : array-like or list of array-like
             The conditional loading vectors
-            of shape (conditions, r)
+            of shape (conditions, r) if there is 1 type
+            of condition, and a list of such matrices if
+            there are more than 1 type of condition
         feature_loading : array-like
             The feature loading vectors
             of shape (features, r)
         sample_loading : array-like
             The sample loading vectors
             of shape (samples, r)
+        loadings : list of array-like
+            A list of loadings for all dimensions
+            of the data
         s : array-like
             The r-dimension vector.
         dist : array-like
@@ -125,7 +129,6 @@ class TenAls(_BaseImpute):
         self.iteration = iteration
         self.ninit = ninit
         self.tol = tol
-        self.sparse_tensor = None
 
     def fit(self, Tensor):
         """
@@ -193,6 +196,10 @@ class TenAls(_BaseImpute):
         self.explained_variance_ratio = \
             list(self.eigenvalues / self.eigenvalues.sum())
         self.sample_distance = distance.cdist(loadings[0], loadings[0])
+        self.sample_loading = loadings[0]
+        self.feature_loading = loadings[1]
+        self.conditional_loading = loadings[2] if len(loadings[2:] == 1) \
+            else loadings[2:]
         self.distances = [distance.cdist(loading, loading) for loading in
                           loadings]
         self.eigenvalues = s_
@@ -368,18 +375,65 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
 def RTPM(TE, r, ninit, nitr):
     """
-    TODO document
+    The Robust Tensor Power Method
+    (RTPM). Is a generalization of
+    the widely used power method for
+    computing lead singular values
+    of a matrix and can approximate
+    the largest singular vectors of
+    a tensor.
+
     Parameters
     ----------
-    r :
-    ninit :
-    nitr :
-    TE :
+    TE : array-like
+        A sparse `n` order tensor with zeros
+        in place of missing values.
+    r : int, optional
+        The underlying low-rank, will be
+        equal to the number of rank 1
+        components that are output. The
+        higher the rank given, the more
+        expensive the computation will
+        be.
+    ninit : int, optional
+        The number of initialization
+        vectors. Larger values will
+        give more accurate factorization
+        but will be more computationally
+        expensive.
+    nitr : int, optional
+        Max number of iterations.
 
     Returns
     -------
-    S0 :
-    U :
+    S0 : array-like
+        The eigenvalues of the factorizations
+    U : list of array-like
+        The `i`-th entry of U corresponds to
+        the factors along the `i`-th mode of TE
+
+    References
+    ----------
+    .. [1] A. Anandkumar, R. Ge, D. Hsu,
+            S. M. Kakade, M. Telgarsky,
+            Tensor Decompositions for Learning
+            Latent Variable Models
+            (A Survey for ALT).
+            Lecture Notes in
+            Computer Science
+            (2015), pp. 19–38.
+    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [3] P. Jain, S. Oh, in Advances in Neural
+            Information Processing Systems
+            27, Z. Ghahramani, M. Welling,
+            C. Cortes, N. D. Lawrence,
+            K. Q. Weinberger, Eds.
+            (Curran Associates, Inc., 2014),
+            pp. 1431–1439.
 
     """
     dims = TE.shape
@@ -411,13 +465,8 @@ def RTPM(TE, r, ninit, nitr):
 
 def RTPM_single(tensor, max_iter=50):
     """
-    The Robust Tensor Power Method
-    (RTPM_single). Is a generalization of
-    the widely used power method for
-    computing lead singular values
-    of a matrix and can approximate
-    the largest singular vectors of
-    a tensor.
+    Completes a single iteration of optimization
+    for a random start of RTPM
 
     Parameters
     ----------
@@ -429,7 +478,8 @@ def RTPM_single(tensor, max_iter=50):
     Returns
     -------
     list of array-like
-        entry `i` of list is a single vector corresponding to the `i`th
+        entry `i` of list is a single
+        vector corresponding to the `i`th
         mode of `tensor`
 
     References
@@ -442,15 +492,18 @@ def RTPM_single(tensor, max_iter=50):
             Lecture Notes in
             Computer Science
             (2015), pp. 19–38.
-    .. [2] P. Jain, S. Oh, in Advances in Neural
+    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [3] P. Jain, S. Oh, in Advances in Neural
             Information Processing Systems
             27, Z. Ghahramani, M. Welling,
             C. Cortes, N. D. Lawrence,
             K. Q. Weinberger, Eds.
             (Curran Associates, Inc., 2014),
             pp. 1431–1439.
-    TODO cite Guaranteed Non-Orthogonal Tensor Decomposition via
-     Alternating Rank-1 Updates
 
     """
 
@@ -519,7 +572,6 @@ def CPcomp(S, U):
 
 def TenProjAlt(D, U_list):
     """
-    TODO make documentation better
     The Orthogonal tensor
     projection created by
     the TE - TE_hat distance.
@@ -529,15 +581,15 @@ def TenProjAlt(D, U_list):
     Parameters
     ----------
     D : array-like
-        shape (n1,n2,n3)
+        with shape (n[0], n[1], ..., )
     U_list : list of array-like
         Element i is a factor of shape
-        (n[i], r).
+        (n[i], r). Same length as D.shape
 
     Returns
     -------
     M : float
-        TODO ???.
+        The multilinear mapping of D on U_list
     """
     current = D
     for u in U_list:
