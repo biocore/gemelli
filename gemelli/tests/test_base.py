@@ -1,6 +1,7 @@
 import unittest
 from gemelli.base import _BaseTransform, _BaseImpute
 
+
 class Test_BaseTransform(unittest.TestCase):
     def test_no_instantiation(self):
         class Foo(_BaseTransform):

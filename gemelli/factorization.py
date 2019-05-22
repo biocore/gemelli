@@ -28,16 +28,7 @@ class TenAls(_BaseImpute):
 
         Parameters
         ----------
-        Tensor : array-like
-            A 3rd order tensor, often
-            compositionally transformed,
-            with missing values. The missing
-            values must be zeros. Tensor must
-            be of the shape:
-            first dimension = samples
-            second dimension = features
-            third dimension = conditions
-        r : int, optional
+        rank : int, optional
             The underlying low-rank, will be
             equal to the number of rank 1
             components that are output. The
@@ -58,7 +49,7 @@ class TenAls(_BaseImpute):
             each iteration.
 
         Attributes
-        -------
+        ----------
         eigenvalues : array-like
             The singular value vectors (1,r)
         explained_variance_ratio : array-like
@@ -68,15 +59,20 @@ class TenAls(_BaseImpute):
             The euclidean distance between
             the sample_loading and it'self
             transposed of shape (samples, samples)
-        conditional_loading  : array-like
+        conditional_loading  : array-like or list of array-like
             The conditional loading vectors
-            of shape (conditions, r)
+            of shape (conditions, r) if there is 1 type
+            of condition, and a list of such matrices if
+            there are more than 1 type of condition
         feature_loading : array-like
             The feature loading vectors
             of shape (features, r)
         sample_loading : array-like
             The sample loading vectors
             of shape (samples, r)
+        loadings : list of array-like
+            A list of loadings for all dimensions
+            of the data
         s : array-like
             The r-dimension vector.
         dist : array-like
@@ -103,25 +99,28 @@ class TenAls(_BaseImpute):
 
         Examples
         --------
+        >>> from scipy.linalg import qr
         >>> r = 3 # rank is 2
         >>> n1 = 10
         >>> n2 = 10
         >>> n3 = 10
-        >>> U01 = np.random.rand(n1,r)
-        >>> U02 = np.random.rand(n2,r)
-        >>> U03 = np.random.rand(n3,r)
+        >>> U01 = np.random.rand(n1, r)
+        >>> U02 = np.random.rand(n2, r)
+        >>> U03 = np.random.rand(n3, r)
         >>> U1, temp = qr(U01)
         >>> U2, temp = qr(U02)
         >>> U3, temp = qr(U03)
-        >>> U1=U1[:,0:r]
-        >>> U2=U2[:,0:r]
-        >>> U3=U3[:,0:r]
-        >>> T = np.zeros((n1,n2,n3))
+        >>> U1 = U1[:, 0:r]
+        >>> U2 = U2[:, 0:r]
+        >>> U3 = U3[:, 0:r]
+        >>> T = np.zeros((n1, n2, n3))
         >>> for i in range(n3):
-        >>>     T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
-        >>> p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
-        >>> E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
-        >>> E = T*E
+        >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
+        >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
+        >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
+        >>> E = T * E
+        >>> noise = np.random.randn(n1, n2, n3)
+        >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
         >>> TF = TenAls()
         >>> TF.fit(TE_noise)
         """
@@ -140,14 +139,14 @@ class TenAls(_BaseImpute):
         Parameters
         ----------
         Tensor : array-like
-            A 3rd order tensor, often
+            A tensor, often
             compositionally transformed,
             with missing values. The missing
-            values must be zeros. Tensor must
-            be of the shape:
+            values must be zeros. Canonically,
+            Tensor must be of the shape:
             first dimension = samples
             second dimension = features
-            third dimension = conditions
+            rest dimensions = types of conditions
         """
 
         self.sparse_tensor = Tensor.copy()
@@ -185,18 +184,25 @@ class TenAls(_BaseImpute):
         # return tensor decomp
         E = np.zeros(sparse_tensor.shape)
         E[abs(sparse_tensor) > 0] = 1
-        U, V, UV_cond, s_, dist = tenals(sparse_tensor, E, r=self.rank,
-                                         ninit=self.ninit,
-                                         nitr=self.iteration,
-                                         tol=self.tol)
+        loadings, s_, dist = tenals(sparse_tensor,
+                                    E,
+                                    r=self.rank,
+                                    ninit=self.ninit,
+                                    nitr=self.iteration,
+                                    tol=self.tol)
 
+        self.loadings = loadings
         self.eigenvalues = np.diag(s_)
-        self.explained_variance_ratio = list(self.eigenvalues / self.eigenvalues.sum())
-        self.sample_distance = distance.cdist(U, U)
-        self.conditional_loading = UV_cond
-        self.feature_loading = V
-        self.sample_loading = U
-        self.s = s_
+        self.explained_variance_ratio = \
+            list(self.eigenvalues / self.eigenvalues.sum())
+        self.sample_distance = distance.cdist(loadings[0], loadings[0])
+        self.sample_loading = loadings[0]
+        self.feature_loading = loadings[1]
+        self.conditional_loading = loadings[2] if len(loadings[2:]) == 1 \
+            else loadings[2:]
+        self.distances = [distance.cdist(loading, loading) for loading in
+                          loadings]
+        self.eigenvalues = s_
         self.dist = dist
 
 
@@ -213,10 +219,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     Parameters
     ----------
     TE : array-like
-        A sparse 3rd order tensor with zeros
-        in place of missing values. Tensor is
-        given in the shape (n1, n2, n3). Where
-        n1, n2, and n3 may or may not be equal.
+        A sparse `n` order tensor with zeros
+        in place of missing values.
     E : array-like
         A masking array of missing values.
     r : int, optional
@@ -241,17 +245,11 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
 
     Returns
     -------
-    V1 : array-like
-        The factorization of shape
-        (n1, r).
-    V2 : array-like
-        The factorization of shape
-        (n2, r).
-    V3 : array-like
-        The factorization of shape
-        (n3, r).
+    loadings : list array-like
+        The factors of TE. The `i`th entry of loadings corresponds to
+        the mode-`i` factors of TE and hase shape (TE.shape[i], r).
     S : array-like
-        The r-dimension vector.
+        The r-dimension vector of eigenvalues.
     dist : array-like
         A absolute distance vector
         between TE and TE_hat.
@@ -278,139 +276,105 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
     >>> n1 = 10
     >>> n2 = 10
     >>> n3 = 10
-    >>> U01 = np.random.rand(n1,r)
-    >>> U02 = np.random.rand(n2,r)
-    >>> U03 = np.random.rand(n3,r)
+    >>> U01 = np.random.rand(n1, r)
+    >>> U02 = np.random.rand(n2, r)
+    >>> U03 = np.random.rand(n3, r)
     >>> U1, temp = qr(U01)
     >>> U2, temp = qr(U02)
     >>> U3, temp = qr(U03)
-    >>> U1=U1[:,0:r]
-    >>> U2=U2[:,0:r]
-    >>> U3=U3[:,0:r]
-    >>> T = np.zeros((n1,n2,n3))
+    >>> U1 = U1[:, 0:r]
+    >>> U2 = U2[:, 0:r]
+    >>> U3 = U3[:, 0:r]
+    >>> T = np.zeros((n1, n2, n3))
     >>> for i in range(n3):
-    >>>     T[:,:,i] = np.matmul(U1,np.matmul(np.diag(U3[i,:]),U2.T))
-    >>> p = 2*(r**0.5*np.log(n1*n2*n3))/np.sqrt(n1*n2*n3)
-    >>> E = abs(np.ceil(np.random.rand(n1,n2,n3)-1+p))
-    >>> E = T*E
-    >>> L1,L2,L3,s,dist = tenals(TE_noise,E)
+    >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
+    >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
+    >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
+    >>> E = T * E
+    >>> noise = np.random.randn(n1, n2, n3)
+    >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
+    >>> loadings, eigenvalues, dist = tenals(TE_noise, E)
 
     """
 
     # start
-    n1, n2, n3 = TE.shape
+    dims = TE.shape
 
-    normTE = 0
-    for i3 in range(n3):
-        normTE = normTE + norm(TE[:, :, i3])**2
+    normTE = norm(TE)**2
 
     # initialization by Robust Tensor Power Method (modified for non-symmetric
     # tensors)
-    U01 = np.zeros((n1, r))
-    U02 = np.zeros((n2, r))
-    U03 = np.zeros((n3, r))
-    S0 = np.zeros((r, 1))
-    for i in range(r):
-        tU1 = np.zeros((n1, ninit))
-        tU2 = np.zeros((n2, ninit))
-        tU3 = np.zeros((n3, ninit))
-        tS = np.zeros((ninit, 1))
-        for init in range(ninit):
-            [tU1[:, init], tU2[:, init], tU3[:, init]] = RTPM(
-                TE - CPcomp(S0, U01, U02, U03), max_iter=nitr)
-            tU1[:, init] = tU1[:, init] / norm(tU1[:, init])
-            tU2[:, init] = tU2[:, init] / norm(tU2[:, init])
-            tU3[:, init] = tU3[:, init] / norm(tU3[:, init])
-            tS[init] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-                               tU1[:, [init]], tU2[:, [init]], tU3[:, [init]])
-        idx = np.argmax(tS, axis=0)[0]
-        U01[:, i] = tU1[:, idx] / norm(tU1[:, idx])
-        U02[:, i] = tU2[:, idx] / norm(tU2[:, idx])
-        U03[:, i] = tU3[:, idx] / norm(tU3[:, idx])
-        S0[i] = TenProj(TE - CPcomp(S0, U01, U02, U03),
-                        U01[:, [i]], U02[:, [i]], U03[:, [i]])
+    S0, U = RTPM(TE, r, ninit, nitr)
 
     # apply alternating least squares
-    V1 = U01.copy()
-    V2 = U02.copy()
-    V3 = U03.copy()
-    S = S0.copy()
+    V_alt = [Un.copy() for Un in U]
+    S_alt = S0.copy()
     for itrs in range(nitr):
         for q in range(r):
-            S_ = S.copy()
-            S_[q] = 0
-            A = np.multiply(CPcomp(S_, V1, V2, V3), E)
-            v1 = V1[:, q].copy()
-            v2 = V2[:, q].copy()
-            v3 = V3[:, q].copy()
-            V1[:, q] = 0
-            V2[:, q] = 0
-            V3[:, q] = 0
-            den1 = np.zeros((n1, 1))
-            den2 = np.zeros((n2, 1))
-            for i3 in range(n3):
-                V1[:, q] = V1[:, q] + \
-                    np.multiply(v3[i3],
-                                np.matmul((TE[:, :, i3]
-                                           - A[:, :, i3]), v2))
-                den1 = den1 + \
-                    np.multiply(v3[i3]**2,
-                                np.matmul(E[:, :, i3],
-                                          v2 * v2)).reshape(den1.shape[0], 1)
-            v1 = V1[:, q].reshape(den1.shape[0], 1) / den1
-            v1 = v1 / norm(v1)
-            for i3 in range(n3):
-                V2[:,
-                   q] = V2[:,
-                           q] + np.multiply(v3[i3],
-                                            np.matmul((TE[:,:,i3]
-                                                       - A[:,:,i3]).T,
-                                                      v1)).flatten()
-                den2 = den2 + \
-                    np.multiply(v3[i3]**2, np.matmul(E[:, :, i3].T,
-                                                     np.multiply(v1, v1)))
-            v2 = V2[:, q].reshape(den2.shape[0], 1) / den2
-            v2 = v2 / norm(v2)
-            for i3 in range(n3):
-                V3[i3, q] = (np.matmul(v1.T,
-                                       np.matmul(TE[:, :, i3]
-                                                 - A[:, :, i3], v2)) /
-                             np.matmul(np.matmul((v1 * v1).T,
-                                                 (E[:, :, i3])),
-                                       (v2 * v2))).flatten()
-            V1[:, q] = v1.flatten()
-            V2[:, q] = v2.flatten()
-            S[q] = norm(V3[:, q])
-            V3[:, q] = V3[:, q] / norm(V3[:, q])
-        ERR = TE - E * CPcomp(S, V1, V2, V3)
-        normERR = 0
-        for i3 in range(n3):
-            normERR = normERR + norm(ERR[:, :, i3])**2
+            S_alt = S_alt.copy()
+            S_alt[q] = 0
+            A_alt = np.multiply(CPcomp(S_alt, V_alt), E)
+            v_alt = [Vn[:, q].copy() for Vn in V_alt]
+            for Vn in V_alt:
+                Vn[:, q] = 0
+
+            # den should end up as a list of np.zeros((dim_i, 1))
+            den = [np.zeros(dim) for dim in dims]
+
+            for dim, dim_size in enumerate(dims):
+                dims_np = np.arange(len(dims))
+                dot_across = dims_np[dims_np != dim]
+                v_dim = np.tensordot(TE - A_alt,
+                                     v_alt[dot_across[0]],
+                                     axes=(1 if dim == 0 else 0, 0))
+                den[dim] = np.tensordot(E,
+                                        v_alt[dot_across[0]]**2,
+                                        axes=(1 if dim == 0 else 0, 0))
+
+                for inner_dim in dot_across[1:]:
+                    v_dim = np.tensordot(v_dim,
+                                         v_alt[inner_dim],
+                                         axes=(1 if inner_dim > dim else 0, 0))
+                    den[dim] = np.tensordot(den[dim],
+                                            v_alt[inner_dim]**2,
+                                            axes=(1 if inner_dim > dim else
+                                                  0, 0))
+
+                v_alt[dim] = V_alt[dim][:, q] + v_dim.flatten()
+                v_alt[dim] = v_alt[dim] / den[dim]
+
+                if dim == len(dims) - 1:
+                    S_alt[q] = norm(v_alt[dim])
+
+                v_alt[dim] = v_alt[dim] / norm(v_alt[dim])
+                V_alt[dim][:, q] = v_alt[dim]
+
+            for i, V_alt_i in enumerate(V_alt):
+                V_alt_i[:, q] = v_alt[i]
+
+        ERR = TE - E * CPcomp(S_alt, V_alt)
+        normERR = norm(ERR)**2
         if np.sqrt(normERR / normTE) < tol:
             break
+
     dist = np.sqrt(normERR / normTE)
-    # check that the fact. converged
-    if sum(sum(np.isnan(V1))) > 0 or\
-       sum(sum(np.isnan(V2))) > 0 or\
-       sum(sum(np.isnan(V3))) > 0:
+    # check that the factorization converged
+    if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V_alt):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
 
-    S = np.diag(S.flatten())
+    S_alt = np.diag(S_alt.flatten())
     # sort the eigenvalues
-    idx = np.argsort(np.diag(S))[::-1]
-    S = S[idx, :][:, idx]
+    idx = np.argsort(np.diag(S_alt))[::-1]
+    S_alt = S_alt[idx, :][:, idx]
     # sort loadings
-    V1 = V1[:, idx]
-    V2 = V2[:, idx]
-    V3 = V3[:, idx]
+    loadings = [Vn[:, idx] for Vn in V_alt]
 
-    return V1, V2, V3, S, dist
+    return loadings, S_alt, dist
 
 
-def RTPM(T, max_iter=50):
+def RTPM(TE, r, ninit, nitr):
     """
-
     The Robust Tensor Power Method
     (RTPM). Is a generalization of
     the widely used power method for
@@ -421,20 +385,32 @@ def RTPM(T, max_iter=50):
 
     Parameters
     ----------
-    T : array-like
-        tensor of shape
-        (n1, n2, n3).
-    max_iter : int
-        maximum iterations.
+    TE : array-like
+        A sparse `n` order tensor with zeros
+        in place of missing values.
+    r : int, optional
+        The underlying low-rank, will be
+        equal to the number of rank 1
+        components that are output. The
+        higher the rank given, the more
+        expensive the computation will
+        be.
+    ninit : int, optional
+        The number of initialization
+        vectors. Larger values will
+        give more accurate factorization
+        but will be more computationally
+        expensive.
+    nitr : int, optional
+        Max number of iterations.
 
     Returns
     -------
-    u1 : array-like
-        The singular vectors n1
-    u2 : array-like
-        The singular vectors n2
-    u3 : array-like
-        The singular vectors n3
+    S0 : array-like
+        The eigenvalues of the factorizations
+    U : list of array-like
+        The `i`-th entry of U corresponds to
+        the factors along the `i`-th mode of TE
 
     References
     ----------
@@ -446,7 +422,82 @@ def RTPM(T, max_iter=50):
             Lecture Notes in
             Computer Science
             (2015), pp. 19–38.
-    .. [2] P. Jain, S. Oh, in Advances in Neural
+    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [3] P. Jain, S. Oh, in Advances in Neural
+            Information Processing Systems
+            27, Z. Ghahramani, M. Welling,
+            C. Cortes, N. D. Lawrence,
+            K. Q. Weinberger, Eds.
+            (Curran Associates, Inc., 2014),
+            pp. 1431–1439.
+
+    """
+    dims = TE.shape
+    U = [np.zeros((n, r)) for n in dims]
+    S0 = np.zeros((r, 1))
+    for i in range(r):
+        tU = [np.zeros((n, ninit)) for n in dims]
+        tS = np.zeros((ninit, 1))
+        for init in range(ninit):
+            initializations = RTPM_single(
+                TE - CPcomp(S0, U), max_iter=nitr)
+
+            for tUn_idx, tUn in enumerate(tU):
+                tUn[:, init] = initializations[tUn_idx]
+                tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
+
+            tS[init] = TenProjAlt(TE - CPcomp(S0, U),
+                                  [tUn[:, [init]] for tUn in tU])
+
+        idx = np.argmax(tS, axis=0)[0]
+        for tUn, Un in zip(tU, U):
+            Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
+
+        S0[i] = TenProjAlt(TE - CPcomp(S0, U),
+                           [Un[:, [i]] for Un in U])
+
+    return S0, U
+
+
+def RTPM_single(tensor, max_iter=50):
+    """
+    Completes a single iteration of optimization
+    for a random start of RTPM
+
+    Parameters
+    ----------
+    tensor : array-like
+        an `n` order tensor
+    max_iter : int
+        maximum iterations.
+
+    Returns
+    -------
+    list of array-like
+        entry `i` of list is a single
+        vector corresponding to the `i`th
+        mode of `tensor`
+
+    References
+    ----------
+    .. [1] A. Anandkumar, R. Ge, D. Hsu,
+            S. M. Kakade, M. Telgarsky,
+            Tensor Decompositions for Learning
+            Latent Variable Models
+            (A Survey for ALT).
+            Lecture Notes in
+            Computer Science
+            (2015), pp. 19–38.
+    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [3] P. Jain, S. Oh, in Advances in Neural
             Information Processing Systems
             27, Z. Ghahramani, M. Welling,
             C. Cortes, N. D. Lawrence,
@@ -456,33 +507,39 @@ def RTPM(T, max_iter=50):
 
     """
 
-    # RTPM
-    n1, n2, n3 = T.shape
-    u1 = randn(n1, 1) / norm(randn(n1, 1))
-    u2 = randn(n2, 1) / norm(randn(n2, 1))
-    u3 = randn(n3, 1) / norm(randn(n3, 1))
-    # conv
+    # RTPM_single
+    n_dims = len(tensor.shape)
+
+    all_u = [randn(n, 1) for n in tensor.shape]
+    all_u = [vec / norm(vec) for vec in all_u]
     for itr in range(max_iter):
-        v1 = np.zeros((n1, 1))
-        v2 = np.zeros((n2, 1))
-        v3 = np.zeros((n3, 1))
-        for i3 in range(n3):
-            v3[i3] = np.matmul(np.matmul(u1.T, T[:, :, i3]), u2)
-            v1 = v1 + np.matmul(u3[i3][0] * T[:, :, i3], u2)
-            v2 = v2 + np.matmul(u3[i3][0] * T[:, :, i3].T, u1)
-        u10 = u1
-        u1 = v1 / norm(v1)
-        u20 = u2
-        u2 = v2 / norm(v2)
-        u30 = u3
-        u3 = v3 / norm(v3)
-        if(norm(u10 - u1) + norm(u20 - u2) + norm(u30 - u3) < 1e-7):
+        # tensordot generalization to higher dims
+        v = []
+        dims = np.arange(n_dims)
+        for dim in dims:
+            dot_across = dims[dims != dim]
+            v_dim = np.tensordot(tensor,
+                                 all_u[dot_across[0]],
+                                 axes=(1 if dim == 0 else 0, 0))
+            for inner_dim in dot_across[1:]:
+                v_dim = np.tensordot(v_dim,
+                                     all_u[inner_dim],
+                                     axes=(1 if inner_dim > dim else 0, 0))
+            v.append(v_dim)
+
+        new_shapes = [v_n.shape[:(-1 * (len(dims) - 2))] for v_n in v]
+        v = [v_n.reshape(new_shape) for v_n, new_shape in zip(v, new_shapes)]
+
+        all_u_previous = [u for u in all_u]
+        all_u = [v_i / norm(v_i) for v_i in v]
+
+        if sum(norm(u0 - u) for u0, u in zip(all_u_previous, all_u)) < 1e-7:
             break
 
-    return u1.flatten(), u2.flatten(), u3.flatten()
+    return [u.flatten() for u in all_u]
 
 
-def CPcomp(S, U1, U2, U3):
+def CPcomp(S, U):
     """
     This function takes the
     CP decomposition of a 3rd
@@ -492,71 +549,83 @@ def CPcomp(S, U1, U2, U3):
 
     Parameters
     ----------
-    U1 : array-like
-        The factorization of shape
-        (n1, r).
-    U2 : array-like
-        The factorization of shape
-        (n2, r).
-    U3 : array-like
-        The factorization of shape
-        (n3, r).
     S : array-like
         The r-dimension vector.
+    U : list of array-like
+        Element i is a factor of shape
+        (n[i], r).
 
     Returns
     -------
     T : array-like
         TE_hat of shape
-        (n1, n2, n3).
+        tuple(n[i] for i in range(len(U))).
     """
 
-    ns, rs = S.shape
-    n1, r1 = U1.shape
-    n2, r2 = U2.shape
-    n3, r3 = U3.shape
-    T = np.zeros((n1, n2, n3))
-    for i in range(n3):
-        t_i = np.diag(np.multiply(U3[i, :], S.T)[0])
-        T[:, :, i] = np.matmul(np.matmul(U1, t_i), U2.T)
+    output_shape = tuple(u.shape[0] for u in U)
+    to_multiply = [S.T*u if i == 0 else u for i, u in enumerate(U)]
+    product = khatri_rao(to_multiply)
+    T = product.sum(1).reshape(output_shape)
+
     return T
 
 
-def TenProj(D, U1, U2, U3):
+def TenProjAlt(D, U_list):
     """
     The Orthogonal tensor
     projection created by
     the TE - TE_hat distance.
     Used in the initialization
-    step with RTPM.
+    step with RTPM_single.
 
     Parameters
     ----------
     D : array-like
-        shape (n1,n2,3)
-    U1 : array-like
-        The factorization of shape
-        (n1, r).
-    U2 : array-like
-        The factorization of shape
-        (n2, r).
-    U3 : array-like
-        The factorization of shape
-        (n3, r).
+        with shape (n[0], n[1], ..., )
+    U_list : list of array-like
+        Element i is a factor of shape
+        (n[i], r). Same length as D.shape
 
     Returns
     -------
-    M : array-like
-        Projection.
+    M : float
+        The multilinear mapping of D on U_list
+    """
+    current = D
+    for u in U_list:
+        current = np.tensordot(current, u, axes=(0, 0))
+    return current
+
+
+def khatri_rao(matrices):
+    """Returns the Khatri Rao product of a list of matrices
+
+    Modified from TensorLy
+
+    Parameters
+    ----------
+    matrices : list of array-like
+        Matrices to take the Khatri Rao Product of
+
+    Returns
+    -------
+    array-like
+        The Khatri Rao Product of the matrices in `matrices`
+
+    References
+    ----------
+    .. [1] Jean Kossaifi, Yannis Panagakis, Anima Anandkumar and Maja
+            Pantic, TensorLy: Tensor Learning in Python,
+            https://arxiv.org/abs/1610.09555.
     """
 
-    n1, r1 = U1.shape
-    n2, r2 = U2.shape
-    n3, r3 = U3.shape
-    M = np.zeros((r1, r2, r3))
-    for i in range(r3):
-        A = np.zeros((n1, n2))
-        for j in range(n3):
-            A = A + D[:, :, j] * U3[j, i]
-        M[:, :, i] = np.matmul(np.matmul(U1.T, A), U2)
-    return M
+    n_columns = matrices[0].shape[1]
+    n_factors = len(matrices)
+
+    start = ord('a')
+    common_dim = 'z'
+    target = ''.join(chr(start + i) for i in range(n_factors))
+    source = ','.join(i + common_dim for i in target)
+    operation = source + '->' + target + common_dim
+
+    return np.einsum(operation, *matrices).reshape((-1, n_columns))
