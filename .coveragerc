@@ -9,6 +9,7 @@ branch = True
 include = */gemelli/*
 
 [report]
+show_missing = True
 exclude_lines =
     pragma: no cover
     raise NotImplementedError
@@ -16,4 +17,4 @@ exclude_lines =
 omit =
     */tests*
     */__init__.py
-
+    */base.py

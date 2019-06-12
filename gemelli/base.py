@@ -21,25 +21,20 @@ class _BaseImpute(object):
         should be implemetned by sub-method"""
 
     def transform(self):
-        """ TODO
+        """ return loadings
         """
         return self.sample_loading, \
             self.feature_loading, \
             self.conditional_loading
 
 
-class _BaseTransform(object):
+class _BaseConstruct(object):
 
     """Base class for transformation/norm methods.
     Warning: This class should not be used directly.
     Use derived classes instead.
     """
     @abstractmethod
-    def fit(self):
-        """ Placeholder for fit this
+    def construct(self):
+        """ Placeholder for construct this
         should be implemetned by sub-method"""
-
-    def transform(self):
-        """ return transformed
-        """
-        return self.TRCLR

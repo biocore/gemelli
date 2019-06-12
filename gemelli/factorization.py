@@ -15,7 +15,14 @@ from scipy.spatial import distance
 
 class TenAls(_BaseImpute):
 
-    def __init__(self, rank=3, iteration=50, ninit=50, tol=1e-8):
+    def __init__(
+            self,
+            rank=3,
+            iteration=50,
+            ninit=50,
+            nitr_RTPM=50,
+            tol=1e-8,
+            pseudocount=1.0):
         """
 
         This class performs a low-rank 3rd order
@@ -129,6 +136,8 @@ class TenAls(_BaseImpute):
         self.iteration = iteration
         self.ninit = ninit
         self.tol = tol
+        self.pseudocount = pseudocount
+        self.nitr_RTPM = nitr_RTPM
 
     def fit(self, Tensor):
         """
@@ -164,15 +173,10 @@ class TenAls(_BaseImpute):
         sparse_tensor = self.sparse_tensor
 
         if not isinstance(sparse_tensor, np.ndarray):
-            sparse_tensor = np.array(sparse_tensor)
-            if not isinstance(sparse_tensor, np.ndarray):
-                raise ValueError('Input data is should be type numpy.ndarray')
-            if len(sparse_tensor.shape) < 3 or len(sparse_tensor.shape) > 3:
-                raise ValueError('Input data is should be 3rd-order tensor',
-                                 ' with shape (samples, features, time)')
+            raise ValueError('Input data is should be type numpy.ndarray')
 
-        if (np.count_nonzero(sparse_tensor) == 0 and
-                np.count_nonzero(~np.isnan(sparse_tensor)) == 0):
+        if (np.count_nonzero(sparse_tensor) == np.product(sparse_tensor.shape) and
+                np.count_nonzero(~np.isnan(sparse_tensor)) == np.product(sparse_tensor.shape)):
             raise ValueError('No missing data in the format np.nan or 0')
 
         if np.count_nonzero(np.isinf(sparse_tensor)) != 0:
@@ -189,7 +193,9 @@ class TenAls(_BaseImpute):
                                     r=self.rank,
                                     ninit=self.ninit,
                                     nitr=self.iteration,
-                                    tol=self.tol)
+                                    nitr_RTPM=self.nitr_RTPM,
+                                    tol=self.tol,
+                                    pseudocount=self.pseudocount)
 
         self.loadings = loadings
         self.eigenvalues = np.diag(s_)
@@ -206,7 +212,15 @@ class TenAls(_BaseImpute):
         self.dist = dist
 
 
-def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
+def tenals(
+        TE,
+        E,
+        r=3,
+        ninit=50,
+        nitr=50,
+        nitr_RTPM=50,
+        tol=1e-8,
+        pseudocount=1.0):
     """
     A low-rank 3rd order tensor factorization
     for partially observered non-symmetric
@@ -341,6 +355,8 @@ def tenals(TE, E, r=3, ninit=50, nitr=50, tol=1e-8):
                                                   0, 0))
 
                 v_alt[dim] = V_alt[dim][:, q] + v_dim.flatten()
+                # add pseudocount to prevent division by zero causing nan.
+                den[dim][den[dim] == 0] = pseudocount
                 v_alt[dim] = v_alt[dim] / den[dim]
 
                 if dim == len(dims) - 1:
@@ -453,7 +469,8 @@ def RTPM(TE, r, ninit, nitr):
             tS[init] = TenProjAlt(TE - CPcomp(S0, U),
                                   [tUn[:, [init]] for tUn in tU])
 
-        idx = np.argmax(tS, axis=0)[0]
+        idx = np.argmin(tS, axis=0)[0]
+
         for tUn, Un in zip(tU, U):
             Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
 
@@ -563,7 +580,7 @@ def CPcomp(S, U):
     """
 
     output_shape = tuple(u.shape[0] for u in U)
-    to_multiply = [S.T*u if i == 0 else u for i, u in enumerate(U)]
+    to_multiply = [S.T * u if i == 0 else u for i, u in enumerate(U)]
     product = khatri_rao(to_multiply)
     T = product.sum(1).reshape(output_shape)
 
@@ -598,7 +615,8 @@ def TenProjAlt(D, U_list):
 
 
 def khatri_rao(matrices):
-    """Returns the Khatri Rao product of a list of matrices
+    """
+    Returns the Khatri Rao product of a list of matrices
 
     Modified from TensorLy
 
