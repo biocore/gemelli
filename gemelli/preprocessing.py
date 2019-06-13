@@ -48,7 +48,7 @@ def rclr(T):
         In an N mode tensor of shape:
         first dimension = samples
         second dimension = features
-        N dimensions = conditions
+        [3..N] dimensions = conditions
 
     Raises
     ------
@@ -232,7 +232,7 @@ class build(_BaseConstruct):
         N mode tensor of shape
         first dimension = samples
         second dimension = features
-        N dimensions = conditions
+        [3..N] dimensions = conditions
 
     Raises
     ------
@@ -290,7 +290,7 @@ class build(_BaseConstruct):
 
     * First dimension = samples
     * Second dimension = features
-    * N dimensions = order of conditions given
+    * [3..N] dimensions = conditions
 
     >>> tensor.counts.shape
 
@@ -365,7 +365,7 @@ class build(_BaseConstruct):
         Furthermore, the index of `table` and `metadata`
         must be matching.
 
-        >>> tensor = Build()
+        >>> tensor = build()
         >>> tensor.construct(table,metadata,
                             subjects,
                             [condition_1,
@@ -376,7 +376,7 @@ class build(_BaseConstruct):
 
         * First dimension = samples
         * Second dimension = features
-        * N dimensions = order of conditions given
+        * [3..N] dimensions = conditions
 
         >>> tensor.counts.shape
 

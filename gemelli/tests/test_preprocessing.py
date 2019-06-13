@@ -58,6 +58,24 @@ class Testpreprocessing(unittest.TestCase):
         tensor_clr_true = tensor_clr_true.transpose([0, 2, 1])
         npt.assert_allclose(rclr(tensor.counts),
                             tensor_clr_true)
+
+    def test_errors(self):
+
+        # flatten tensor into matrix
+        matrix_counts = self.tensor_true.transpose([0, 2, 1])
+        reshape_shape = matrix_counts.shape
+        matrix_counts = matrix_counts.reshape(9, 2)
+        # build mapping and table dataframe to rebuild
+        mapping = np.array([[0, 0, 0, 1, 1, 1, 2, 2, 2],
+                            [0, 1, 2, 0, 1, 2, 0, 1, 2]])
+        mapping = pd.DataFrame(mapping.T,
+                               columns=['ID', 'conditional'])
+        table = pd.DataFrame(matrix_counts.T)
+        # rebuild the tensor
+        tensor = build()
+        with self.assertWarns(Warning):
+            tensor.construct(table, mapping,
+                             'ID', ['conditional'])
         # test less than 2D throws ValueError
         with self.assertRaises(ValueError):
             rclr(np.array(range(3)))
