@@ -42,25 +42,24 @@ class TestTenAls(unittest.TestCase):
         T4 = product.sum(1).reshape((n5, n5, n4, n5))
         T5 = product5.sum(1).reshape((n5, n5, n4, n5, n5))
         # sample entries
-        p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3))/np.sqrt(n1 * n2 * n3)
-        p4 = 2 * (r ** 0.5 * np.log(n5 * n5 * n4 * n5))/np.sqrt(n5 * n5 * n4
-                                                                * n5)
-        p5 = 2 * (r ** 0.5 * np.log(n5 * n5 * n4 * n5 * n5))/np.sqrt(n5 * n5
-                                                                     * n4
-                                                                     * n5 * n5)
+        p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
+        p4 = 1 * (r ** 5e-5 * np.log(n5 * n5 * n4 * n5)) / np.sqrt(n5 * n5 * n4
+                                                                   * n5)
+        p5 = 1 * (r ** 5e-5 * np.log(n5 * n5 * n4 * n5 * n5)) / \
+            np.sqrt(n5 * n5 * n4 * n5 * n5)
         self.E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
         self.E4 = abs(np.ceil(np.random.rand(n5, n5, n4, n5) - 1 + p4))
         self.E5 = abs(np.ceil(np.random.rand(n5, n5, n4, n5, n5) - 1 + p5))
         self.TE = T * self.E
         self.TE4 = T4 * self.E4
         self.TE5 = T5 * self.E5
-        self.TE_noise = self.TE+(0.0001 / np.sqrt(n1 * n2 * n3)
-                                 * np.random.randn(n1, n2, n3) * self.E)
-        self.TE_noise4 = self.TE4+(0.0001 / np.sqrt(n5 * n5 * n4 * n5)
-                                   * np.random.randn(n5, n5, n4, n5) * self.E4)
-        self.TE_noise5 = self.TE5+(0.0001 / np.sqrt(n5 * n5 * n4 * n5 * n5)
-                                   * np.random.randn(n5, n5, n4, n5, n5
-                                                     ) * self.E5)
+        self.TE_noise = self.TE + (0.0001 / np.sqrt(n1 * n2 * n3)
+                                   * np.random.randn(n1, n2, n3) * self.E)
+        self.TE_noise4 = self.TE4 + (1e-10 / np.sqrt(n5 * n5 * n4 * n5)
+                                     * np.random.randn(n5, n5, n4, n5) * self.E4)
+        self.TE_noise5 = self.TE5 + (1e-10 / np.sqrt(n5 * n5 * n4 * n5 * n5)
+                                     * np.random.randn(n5, n5, n4, n5, n5
+                                                       ) * self.E5)
         self.n1 = n1
         self.n2 = n2
         self.n3 = n3
@@ -84,7 +83,7 @@ class TestTenAls(unittest.TestCase):
             A1 = self.U1
             A2 = np.matmul(self.U2, np.diag(self.U3[i3, :]))
             B1 = L1
-            B2 = np.matmul(L2, np.diag(L3[i3, :]*s.T.flatten()))
+            B2 = np.matmul(L2, np.diag(L3[i3, :] * s.T.flatten()))
             rmse += np.trace(np.matmul(np.matmul(A1.T, A1), np.matmul(A2.T,
                                                                       A2))) + \
                 np.trace(np.matmul(np.matmul(B1.T, B1), np.matmul(B2.T,
@@ -164,3 +163,19 @@ class TestTenAls(unittest.TestCase):
         self.assertEqual((self.n1 * self.n2 * self.n3 * self.n4 * self.n4 *
                           self.n5, self.r),
                          multiply_6.shape)
+
+    def test_errors(self):
+        # test not array
+        with self.assertRaises(ValueError):
+            TenAls().fit(list(range(10)))
+        # test if none missing
+        with self.assertRaises(ValueError):
+            TenAls().fit(np.ones((5, 5)))
+        # test no nan(s)
+        TE_errors = self.TE
+        TE_errors[0, :, :] = np.inf
+        with self.assertRaises(ValueError):
+            TenAls().fit(TE_errors)
+        # test max rank
+        with self.assertRaises(ValueError):
+            TenAls(rank=np.max(self.TE_noise.shape) + 10).fit(self.TE_noise)

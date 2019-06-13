@@ -8,117 +8,251 @@
 
 import warnings
 import numpy as np
-from .utils import match
-from .base import _BaseTransform
-from deicode.preprocessing import rclr
+from .base import _BaseConstruct
 
 
-class build(_BaseTransform):
-
+def rclr(T):
     """
-    This class can both build and RCLR
-    transform tensors from 2D dataframes
-    given count and mapping data.
+    Robust clr transform. The :math:`clr` transform
+    is defined on the following spaces:
 
-    A conditional measurement is given
-    that identifies conditions measured
-    multiple times over the same sample
-    ID. Additionally a set of sample IDs
-    must be provided. Any samples that are
-    missing in a given condition are left
-    as completely zero. The tensor is given
-    in the shape (conditions, features,
-    samples).
+    .. math::
+       `rclr \left( x \right)  &=  \left[ \log\frac{x_{1}}{g_{r}
+       \left( x \right) }, ..., \log\frac{x_{D}}{g_{r}
+       \left( x \right) } \right]`
 
-    The tensor is the RCLR transformed along
-    each conditional slice. The output RCLR
-    tensor is of the shape (samples, features,
-    conditions).
+    where
+
+    .. math::
+        `g_{r} \left( x \right)  &=
+        \left(  \prod_{i \in  \Omega _{x} }^{}x_{i}
+        \right) ^{1/ \vert  \Omega _{x} \vert }`
+
+    is the approximate geometric mean of :math:`x`.
+    We know from the Central Limit Theorem that as
+    we collect more independent measurements we
+    approach the true geometric mean.
+
+    This transformation will work on N mode tensors
+    by flattening. Flattened tensor are reshaped into
+    subject x contions by features before transformation.
+    A tensor will be returned in the shape shape and order.
+
+    Mode 2 tensors (matrix) will be directly transformed,
+    no reshaping necessary.
 
     Parameters
     ----------
-    pseudocount : float, optional
-        A pseudocount used in the
-        case that a sample, feature,
-            and/or condition is completely
-            missing from a vector slice in
-            the tensor formed.
-    table : DataFrame
-        table of non-negative count data
-        rows = samples
-        columns = features
-    mapping : DataFrame
-        mapping metadata for table
-        rows = samples
-        columns = metadata categories
-    ID_col : str, int, or float
-        category of sample IDs in metadata
-    cond_col : str, int, or float
-        category of conditional in metadata
-    tensor : array-like, optional
-        A premade tensor to RCLR transform.
-        first dimension = conditions
-        second dimension = features
-        third dimension = samples
-
-    Attributes
-    -------
-    ID_order : list
-        order of IDs in tensor array
-    feature_order : list
-        order of features in tensor array
-    cond_order : list
-        order of conditions in tensor array
-    tensor : array-like
-        3rd order tensor of shape
-        first dimension = conditions
-        second dimension = features
-        third dimension = samples
-    TRCLR : array-like
-        RCLR transformed 3rd order tensor
-        of shape (transpose of input tensor).
+    T : array-like
+        Array of non-negative count data.
+        In an N mode tensor of shape:
         first dimension = samples
         second dimension = features
-        third dimension = conditions
+        [3..N] dimensions = conditions
 
     Raises
     ------
     ValueError
-        Raises an error if pseudocount
-        is less than zero.
+        Tensor is less than 2-dimensions.
     ValueError
-        if ID_col not in mapping cols
+        Tensor contains negative values.
     ValueError
-        if cond_col not in mapping cols
+        Tensor contains np.inf or -np.inf.
     ValueError
-        Table is not 2-dimension
+        Tensor contains np.nan or missing.
+
+    References
+    ----------
+    .. [1] V. Pawlowsky-Glahn, J. J. Egozcue,
+           R. Tolosana-Delgado (2015),
+           Modeling and Analysis of
+           Compositional Data, Wiley,
+           Chichester, UK
+
+    .. [2] C. Martino et al., A Novel Sparse
+           Compositional Technique Reveals
+           Microbial Perturbations. mSystems.
+           4 (2019), doi:10.1128/mSystems.00016-19.
+
+    Examples
+    --------
+
+    To use directly with a
+    prebuilt tensor.
+
+    >>> from numpy import np
+    >>> T_counts = np.array([[[10, 14, 43],
+                             [ 41, 43, 14]],
+                           [[10, 14, 43],
+                            [ 41, 43, 14]],
+                           [[10, 14, 43],
+                            [ 41, 43, 14]]])
+    >>> rclr(T_counts)
+
+    """
+
+    if len(T.shape) < 2:
+        raise ValueError('Tensor is less than 2-dimensions')
+
+    if (T < 0).any():
+        raise ValueError('Tensor contains negative values.')
+
+    if np.count_nonzero(np.isinf(T)) != 0:
+        raise ValueError('Tensor contains either np.inf or -np.inf.')
+
+    if np.count_nonzero(np.isnan(T)) != 0:
+        raise ValueError('Tensor contains np.nan or missing.')
+
+    if len(T.shape) < 3:
+        # rclr on 2D matrix
+        return rclr_matrix(T.transpose().copy()).T
+    else:
+        # flatten tensor (samples*conditions x features)
+        T = T.copy()
+        # conditional dimensions
+        conditions_index = list(range(2, len(T.shape)))
+        forward_T = tuple([0] + conditions_index + [1])
+        reverse_T = tuple([0] + [conditions_index[-1]]
+                          + [1] + conditions_index[:-1])
+        # transpose to flatten
+        T = T.transpose(forward_T)
+        M = T.reshape(np.product(T.shape[:len(T.shape) - 1]),
+                      T.shape[-1])
+        with np.errstate(divide='ignore', invalid='ignore'):
+            M_rclr = rclr_matrix(M)
+        # reshape to former tensor and return tensors
+        return M_rclr.reshape(T.shape).transpose(reverse_T)
+
+
+def rclr_matrix(M):
+    """
+    Robust clr transform helper function.
+    This function is built for mode 2 tensors,
+    also known as matrices.
+
+    Raises
+    ------
+    ValueError
+       Raises an error if any values are negative.
+    ValueError
+       Raises an error if the matrix has more than 2 dimension.
+
+    References
+    ----------
+    .. [1] V. Pawlowsky-Glahn, J. J. Egozcue,
+           R. Tolosana-Delgado (2015),
+           Modeling and Analysis of
+           Compositional Data, Wiley,
+           Chichester, UK
+
+    .. [2] C. Martino et al., A Novel Sparse
+           Compositional Technique Reveals
+           Microbial Perturbations. mSystems.
+           4 (2019), doi:10.1128/mSystems.00016-19.
+
+    Examples
+    --------
+
+    To use directly with a
+    prebuilt tensor.
+
+    >>> from numpy import np
+    >>> T_counts = np.array([[10, 14, 43],
+                             [ 41, 43, 14]])
+    >>> rclr_matrix(T_counts)
+
+    """
+
+    mat = np.atleast_2d(M)
+    if np.any(M < 0):
+        raise ValueError("Cannot have negative proportions")
+    if M.ndim > 2:
+        raise ValueError("Input matrix can only have two dimensions or less")
+
+    # closure following procedure in
+    # skbio.stats.composition.closure
+    M_log = M / M.sum(axis=1, keepdims=True)
+    # log transform before geo-mean
+    M_log = np.log(M_log.squeeze())
+    mask = [True] * np.product(M_log.shape)
+    mask = np.array(mask).reshape(M_log.shape)
+    mask[np.isfinite(M_log)] = False
+    # sum of rows (features)
+    M_rclr = np.ma.array(M_log, mask=mask)
+    # approx. geometric mean of the features
+    gm = M_rclr.mean(axis=-1, keepdims=True)
+    # subtracted to center log
+    M_rclr = (M_rclr - gm).squeeze().data
+    # ensure any missing are zero again
+    M_rclr[~np.isfinite(M_log)] = 0.0
+    return M_rclr
+
+
+class build(_BaseConstruct):
+
+    """
+    This class can both build N-mode
+    tensors from 2D dataframes given
+    a count table and mapping data.
+
+    A list of conditional measurements are
+    given that identify context measured
+    multiple times over the same subjects.
+    Additionally a set of subject IDs
+    must be provided. Any subjects that are
+    missing in a given condition are left
+    as completely zero.
+
+    Parameters
+    ----------
+    table : DataFrame
+        table of non-negative count data
+        rows = features
+        columns = samples
+    mapping : DataFrame
+        mapping metadata for table
+        rows = samples
+        columns = categories
+    subjects : str, int, or float
+        category of sample IDs in metadata
+    conditions : str, int, or float
+        category of conditional in metadata
+
+    Attributes
+    -------
+    subject_order : list
+        order of subjects in tensor array
+    feature_order : list
+        order of features in tensor array
+    condition_orders : list of lists
+        order of conditions for each
+        condition in tensor array
+    counts : array-like
+        Contains table counts.
+        N mode tensor of shape
+        first dimension = samples
+        second dimension = features
+        [3..N] dimensions = conditions
+
+    Raises
+    ------
+    ValueError
+        if subject not in mapping
+    ValueError
+        if any conditions not in mapping
+    ValueError
+        Table is not 2-dimensional
     ValueError
         Table contains negative values
     ValueError
         Table contains np.inf or -np.inf
     ValueError
-        Table contains nans
-    ValueError
-        tensor is not 3-dimension
-    ValueError
-        tensor contains negative values
-    ValueError
-        tensor contains np.inf or -np.inf
-    ValueError
-        tensor contains nans
-    Warning
-        tensor contains no zeros
-    Warning
-        Table contains no zeros
+        Table contains np.nan or missing.
     Warning
         If a conditional-sample pair
         has multiple IDs associated
         with it. In this case the
         default method is to sum them.
-    Warning
-        If total completely missing
-        samples exceeds 50% of the
-        data.
 
     References
     ----------
@@ -131,389 +265,233 @@ class build(_BaseTransform):
     Examples
     --------
 
-    To start with a 2D table.
+    To start with a 2D `table` in a DataFrame.
 
-    >>> t = Build()
-    >>> t.fit(table,metadata,ID,condition)
-    >>> t.TRCLR
+    Along with subject and conditional columns from
+    a `metadata` DataFrame.
 
-    To RCLR transform with a
-    prebuilt tensor.
+    The subject column is given as a string and the
+    list of conditions are given as a list of strings.
 
-    >>> T_counts = [[[ 0, 0, 0],
-                        [ 0, 0, 0]],
-                    [[10, 14, 43],
-                    [ 41, 43, 14],
-                    [[ 0 , 0 , 0 ],
-                    [ 0,  0 , 0 ]]]
-    >>> t = Build()
-    >>> t.tensor
-    >>> t.transform()
-    >>> t.TRCLR
+    All the strings given in subjects and conditions
+    must be columns in the metadata.
+
+    Furthermore, the index of `table` and `metadata`
+    must be matching.
+
+    >>> tensor = build()
+    >>> tensor.construct(table,metadata,
+                         subjects,
+                         [condition_1,
+                          condition_2])
+
+    Obtain a N-mode count tensor. The shape
+    of this tensor will be:
+
+    * First dimension = samples
+    * Second dimension = features
+    * [3..N] dimensions = conditions
+
+    >>> tensor.counts.shape
 
     """
 
-    def __init__(self, pseudocount=1):
+    def __init__(self):
         """
         Parameters
         ----------
-        pseudocount : float, optional
-            A pseudocount used in the
-            case that a sample, feature,
-             and/or condition is completely
-             missing from a vector slice in
-             the tensor formed.
-
-        """
-        if pseudocount < 0.0:
-            raise ValueError("pseudocount should be larger than zero")
-
-        self._pseudocount = pseudocount
-
-    @property
-    def pseudocount(self):
-        """
-        Pseudocount property
-        allows pseudocount to
-        be set explicitly.
+        None
 
         """
 
-        return self._pseudocount
-
-    @pseudocount.setter
-    def pseudocount(self, value):
-        """
-        Set pseudocount value
-        for property.
-
-        Parameters
-        ----------
-        value : float
-            pseudocount value
-
-        Raises
-        ------
-        ValueError
-            Raises an error if value is less than zero.
-
-        Examples
-        --------
-        >>> t = Build()
-        >>> t.pseudocount
-        >>> t.pseudocount = 1
-
-        """
-
-        if value < 0.0:
-            raise ValueError("pseudocount should be larger than zero")
-        self._pseudocount = value
-
-    @property
-    def tensor(self):
-        """
-        pseudocount property
-        allows tensor to
-        be set explicitly.
-
-        """
-
-        return self._tensor
-
-    @tensor.setter
-    def tensor(self, tensor):
-        """
-        Set a tensor directly.
-
-        Parameters
-        ----------
-        tensor : array-like
-            first dimension = conditions
-            second dimension = features
-            third dimension = samples
-
-        Raises
-        ------
-        ValueError
-            Raises an error if value is less than zero.
-
-        Examples
-        --------
-        >>> T_counts = [[[ 0, 0, 0],
-                         [ 0, 0, 0]],
-                       [[10, 14, 43],
-                        [ 41, 43, 14],
-                       [[ 0 , 0 , 0 ],
-                        [ 0,  0 , 0 ]]]
-        >>> t = Build()
-        >>> t.tensor
-        >>> t.tensor = T_counts
-
-        """
-
-        if len(tensor.shape) != 3:
-            raise ValueError('tensor is not 3-dimension')
-
-        if (tensor < 0).any():
-            raise ValueError('tensor Contains Negative Values')
-
-        if np.count_nonzero(np.isinf(tensor)) != 0:
-            raise ValueError('tensor contains either np.inf or -np.inf')
-
-        if np.count_nonzero(np.isnan(tensor)) != 0:
-            raise ValueError('tensor contains nans')
-
-        if np.count_nonzero(tensor) == 0:
-            warnings.warn("tensor contains no zeros.", RuntimeWarning)
-
-        self._tensor = tensor
-
-    def fit(self, table, mapping, ID_col, cond_col):
+    def construct(self, table, mf, subjects, conditions):
         """
         This function transforms a 2D table
-        into a 3rd-Order tensor in CLR space.
+        into a N-Order tensor.
 
         Parameters
         ----------
         table : DataFrame
             table of non-negative count data
-            rows = samples
-            columns = features
+            rows = features
+            columns = samples
         mapping : DataFrame
             mapping metadata for table
             rows = samples
-            columns = metadata categories
-        ID_col : str, int, or float
+            columns = categories
+        subjects : str, int, or float
             category of sample IDs in metadata
-        cond_col : str, int, or float
+        conditions : str, int, or float
             category of conditional in metadata
 
         Returns
         -------
-        self to abstract method in base
+        self to abstract method
 
         Raises
         ------
         ValueError
-            if ID_col not in mapping cols
+            if subject not in mapping
         ValueError
-            if cond_col not in mapping cols
+            if any conditions not in mapping
         ValueError
-            Table is not 2-dimensions
+            Table is not 2-dimensional
         ValueError
             Table contains negative values
         ValueError
             Table contains np.inf or -np.inf
         ValueError
-            Table contains nans
-        Warning
-            Table contains no zeros
-
-        Examples
-        --------
-        >>> t = Build()
-        >>> t.fit(table,metadata,ID,condition)
-
-        """
-
-        if ID_col not in mapping.columns:
-            raise ValueError("ID category not in metadata columns")
-
-        if cond_col not in mapping.columns:
-            raise ValueError("Conditional category not in metadata columns")
-
-        if len(table.values.shape) != 2:
-            raise ValueError('Table is not 2-dimensions')
-
-        if (table.values < 0).any():
-            raise ValueError('Table Contains Negative Values')
-
-        if np.count_nonzero(np.isinf(table.values)) != 0:
-            raise ValueError('Table contains either np.inf or -np.inf')
-
-        if np.count_nonzero(np.isnan(table.values)) != 0:
-            raise ValueError('Table contains nans')
-
-        if np.count_nonzero(table.values) == 0:
-            warnings.warn("Table contains no zeros.", RuntimeWarning)
-
-        self.table = table.copy()
-        self.mapping = mapping.copy()
-        self.ID_col = ID_col
-        self.cond_col = cond_col
-        self._fit()
-
-        return self
-
-    def _fit(self):
-        """
-        This function forms a tensor
-        with missing samples left as
-        all zeros. It then passes that
-        tensor into transform() for
-        RCLR transformation.
-
-        Raises
-        ------
+            Table contains np.nan or missing.
         Warning
             If a conditional-sample pair
             has multiple IDs associated
             with it. In this case the
             default method is to sum them.
-        Warning
-            If total completely missing
-            samples exceeds 50% of the
-            data.
-
-        """
-
-        # check that all indicies match & are unqiue
-        self.table, self.mapping = match(self.table, self.mapping)
-
-        # order ids, cond, feats
-        ID_order = sorted(set(self.mapping[self.ID_col]))
-        cond_order = sorted(set(self.mapping[self.cond_col]))
-
-        # empty tensor to fill
-        tensor = np.zeros((len(cond_order),
-                           len(self.table.columns),
-                           len(ID_order)))
-
-        # fill tensor where possible
-        table_index = np.array(self.table.index)
-        table_array = self.table.values
-        num_missing = 0  # check if fully missing samples
-        for i, c_i in enumerate(cond_order):
-            for j, ID_j in enumerate(ID_order):
-                # get index ID assoc. in cond.
-                idx1 = (self.mapping[self.ID_col].isin([ID_j]))
-                idx2 = (self.mapping[self.cond_col].isin([c_i]))
-                idx = set(self.mapping[idx1 & idx2].index)
-                if len(idx) > 1:
-                    warnings.warn(''.join(["Condition ", str(c_i),
-                                           " has multiple sample ",
-                                           "with the same IDs ",
-                                           str(ID_j)]), RuntimeWarning)
-                elif len(idx) == 0:
-                    num_missing += 1
-                    continue
-                # fill slice
-                tensor[i, :, j] = table_array[table_index ==
-                                              list(idx), :].sum(axis=0)
-
-        # find percent totally missing samples
-        self.perc_missing = num_missing / (len(cond_order) * len(ID_order))
-        if self.perc_missing > 0.50:
-            warnings.warn(''.join(["Total Missing Sample Exceeds 50% ",
-                                   "some conditions or samples may ",
-                                   "need to be removed."]), RuntimeWarning)
-
-        # perform RCLR transformation
-        self._tensor = tensor
-        self.transform()
-
-        # save intermediates
-        self.ID_order = ID_order
-        self.feature_order = self.table.columns
-        self.cond_order = cond_order
-
-    def transform(self):
-        """
-        tensor wrapped for rclr transform
-        will add pseudocount where samples
-        are completely missing. The transform
-        of those samples will be zero again.
-
-        Raises
-        ------
-        ValueError
-            tensor is not 3-dimensions
-        ValueError
-            tensor contains negative values
-        ValueError
-            tensor contains np.inf or -np.inf
-        ValueError
-            tensor contains nans
-        Warning
-            tensor contains no zeros
-
-        References
-        ----------
-        .. [1] V. Pawlowsky-Glahn, J. J. Egozcue,
-               R. Tolosana-Delgado (2015),
-               Modeling and Analysis of
-               Compositional Data, Wiley,
-               Chichester, UK
-
-        .. [2] C. Martino et al., A Novel Sparse
-               Compositional Technique Reveals
-               Microbial Perturbations. mSystems.
-               4 (2019), doi:10.1128/mSystems.00016-19.
 
         Examples
         --------
 
-        To use directly with a
-        prebuilt tensor.
+        To start with a 2D `table` in a DataFrame.
 
-        >>> T_counts = [[[ 0, 0, 0],
-                         [ 0, 0, 0]],
-                       [[10, 14, 43],
-                        [ 41, 43, 14],
-                       [[ 0 , 0 , 0 ],
-                        [ 0,  0 , 0 ]]]
-        >>> t = Build()
-        >>> t.tensor = T_counts
-        >>> t.transform()
-        >>> t.TRCLR
+        Along with subject and conditional columns from
+        a `metadata` DataFrame.
+
+        The subject column is given as a string and the
+        list of conditions are given as a list of strings.
+
+        All the strings given in subjects and conditions
+        must be columns in the metadata.
+
+        Furthermore, the index of `table` and `metadata`
+        must be matching.
+
+        >>> tensor = build()
+        >>> tensor.construct(table,metadata,
+                            subjects,
+                            [condition_1,
+                            condition_2])
+
+        Obtain a N-mode count tensor. The shape
+        of this tensor will be:
+
+        * First dimension = samples
+        * Second dimension = features
+        * [3..N] dimensions = conditions
+
+        >>> tensor.counts.shape
 
         """
 
-        if len(self._tensor.shape) != 3:
-            raise ValueError('tensor is not 3-dimentional')
+        if subjects not in mf.columns:
+            raise ValueError("Subject provided (" +
+                             str(subjects) +
+                             ") category not in metadata columns.")
 
-        if (self._tensor < 0).any():
-            raise ValueError('tensor Contains Negative Values')
+        if any(cond_col not in mf.columns for cond_col in conditions):
+            missin_cond = ','.join([cond_col for cond_col in conditions
+                                    if cond_col not in mf.columns])
+            raise ValueError("Conditional category(s) [" +
+                             str(missin_cond) +
+                             "] not in metadata column(s).")
 
-        if np.count_nonzero(np.isinf(self._tensor)) != 0:
-            raise ValueError('tensor contains either np.inf or -np.inf')
+        if (table.values < 0).any():
+            raise ValueError('Table contains negative values.')
 
-        if np.count_nonzero(np.isnan(self._tensor)) != 0:
-            raise ValueError('tensor contains nans')
+        if np.count_nonzero(np.isinf(table.values)) != 0:
+            raise ValueError('Table contains either np.inf or -np.inf.')
 
-        if np.count_nonzero(self._tensor) == 0:
-            warnings.warn("tensor contains no zeros.", RuntimeWarning)
+        if np.count_nonzero(np.isnan(table.values)) != 0:
+            raise ValueError('Table contains np.nan or missing.')
 
-        # copy tensor to transform
-        TRCLR = self._tensor.copy()
+        # store all to self
+        self.table = table.copy()
+        self.mf = mf.copy()
+        self.subjects = subjects
+        self.conditions = conditions
+        self._construct()
 
-        # pseudocount totally missing samp:
-        # sum of all feat (time,samp)==0
-        for i, j in np.argwhere(self._tensor.sum(axis=1) == 0):
-            self._tensor[i, :, j] += self._pseudocount
-        # add for any totally zero features (should not occur)
-        if sum(self._tensor.sum(axis=0).sum(axis=1) == 0) > 0:
-            self._tensor[:, self._tensor.sum(axis=0).sum(
-                axis=1) == 0, :] += self._pseudocount
-        # add for any totally zero timepoint (should not occur)
-        if sum(self._tensor.sum(axis=2).sum(axis=1) == 0) > 0:
-            self._tensor[self._tensor.sum(axis=2).sum(
-                axis=1) == 0, :, :] += self._pseudocount
+        return self
 
-        # flatten
-        TRCLR = np.concatenate([self._tensor[i, :, :].T
-                                for i in range(self._tensor.shape[0])], axis=0)
+    def _construct(self):
+        """
+        This function forms a tensor
+        with missing subject x condition
+        pairs left as all zeros.
 
-        # transform flat
-        TRCLR = rclr().fit_transform(TRCLR)
+        Raises
+        ------
+        Warning
+            If a conditional-subject pair
+            has multiple samples associated
+            with it. In this case the
+            default method is to sum them.
 
-        # re-shape tensor
-        TRCLR = np.dstack([TRCLR[(i - 1) *
-                           self._tensor.shape[-1]:(i) *
-                           self._tensor.shape[-1]]
-                           for i in range(1, self._tensor.shape[0] + 1)])
+        """
 
-        # fill nan with zero
-        TRCLR[np.isnan(TRCLR)] = 0
+        table, mf = self.table, self.mf
 
-        self.TRCLR = TRCLR
+        ## Step 1: sum samples with multiple conditional overlaps ##
+
+        duplicated = {k: list(df.index) for k, df in mf.groupby([self.subjects]
+                                                                + self.conditions)
+                      if df.shape[0] > 1}  # get duplicated conditionals
+        duplicated_ids = ','.join(
+            list(set([str(k[0]) for k in duplicated.keys()])))
+        warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
+                               ") contains multiple ",
+                               "samples. Multiple subject counts will be",
+                               " summed across samples by subject."]),
+                      RuntimeWarning)
+        for id_, dup in duplicated.items():
+            # sum and keep one
+            table[dup[0]] = table.loc[:, dup].mean(axis=1).astype(int)
+            # drop the other
+            table.drop(dup[1:], axis=1)
+            mf.drop(dup[1:], axis=0)
+        # save direct data
+        table_counts = table.values
+
+        ## Step 2: fill the tensor (missing are all zero) ##
+
+        # generate all sorted mode ids
+        def sortset(ids): return sorted(set(ids))
+        # get the ordered subjects
+        subject_order = sortset(mf[self.subjects])
+        # get un-ordered features (order does not matter)
+        feature_order = list(table.index)
+        # get the ordered for each conditional
+        conditional_orders = [sortset(mf[cond])
+                              for cond in self.conditions]
+        # generate the dims.
+        all_dim = [subject_order]\
+            + conditional_orders  # concat all
+
+        # get tensor to fill with counts (all zeros)
+        shape = tuple([len(cl) for cl in [subject_order,
+                                          feature_order]
+                       + all_dim[1:]])
+        tensor_counts = np.zeros(tuple(shape))
+
+        # generate map from ordered subject and conditions
+        # to the original orders in the table
+        projection = {
+            tuple(
+                dim.index(k_) for k_, dim in zip(
+                    k, all_dim)): list(
+                table.columns).index(
+                    df.index[0]) for k, df in mf.groupby(
+                        [
+                            self.subjects] + self.conditions)}
+
+        # fill the tensor with data
+        for T_ind, M_ind in projection.items():
+            # get the index from the tensor
+            ind_ = [T_ind[:1], list(range(len(table.index)))] + list(T_ind[1:])
+            # fill count tensor from table
+            tensor_counts[tuple(ind_)] = table_counts[:, M_ind]
+
+        # save tensor label order
+        self.counts = tensor_counts
+        self.subject_order = subject_order
+        self.feature_order = feature_order
+        self.condition_orders = conditional_orders

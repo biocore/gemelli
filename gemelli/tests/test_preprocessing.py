@@ -2,120 +2,147 @@ import unittest
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
-from deicode.preprocessing import rclr
-from gemelli.preprocessing import build
 from skbio.stats.composition import clr
+from deicode.preprocessing import rclr as matrix_rclr
+from gemelli.preprocessing import build, rclr, rclr_matrix
 
 
 class Testpreprocessing(unittest.TestCase):
 
     def setUp(self):
-
-        self.cdata1 = np.array([[2, 2, 6],
-                                [4, 4, 2]])
-
-        self.cdata2 = [[3, 3, 0], [0, 4, 2]]
-
-        self.true2 = np.array([[0.0,    0.0,        np.nan],
-                               [np.nan, 0.34657359, -0.34657359]])
-
-        self.T_true2 = [[[0.,          0.,          0.],
-                         [0.,          0.,          0.]],
-                        [[-0.14384104, -0.14384104, -0.14384104],
-                         [0.14384104,   0.14384104,  0.14384104]],
-                        [[0.,          0.,          0.],
-                         [0.,          0.,          0.]]]
-
-        self.bad1 = np.array([1, 2, -1])
-
-        self.tenres = np.array([[[1,  2,  3],
-                                 [4,  5,  6]],
-                                [[7,  8,  9],
-                                 [10, 11, 12]],
-                                [[13, 14, 15],
-                                 [16, 17, 18]]])
-
-        self.clrres = np.array([[[-1.76959918],
-                                 [-1.076452],
-                                 [-0.67098689],
-                                 [0.17631097],
-                                 [0.30984236],
-                                 [0.4276254],
-                                 [0.79535018],
-                                 [0.86945815],
-                                 [0.93845102]],
-                                [[-0.88804481],
-                                 [-0.66490126],
-                                 [-0.48257971],
-                                 [0.02824592],
-                                 [0.1235561],
-                                 [0.21056747],
-                                 [0.49824955],
-                                 [0.55887417],
-                                 [0.61603258]]])
-        self.t = build()
-        self._rclr = rclr()
+        # test dense
+        self.count_data_one = np.array([[2, 2, 6],
+                                        [4, 4, 2]])
+        # test with zeros
+        self.count_data_two = np.array([[3, 3, 0],
+                                        [0, 4, 2]])
+        # test dense tensor
+        self.tensor_true = np.array([[[1, 2, 3],
+                                      [4, 5, 6]],
+                                     [[7, 8, 9],
+                                      [10, 11, 12]],
+                                     [[13, 14, 15],
+                                      [16, 17, 18]]])
         pass
 
     def test_build(self):
 
-        shape_ = self.tenres.shape[0]
-        M_counts = np.concatenate([self.tenres[i, :, :].T
-                                   for i in range(shape_)],
-                                  axis=0).T
-        mapping = np.array([[0, 0, 1, 1, 2, 2],
-                            [0, 1, 2, 0, 1, 2]])
+        # flatten tensor into matrix
+        matrix_counts = self.tensor_true.transpose([0, 2, 1])
+        reshape_shape = matrix_counts.shape
+        matrix_counts = matrix_counts.reshape(9, 2)
+        # build mapping and table dataframe to rebuild
+        mapping = np.array([[0, 0, 0, 1, 1, 1, 2, 2, 2],
+                            [0, 1, 2, 0, 1, 2, 0, 1, 2]])
         mapping = pd.DataFrame(mapping.T,
-                               columns=['Cond', 'ID'])
-        table = pd.DataFrame(M_counts)
+                               columns=['ID', 'conditional'])
+        table = pd.DataFrame(matrix_counts.T)
+        # rebuild the tensor
+        tensor = build()
+        with self.assertWarns(Warning):
+            tensor.construct(table, mapping,
+                             'ID', ['conditional'])
+        # ensure rebuild tensor is the same as it started
+        npt.assert_allclose(tensor.counts,
+                            self.tensor_true.astype(float))
+        # test tensor is ordered correctly in every dimension
+        self.assertListEqual(tensor.subject_order,
+                             list(range(3)))
+        self.assertListEqual(tensor.feature_order,
+                             list(range(2)))
+        self.assertListEqual(tensor.condition_orders[0],
+                             list(range(3)))
+        # test that flattened matrix has the same clr
+        # transform as the tensor rclr
+        tensor_clr_true = clr(matrix_counts).reshape(reshape_shape)
+        tensor_clr_true = tensor_clr_true.transpose([0, 2, 1])
+        npt.assert_allclose(rclr(tensor.counts),
+                            tensor_clr_true)
 
-        self.t.fit(table, mapping, 'ID', 'Cond')
-        npt.assert_allclose(self.t.tensor.astype(float).reshape(1, 9, 2),
-                            M_counts.T.astype(float).reshape(1, 9, 2))
-        self.t.transform()
-        npt.assert_allclose(np.around(self.t.TRCLR.astype(float), 3),
-                            np.around(self.clrres.astype(float), 3))
+    def test_errors(self):
+
+        # flatten tensor into matrix
+        matrix_counts = self.tensor_true.transpose([0, 2, 1])
+        reshape_shape = matrix_counts.shape
+        matrix_counts = matrix_counts.reshape(9, 2)
+        # build mapping and table dataframe to rebuild
+        mapping = np.array([[0, 0, 0, 1, 1, 1, 2, 2, 2],
+                            [0, 1, 2, 0, 1, 2, 0, 1, 2]])
+        mapping = pd.DataFrame(mapping.T,
+                               columns=['ID', 'conditional'])
+        table = pd.DataFrame(matrix_counts.T)
+        # rebuild the tensor
+        tensor = build()
+        with self.assertWarns(Warning):
+            tensor.construct(table, mapping,
+                             'ID', ['conditional'])
+        # test less than 2D throws ValueError
+        with self.assertRaises(ValueError):
+            rclr(np.array(range(3)))
+        # test negatives throws ValueError
+        with self.assertRaises(ValueError):
+            rclr(tensor.counts * -1)
+        tensor_true_error = self.tensor_true.astype(float)
+        tensor_true_error[tensor_true_error <= 10] = np.inf
+        # test infs throws ValueError
+        with self.assertRaises(ValueError):
+            rclr(tensor_true_error)
+        tensor_true_error = self.tensor_true.astype(float)
+        tensor_true_error[tensor_true_error <= 10] = np.nan
+        # test nan(s) throws ValueError
+        with self.assertRaises(ValueError):
+            rclr(tensor_true_error)
+        # test rclr_matrix on already made tensor
+        with self.assertRaises(ValueError):
+            rclr_matrix(self.tensor_true)
+        # test rclr_matrix on negatives
+        with self.assertRaises(ValueError):
+            rclr_matrix(self.tensor_true * -1)
+        # test that missing id in mapping ValueError
+        with self.assertRaises(ValueError):
+            tensor.construct(table, mapping.drop(['ID'], axis=1),
+                             'ID', ['conditional'])
+        # test that missing conditional in mapping ValueError
+        with self.assertRaises(ValueError):
+            tensor.construct(table, mapping.drop(['conditional'], axis=1),
+                             'ID', ['conditional'])
+        # test negatives throws ValueError
+        with self.assertRaises(ValueError):
+            tensor.construct(table * -1, mapping,
+                             'ID', ['conditional'])
+        table_error = table.astype(float)
+        table_error[table_error <= 10] = np.inf
+        # test infs throws ValueError
+        with self.assertRaises(ValueError):
+            tensor.construct(table_error, mapping,
+                             'ID', ['conditional'])
+        table_error = table.astype(float)
+        table_error[table_error <= 10] = np.nan
+        # test nan(s) throws ValueError
+        with self.assertRaises(ValueError):
+            tensor.construct(table_error, mapping,
+                             'ID', ['conditional'])
+        # test adding up counts for repeat samples
+        table[9] = table[8] - 1
+        mapping.loc[9, ['ID', 'conditional']
+                    ] = mapping.loc[8, ['ID', 'conditional']]
+        with self.assertWarns(Warning):
+            tensor.construct(table, mapping, 'ID', ['conditional'])
+        duplicate_tensor_true = self.tensor_true.copy()
+        duplicate_tensor_true[2, :, 2] = duplicate_tensor_true[2, :, 2] - 1
+        npt.assert_allclose(tensor.counts,
+                            duplicate_tensor_true.astype(float))
 
     def test_matrix_rclr(self):
 
         # test clr works the same if there are no zeros
-        cmat = self._rclr.fit_transform(self.cdata1)
-        npt.assert_allclose(cmat, clr(self.cdata1.copy()))
-
+        npt.assert_allclose(rclr(self.count_data_one.T).T,
+                            clr(self.count_data_one))
         # test a case with zeros
-        cmat = self._rclr.fit_transform(self.cdata2)
-        npt.assert_allclose(cmat, self.true2)
-
+        matrix_result = matrix_rclr()
+        matrix_result = matrix_result.fit_transform(self.count_data_two.T)
+        matrix_result[np.isnan(matrix_result)] = 0.0
+        npt.assert_allclose(rclr(self.count_data_two), matrix_result.T)
+        # test negatives throw ValueError
         with self.assertRaises(ValueError):
-            self._rclr.fit_transform(self.bad1)
-
-    def test_transform(self):
-
-        t = build()
-        # test flat clr works the same if there are no zeros
-        t.tensor = np.stack([self.cdata1 for i in range(3)])
-        t.transform()
-        T_cmat = t.TRCLR
-        test_T = np.stack([self.cdata1 for i in range(3)])
-        clr_test_T = clr(np.concatenate([test_T[i, :, :].T
-                                         for i in range(test_T.shape[0])],
-                                        axis=0))
-
-        def start(i): return (i - 1) * test_T.shape[-1]
-
-        def end(i): return i * test_T.shape[-1]
-
-        test_shape = test_T.shape[0] + 1
-        test_list = [clr_test_T[start(i):end(i)] for i in range(1, test_shape)]
-        clr_test_T = np.dstack(test_list)
-        npt.assert_allclose(T_cmat, clr_test_T)
-
-        # test a case with zeros
-        t.tensor = np.stack([self.cdata2 for _ in range(3)])
-        t.transform()
-        T_cmat = t.TRCLR
-        npt.assert_allclose(T_cmat, self.T_true2)
-
-        with self.assertRaises(ValueError):
-            t.tensor = np.stack([self.bad1 for _ in range(3)])
-            t.transform()
+            rclr(self.tensor_true * -1)

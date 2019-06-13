@@ -66,7 +66,7 @@ class Testtenals(unittest.TestCase):
             A1 = self.U1
             A2 = np.matmul(self.U2, np.diag(self.U3[i3, :]))
             B1 = L1
-            B2 = np.matmul(L2, np.diag(L3[i3, :]*s.T.flatten()))
+            B2 = np.matmul(L2, np.diag(L3[i3, :] * s.T.flatten()))
             rmse += np.trace(np.matmul(np.matmul(A1.T, A1), np.matmul(A2.T,
                                                                       A2))) + \
                 np.trace(np.matmul(np.matmul(B1.T, B1), np.matmul(B2.T,
