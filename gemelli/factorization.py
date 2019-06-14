@@ -46,7 +46,7 @@ class TensorFactorization(_BaseImpute):
         max_als_iterations : int, optional
             Max number of Alternating Least Square (ALS).
         tol_als : float, optional
-            The minimization -- convergence break point for 
+            The minimization -- convergence break point for
             ALS.
         max_rtpm_iterations : int, optional
             Max number of Robust Tensor Power Method (RTPM)
@@ -58,7 +58,7 @@ class TensorFactorization(_BaseImpute):
             but will be more computationally
             expensive.
         tol_rtpm : float, optional
-            The minimization -- convergence break point for 
+            The minimization -- convergence break point for
             RTPM.
         fillna : int, optional
             Prevent division by zero in denominator causing nan
@@ -111,7 +111,7 @@ class TensorFactorization(_BaseImpute):
 
         References
         ----------
-        .. [1] Jain, Prateek, and Sewoong Oh. 2014. 
+        .. [1] Jain, Prateek, and Sewoong Oh. 2014.
                “Provable Tensor Factorization with Missing Data.”
                In Advances in Neural Information Processing Systems
                27, edited by Z. Ghahramani, M. Welling, C. Cortes,
@@ -187,10 +187,11 @@ class TensorFactorization(_BaseImpute):
             raise ValueError('Contains either np.inf or -np.inf')
         # ensure there are less components that the max. shape of the tensor
         if self.n_components > np.max(tensor.shape):
-            raise ValueError('n_components must be less than the maximum shape')
+            raise ValueError(
+                'n_components must be less than the maximum shape')
         # obtain mask array where values of tensor are zero
-        mask = np.zeros(tensor.shape) # mask of zeros the same shape
-        mask[abs(tensor) > 0] = 1 # set masked (missing) values to one
+        mask = np.zeros(tensor.shape)  # mask of zeros the same shape
+        mask[abs(tensor) > 0] = 1  # set masked (missing) values to one
         # run the tensor factorization method [2]
         loadings, eigvals, reconstructed_distance = tenals(tensor,
                                                            mask,
@@ -216,7 +217,7 @@ class TensorFactorization(_BaseImpute):
         self.features = loadings[1]
         # save list of array(s) of loadings for conditions
         self.conditions = loadings[2] if len(loadings[2:]) == 1 \
-                                      else loadings[2:]
+            else loadings[2:]
         # generate the trajectory(s) and distances
         # list of each condition-subject trajectory
         self.subject_trajectory = []
@@ -229,29 +230,33 @@ class TensorFactorization(_BaseImpute):
         # for each condition in conditions
         # generate a trajectory and distance array
         for condition in loadings[2:]:
-            # temporary list of components in subject trajectory 
+            # temporary list of components in subject trajectory
             subject_temp_trajectory = []
-            # temporary list of components in feature trajectory 
+            # temporary list of components in feature trajectory
             feature_temp_trajectory = []
             # for each component in the rank given to TensorFactorization
             for component in range(self.n_components):
                 # component condition-subject trajectory
-                subject_temp_trajectory.append(np.dot(loadings[0][:,[component]], 
-                                               condition[:,[component]].T).flatten())
+                subject_temp_trajectory.append(np.dot(loadings[0][:, [component]],
+                                                      condition[:, [component]].T).flatten())
                 # component condition-feature trajectory
-                feature_temp_trajectory.append(np.dot(loadings[1][:,[component]], 
-                                               condition[:,[component]].T).flatten())
+                feature_temp_trajectory.append(np.dot(loadings[1][:, [component]],
+                                                      condition[:, [component]].T).flatten())
             # combine all n_components
             subject_temp_trajectory = np.array(subject_temp_trajectory).T
             feature_temp_trajectory = np.array(feature_temp_trajectory).T
             # save subject-condition trajectory and distance matrix
             self.subject_trajectory.append(subject_temp_trajectory)
-            self.subject_distances.append(distance.cdist(subject_temp_trajectory,
-                                                         subject_temp_trajectory))
+            self.subject_distances.append(
+                distance.cdist(
+                    subject_temp_trajectory,
+                    subject_temp_trajectory))
             # save feature-condition trajectory and distance matrix
             self.feature_trajectory.append(feature_temp_trajectory)
-            self.feature_distances.append(distance.cdist(feature_temp_trajectory,
-                                                         feature_temp_trajectory))
+            self.feature_distances.append(
+                distance.cdist(
+                    feature_temp_trajectory,
+                    feature_temp_trajectory))
 
 
 def tenals(
@@ -290,7 +295,7 @@ def tenals(
     max_als_iterations : int, optional
         Max number of Alternating Least Square (ALS).
     tol_als : float, optional
-        The minimization -- convergence break point for 
+        The minimization -- convergence break point for
         ALS.
     max_rtpm_iterations : int, optional
         Max number of Robust Tensor Power Method (RTPM)
@@ -302,7 +307,7 @@ def tenals(
         but will be more computationally
         expensive.
     tol_rtpm : float, optional
-        The minimization -- convergence break point for 
+        The minimization -- convergence break point for
         RTPM.
     fillna : int, optional
         Prevent division by zero in denominator causing nan
@@ -327,7 +332,7 @@ def tenals(
 
     References
     ----------
-    .. [1] Jain, Prateek, and Sewoong Oh. 2014. 
+    .. [1] Jain, Prateek, and Sewoong Oh. 2014.
             “Provable Tensor Factorization with Missing Data.”
             In Advances in Neural Information Processing Systems
             27, edited by Z. Ghahramani, M. Welling, C. Cortes,
@@ -348,16 +353,17 @@ def tenals(
     --------
     TODO
     """
-    
+
     # Get the shape of tensor to iterate
     tensor_dimensions = tensor.shape
     # Frobenius norm initialization for ALS minimization.
     initial_tensor_frobenius_norm = norm(tensor)**2
     # initialization by Robust Tensor Power Method (modified for non-symmetric
     # tensors).
-    initial_eigvals, initial_loadings = robust_tensor_power_method(tensor, n_components, n_initializations, max_rtpm_iterations, tol_rtpm)
+    initial_eigvals, initial_loadings = robust_tensor_power_method(
+        tensor, n_components, n_initializations, max_rtpm_iterations, tol_rtpm)
     # Begin alternating least squares minimization below!
-    # make a copy of inital factorization from RTPM 
+    # make a copy of inital factorization from RTPM
     # to use in the ALS step.
     loadings = initial_loadings.copy()
     eigvals = initial_eigvals.copy()
@@ -368,14 +374,18 @@ def tenals(
         for component in range(n_components):
             # set all eigvals to zero for iteration
             eigvals[component] = 0
-            # reconstruct the tensor from the loadings to compare to the original tensor
-            reconstructed_tensor = np.multiply(reconstruct_tensor(eigvals, loadings), mask)
+            # reconstruct the tensor from the loadings to compare to the
+            # original tensor
+            reconstructed_tensor = np.multiply(
+                reconstruct_tensor(eigvals, loadings), mask)
             # generate copy of loadings to reconstruct on each iterations
-            loadings_iteration = [loading[:, component].copy() for loading in loadings]
+            loadings_iteration = [loading[:, component].copy()
+                                  for loading in loadings]
             # denominator should end up as a list of np.zeros((dim_i, 1))
             denominator = [np.zeros(dim) for dim in tensor_dimensions]
             # for each  dimension of the tensor optimize that dimensions loading
-            # based on the distance between the original tensor and the reconstruction
+            # based on the distance between the original tensor and the
+            # reconstruction
             for dim, dim_size in enumerate(tensor_dimensions):
                 # set previous loading to zero
                 loadings[dim][:, component] = 0
@@ -384,47 +394,59 @@ def tenals(
                 dot_across = dims_np[dims_np != dim]
                 # outer dot-product
                 dim_loadings_reconstructed = np.tensordot(tensor - reconstructed_tensor,
-                                     loadings_iteration[dot_across[0]],
-                                     axes=(1 if dim == 0 else 0, 0))
+                                                          loadings_iteration[dot_across[0]],
+                                                          axes=(1 if dim == 0 else 0, 0))
                 denominator[dim] = np.tensordot(mask,
-                                        loadings_iteration[dot_across[0]]**2,
-                                        axes=(1 if dim == 0 else 0, 0))
+                                                loadings_iteration[dot_across[0]]**2,
+                                                axes=(1 if dim == 0 else 0, 0))
                 # inner dot-product
                 for inner_dim in dot_across[1:]:
-                    dim_loadings_reconstructed = np.tensordot(dim_loadings_reconstructed,
-                                         loadings_iteration[inner_dim],
-                                         axes=(1 if inner_dim > dim else 0, 0))
-                    denominator[dim] = np.tensordot(denominator[dim],
-                                            loadings_iteration[inner_dim]**2,
-                                            axes=(1 if inner_dim > dim else
-                                                  0, 0))
+                    dim_loadings_reconstructed = np.tensordot(
+                        dim_loadings_reconstructed, loadings_iteration[inner_dim], axes=(
+                            1 if inner_dim > dim else 0, 0))
+                    denominator[dim] = np.tensordot(
+                        denominator[dim],
+                        loadings_iteration[inner_dim]**2,
+                        axes=(
+                            1 if inner_dim > dim else 0,
+                            0))
                 # update iteration's loadings
-                loadings_iteration[dim] = loadings[dim][:, component] + dim_loadings_reconstructed.flatten()
+                loadings_iteration[dim] = loadings[dim][:,
+                                                        component] + dim_loadings_reconstructed.flatten()
                 # Add fillna to prevent division by zero in denominator causing nan.
                 # This can occur in early iteration from all zero fibers in the tensor along dim.
-                # In practice this should be rare but can occur in very sparse tensors.
+                # In practice this should be rare but can occur in very sparse
+                # tensors.
                 denominator[dim][denominator[dim] == 0] = fillna
-                loadings_iteration[dim] = loadings_iteration[dim] / denominator[dim]
+                loadings_iteration[dim] = loadings_iteration[dim] / \
+                    denominator[dim]
                 # If  this dimension is the last in the tensor then update the eigvals
                 # with the new loadings.
                 if dim == len(tensor_dimensions) - 1:
                     eigvals[component] = norm(loadings_iteration[dim])
                 #  update the loadings_iteration in dimension (dim)
-                loadings_iteration[dim] = loadings_iteration[dim] / norm(loadings_iteration[dim])
+                loadings_iteration[dim] = loadings_iteration[dim] / \
+                    norm(loadings_iteration[dim])
                 loadings[dim][:, component] = loadings_iteration[dim]
             # update the loadings with this iterations loadings
             for i, loading in enumerate(loadings):
                 loading[:, component] = loadings_iteration[i]
-        # MSE of the original tensor and the reconstructed tensor based on the loadings.
-        mean_squared_error = tensor - mask * reconstruct_tensor(eigvals, loadings)
+        # MSE of the original tensor and the reconstructed tensor based on the
+        # loadings.
+        mean_squared_error = tensor - mask * \
+            reconstruct_tensor(eigvals, loadings)
         # Frobenius norm for new reconstructed tensor
         iteration_tensor_frobenius_norm = norm(mean_squared_error)**2
         # If the error between this iterations reconstruction and the intital tensor is
-        # below tol_als then  break the iterations. 
-        if np.sqrt(iteration_tensor_frobenius_norm / initial_tensor_frobenius_norm) < tol_als:
+        # below tol_als then  break the iterations.
+        if np.sqrt(
+                iteration_tensor_frobenius_norm /
+                initial_tensor_frobenius_norm) < tol_als:
             break
     # get the final distance between the initial tensor and the reconstruction
-    reconstructed_distance = np.sqrt(iteration_tensor_frobenius_norm / initial_tensor_frobenius_norm)
+    reconstructed_distance = np.sqrt(
+        iteration_tensor_frobenius_norm /
+        initial_tensor_frobenius_norm)
     # check that the factorization converged
     if any(sum(sum(np.isnan(loading))) > 0 for loading in loadings):
         raise ValueError("The factorization did not converge.",
@@ -440,7 +462,12 @@ def tenals(
     return loadings, eigvals, reconstructed_distance
 
 
-def robust_tensor_power_method(tensor, n_components, n_initializations, max_rtpm_iterations, tol_rtpm):
+def robust_tensor_power_method(
+        tensor,
+        n_components,
+        n_initializations,
+        max_rtpm_iterations,
+        tol_rtpm):
     """
     The Robust Tensor Power Method
     (RTPM). Is a generalization of
@@ -471,7 +498,7 @@ def robust_tensor_power_method(tensor, n_components, n_initializations, max_rtpm
     max_rtpm_iterations : int, optional
         Max number of iterations.
     tol_rtpm : flat, optional
-        The minimization -- convergence break point for 
+        The minimization -- convergence break point for
         RTPM.
 
     Returns
@@ -494,30 +521,46 @@ def robust_tensor_power_method(tensor, n_components, n_initializations, max_rtpm
     # get the dimensions of the tensor for n loadings
     tensor_dimensions = tensor.shape
     # initialize loadings and eigvals as all zeros
-    initial_loadings = [np.zeros((dim, n_components)) for dim in tensor_dimensions]
+    initial_loadings = [np.zeros((dim, n_components))
+                        for dim in tensor_dimensions]
     initial_eigvals = np.zeros((n_components, 1))
     # begin power iterations for each rank-1 component
     for component in range(n_components):
         # initialize component loadings and eigvals as all zeros
-        component_loadings = [np.zeros((dim, n_initializations)) for dim in tensor_dimensions]
+        component_loadings = [np.zeros((dim, n_initializations))
+                              for dim in tensor_dimensions]
         component_eigvals = np.zeros((n_initializations, 1))
         # for each initialization run a single iteration of RTPM
         for initialization in range(n_initializations):
-            initializations = asymmetric_power_update(tensor - reconstruct_tensor(initial_eigvals, initial_loadings), max_rtpm_iterations=max_rtpm_iterations, tol_rtpm=tol_rtpm)
+            initializations = asymmetric_power_update(
+                tensor -
+                reconstruct_tensor(
+                    initial_eigvals,
+                    initial_loadings),
+                max_rtpm_iterations=max_rtpm_iterations,
+                tol_rtpm=tol_rtpm)
             # from this initialization generate the laodings
             for idx, initialization_loading in enumerate(component_loadings):
-                initialization_loading[:, initialization] = initializations[idx]
-                initialization_loading[:, initialization] = initialization_loading[:, initialization] / norm(initialization_loading[:, initialization])
+                initialization_loading[:,
+                                       initialization] = initializations[idx]
+                initialization_loading[:,
+                                       initialization] = initialization_loading[:,
+                                                                                initialization] / norm(initialization_loading[:,
+                                                                                                                              initialization])
             # generate the eigvals
-            component_eigvals[initialization] = tensor_distance(tensor - reconstruct_tensor(initial_eigvals, initial_loadings),
-                                  [initialization_loading[:, [initialization]] for initialization_loading in component_loadings])
+            component_eigvals[initialization] = tensor_distance(tensor - reconstruct_tensor(initial_eigvals, initial_loadings), [
+                                                                initialization_loading[:, [initialization]] for initialization_loading in component_loadings])
         # find the best eigvals from all initializations and return that one
         idx = np.argmin(component_eigvals, axis=0)[0]
-        # return the loadings and eigvals from that best initialization 
-        for initialization_loading, component_loading in zip(component_loadings, initial_loadings):
-            component_loading[:, component] = initialization_loading[:, idx] / norm(initialization_loading[:, idx])
-        initial_eigvals[component] = tensor_distance(tensor - reconstruct_tensor(initial_eigvals, initial_loadings),
-                           [component_loading[:, [component]] for component_loading in initial_loadings])
+        # return the loadings and eigvals from that best initialization
+        for initialization_loading, component_loading in zip(
+                component_loadings, initial_loadings):
+            component_loading[:,
+                              component] = initialization_loading[:,
+                                                                  idx] / norm(initialization_loading[:,
+                                                                                                     idx])
+        initial_eigvals[component] = tensor_distance(tensor - reconstruct_tensor(initial_eigvals, initial_loadings), [
+                                                     component_loading[:, [component]] for component_loading in initial_loadings])
 
     return initial_eigvals, initial_loadings
 
@@ -554,22 +597,32 @@ def asymmetric_power_update(tensor, max_rtpm_iterations=50, tol_rtpm=1e-7):
         tensor_dimensions = np.arange(n_dims)
         for dim in tensor_dimensions:
             dot_across = tensor_dimensions[tensor_dimensions != dim]
-            dim_loadings_reconstructed = np.tensordot(tensor,
-                                 loadings[dot_across[0]],
-                                 axes=(1 if dim == 0 else 0, 0))
+            dim_loadings_reconstructed = np.tensordot(
+                tensor, loadings[dot_across[0]], axes=(1 if dim == 0 else 0, 0))
             for inner_dim in dot_across[1:]:
-                dim_loadings_reconstructed = np.tensordot(dim_loadings_reconstructed,
-                                     loadings[inner_dim],
-                                     axes=(1 if inner_dim > dim else 0, 0))
+                dim_loadings_reconstructed = np.tensordot(
+                    dim_loadings_reconstructed, loadings[inner_dim], axes=(
+                        1 if inner_dim > dim else 0, 0))
             loadings_update.append(dim_loadings_reconstructed)
 
-        new_shapes = [v_n.shape[:(-1 * (len(tensor_dimensions) - 2))] for v_n in loadings_update]
-        loadings_update = [v_n.reshape(new_shape) for v_n, new_shape in zip(loadings_update, new_shapes)]
+        new_shapes = [v_n.shape[:(-1 * (len(tensor_dimensions) - 2))]
+                      for v_n in loadings_update]
+        loadings_update = [
+            v_n.reshape(new_shape) for v_n,
+            new_shape in zip(
+                loadings_update,
+                new_shapes)]
         # save next iterations loadings and update to previous
         previous_loading = loadings
         loadings = [loading / norm(loading) for loading in loadings_update]
         # if the update converges then break from iterations
-        if sum(norm(loading_prev - loading) for loading_prev, loading in zip(previous_loading, loadings)) < tol_rtpm:
+        if sum(
+            norm(
+                loading_prev -
+                loading) for loading_prev,
+            loading in zip(
+                previous_loading,
+                loadings)) < tol_rtpm:
             break
 
     return [loading.flatten() for loading in loadings]
@@ -599,7 +652,10 @@ def reconstruct_tensor(eigvals, initial_loadings):
     """
 
     output_shape = tuple(loading.shape[0] for loading in initial_loadings)
-    to_multiply = [eigvals.T * loading if i == 0 else loading for i, loading in enumerate(initial_loadings)]
+    to_multiply = [
+        eigvals.T *
+        loading if i == 0 else loading for i,
+        loading in enumerate(initial_loadings)]
     product = khatri_rao(to_multiply)
     T = product.sum(1).reshape(output_shape)
 

@@ -172,4 +172,8 @@ class TestTenAls(unittest.TestCase):
             TensorFactorization().fit(TE_errors)
         # test max rank
         with self.assertRaises(ValueError):
-            TensorFactorization(n_components=np.max(self.TE_noise.shape) + 10).fit(self.TE_noise)
+            TensorFactorization(
+                n_components=np.max(
+                    self.TE_noise.shape) +
+                10).fit(
+                self.TE_noise)
