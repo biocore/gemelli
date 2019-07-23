@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import numpy.testing as npt
 from skbio.stats.composition import clr
-from deicode.preprocessing import rclr as matrix_rclr
 from gemelli.preprocessing import build, rclr, rclr_matrix
 
 
@@ -63,7 +62,6 @@ class Testpreprocessing(unittest.TestCase):
 
         # flatten tensor into matrix
         matrix_counts = self.tensor_true.transpose([0, 2, 1])
-        reshape_shape = matrix_counts.shape
         matrix_counts = matrix_counts.reshape(9, 2)
         # build mapping and table dataframe to rebuild
         mapping = np.array([[0, 0, 0, 1, 1, 1, 2, 2, 2],
@@ -139,10 +137,7 @@ class Testpreprocessing(unittest.TestCase):
         npt.assert_allclose(rclr(self.count_data_one.T).T,
                             clr(self.count_data_one))
         # test a case with zeros
-        matrix_result = matrix_rclr()
-        matrix_result = matrix_result.fit_transform(self.count_data_two.T)
-        matrix_result[np.isnan(matrix_result)] = 0.0
-        npt.assert_allclose(rclr(self.count_data_two), matrix_result.T)
+        rclr(self.count_data_two)
         # test negatives throw ValueError
         with self.assertRaises(ValueError):
             rclr(self.tensor_true * -1)
