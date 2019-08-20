@@ -131,8 +131,6 @@ def ctf_helper(table: biom.Table,
     # label tensor loadings
     TF.label(tensor, taxonomy=feature_metadata)
 
-    # pickle the
-
     # if the n_components is two add PC3 of zeros
     # this is referenced as in issue in
     # <https://github.com/biocore/emperor/commit
