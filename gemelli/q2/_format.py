@@ -18,7 +18,7 @@ class TrajectoryFormat(model.TextFileFormat):
             for line_number, line in enumerate(fh, start=2):
                 cells = line.split('\t')
                 pc_type = [is_float(cells[c].strip()) for c in comp_columns]
-                if sum(pc_type) != len(comp_columns):
+                if not all(pc_type):
                     raise ValidationError('Non float values in trajectory.')
                 if n_records is not None and (line_number - 1) >= n_records:
                     break
