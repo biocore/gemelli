@@ -70,7 +70,7 @@ def percentile_ratio(mat, ranks, pseudocount=None,
         a matrix of feature ranks
     pseudocount: float, optional
         Add a pseudocount before taking the log-ratio. Default is None.
-    percent: int, optional [1,100]
+    percent: int, optional[1, 50]
         The upper and lower percentile of ranks for the log-ratio.
         The default is quartiles (i.e. 25).
     interpolation:
