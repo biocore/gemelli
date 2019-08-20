@@ -219,8 +219,8 @@ class build(_BaseConstruct):
     Warning
         If a conditional-sample pair
         has multiple IDs associated
-        with it. In this case the
-        default method is to mean them.
+        with it the multiple samples
+        are meaned.
 
     References
     ----------
