@@ -326,7 +326,7 @@ class build(_BaseConstruct):
 
     def _construct(self):
         """
-        This function forms a tensorx
+        This function forms a tensor
         with missing subject x condition
         pairs left as all zeros.
 
