@@ -7,18 +7,18 @@ class TrajectoryFormat(model.TextFileFormat):
         with self.open() as fh:
             # check the header column names
             header = fh.readline()
-            n_comp = [i for i, head in enumerate(header.split('\t'))
+            comp_columns = [i for i, head in enumerate(header.split('\t'))
                       if 'PC' in head]
             # ensure there at least two components
-            if len(n_comp) < 1:
+            if len(comp_columns) < 1:
                 raise ValidationError('No PC# columns present. '
                                       'There should be at least one PC#'
                                       '(i.e. at minimum PC1) in trajectory.')
             # validate the body of the data
             for line_number, line in enumerate(fh, start=2):
                 cells = line.split('\t')
-                pc_type = [is_float(cells[c].strip()) for c in n_comp]
-                if sum(pc_type) != len(n_comp):
+                pc_type = [is_float(cells[c].strip()) for c in comp_columns]
+                if sum(pc_type) != len(comp_columns):
                     raise ValidationError('Non float values in trajectory.')
                 if n_records is not None and (line_number - 1) >= n_records:
                     break
