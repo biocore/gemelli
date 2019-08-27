@@ -662,14 +662,16 @@ def robust_tensor_power_method(tensor,
         # each random initalization vector
         tU = [np.zeros((n, n_initializations)) for n in dims]
         tS = np.zeros((n_initializations, 1))
+        # random initialization
+        if random_state is None or isinstance(random_state, int):
+            rnd = np.random.RandomState(random_state)
+        elif isinstance(random_state, np.random.RandomState):
+            rnd = random_state
+        else:
+            raise ValueError('Random State must be of type ',
+                             'np.random.RandomState or int.')
+        # run n-initializations
         for init in range(n_initializations):
-            # random initialization
-            if random_state is None or isinstance(random_state, int):
-                rnd = np.random.RandomState(random_state)
-            elif isinstance(random_state, np.random.RandomState):
-                rnd = random_state
-            else:
-                raise ValueError('Random State is ')
             # single random initialization
             init_load = [rnd.random_sample((n, 1)) for n in dims]
             init_load = [vec / norm(vec) for vec in init_load]
