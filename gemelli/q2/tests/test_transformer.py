@@ -18,8 +18,7 @@ class TestTrajectoryFormatTransformers(TestPluginBase):
                                ['PC1', 'PC2', 'PC3'])
         test_df.index.name = '#SampleID'
         result = transformer(test_df)
-        if isinstance(result, str):
-            pass
+        self.assertIsInstance(result, TrajectoryFormat)
 
     def test_trajectory_format_to_pd_dataframe(self):
         _, obs = self.transform_format(TrajectoryFormat,
