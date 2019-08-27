@@ -65,7 +65,9 @@ class Testlogratios(unittest.TestCase):
         with self.assertRaises(ValueError):
             percentile_ratio(self.M, self.ranks[:-1])
 
-        # when percentile bad
+        # when percentile bad (zero)
         with self.assertRaises(ValueError):
             percentile_ratio(self.M, self.ranks, percent=0)
+        # when percentile bad (greater than 50)
+        with self.assertRaises(ValueError):
             percentile_ratio(self.M, self.ranks, percent=51)
