@@ -74,7 +74,12 @@ plugin.methods.register_function(
                          'state_subject_ordination': QORD,
                          'state_feature_ordination': QORD},
     name='Compositional Tensor Factorization - Mode 3',
-    description=("TODO"),
+    description=("Gemelli resolves spatiotemporal subject variation and the"
+                 " biological features that separate them. In this case, a "
+                 "subject may have several paired samples, where each sample"
+                 " may be a time point. The output is akin to conventional "
+                 "beta-diversity analyses but with the paired component "
+                 "integrated in the dimensionality reduction."),
 )
 
 plugin.register_semantic_types(SampleTrajectory, FeatureTrajectory)
