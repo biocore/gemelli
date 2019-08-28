@@ -1,6 +1,7 @@
 import biom
 import skbio
 import qiime2
+from pandas import concat
 from pandas import DataFrame
 from qiime2 import Metadata
 from skbio import OrdinationResults, DistanceMatrix
@@ -63,18 +64,33 @@ def ctf_helper(table: biom.Table,
 
     # validate the metadata using q2 as a wrapper
     if isinstance(sample_metadata, DataFrame):
-        sample_metadata = sample_metadata[state_columns +
-                                          [individual_id_column]]
+        keep_cols = state_columns + [individual_id_column]
+        all_sample_metadata = sample_metadata.drop(keep_cols, axis=1)
+        sample_metadata = sample_metadata[keep_cols]
+        # drop any metadata columns that are boolean
+        # they will cause issues downstream with nan values
+        drop_bool = (all_sample_metadata.dtypes == 'bool').values
+        all_sample_metadata = all_sample_metadata.loc[:, ~drop_bool]
+        # repeat to make sure no bools
+        # converted to strings are missed
+        drop_bool = (all_sample_metadata.eq('True').any(axis=0) !=\
+                     all_sample_metadata.eq('False').any(axis=0)).values
+        all_sample_metadata = all_sample_metadata.loc[:, ~drop_bool]
+        # now check metadata through QIIME2
         sample_metadata = qiime2.Metadata(sample_metadata).to_dataframe()
     else:
-        sample_metadata = sample_metadata.to_dataframe()[
-            state_columns + [individual_id_column]]
+        # if metadata is provided as QIIME2 metadata 
+        # skip inital processing stuff 
+        # (should be handled already)
+        keep_cols = state_columns + [individual_id_column]
+        sample_metadata = sample_metadata.to_dataframe()
+        all_sample_metadata = sample_metadata.drop(keep_cols, axis=1)
+        sample_metadata = sample_metadata[keep_cols]
     # validate the metadata using q2 as a wrapper
     if isinstance(feature_metadata, DataFrame):
         feature_metadata = qiime2.Metadata(feature_metadata).to_dataframe()
     elif feature_metadata is not None:
         feature_metadata = feature_metadata.to_dataframe()
-
     # match the data (borrowed in part from gneiss.util.match)
     subtablefids = table.ids('observation')
     subtablesids = table.ids('sample')
@@ -150,8 +166,8 @@ def ctf_helper(table: biom.Table,
         short_method_name,
         long_method_name,
         TF.eigvals,
-        samples=TF.subjects[keep_PC],
-        features=TF.features[keep_PC],
+        samples=TF.subjects[keep_PC].dropna(axis=0),
+        features=TF.features[keep_PC].dropna(axis=0),
         proportion_explained=TF.proportion_explained)
 
     # save distance matrix for each condition
@@ -170,6 +186,16 @@ def ctf_helper(table: biom.Table,
         dist = dist[indices, :][:, indices]
         distances[condition] = skbio.stats.distance.DistanceMatrix(
             dist, ids=ids[indices])
+        # add the sample metadata before returning output
+        # addtionally only keep metadata with trajectory
+        # output available.
+        pre_merge_cols = list(straj.columns)
+        straj = concat([straj.loc[all_sample_metadata.index, :],
+                        all_sample_metadata],
+                        axis=1, sort=True)
+        straj = straj.dropna(subset=pre_merge_cols)   
+        # ensure index name for q2  
+        straj.index.name = "#SampleID"    
         # save traj.
         subject_trajectories[condition] = straj
         ftraj.index = ftraj.index.astype(str)
