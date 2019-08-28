@@ -210,8 +210,8 @@ class TensorFactorization(_BaseImpute):
         # the distance between tensor_imputed and tensor
         self.dist = dist
         # the proortion explained for n_components
-        self.proportion_explained = \
-            list(self.eigvals / self.eigvals.sum())
+        self.proportion_explained = list(self.eigvals**2 \
+                                         / np.sum(self.eigvals**2))
         # save array of loadings for subjects
         self.subjects = loads[0]
         self.subjects = self.subjects[self.subjects[:, 0].argsort()]
@@ -588,7 +588,8 @@ def tenals(tensor,
     # largest to smallest.
     idx = np.argsort(np.diag(eigvals))[::-1]
     eigvals = eigvals[idx, :][:, idx]
-    loadings = [loading[:, idx] for loading in loadings]
+    loadings = [loading[:, idx[::-1]]
+                for loading in loadings]
 
     return loadings, eigvals, err_conv
 
