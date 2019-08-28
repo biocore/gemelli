@@ -7,139 +7,142 @@
 # ----------------------------------------------------------------------------
 
 import numpy as np
-from numpy.random import randn
+import pandas as pd
+from numpy.random import rand
 from numpy.linalg import norm
 from .base import _BaseImpute
 from scipy.spatial import distance
 
 
-class TenAls(_BaseImpute):
+class TensorFactorization(_BaseImpute):
 
-    def __init__(
-            self,
-            rank=3,
-            iteration=50,
-            ninit=50,
-            nitr_RTPM=50,
-            tol=1e-8,
-            pseudocount=1.0):
+    def __init__(self,
+                 n_components=3,
+                 max_als_iterations=50,
+                 tol_als=1e-7,
+                 max_rtpm_iterations=50,
+                 n_initializations=50,
+                 tol_rtpm=1e-5,
+                 fillna=1.0):
         """
 
-        This class performs a low-rank 3rd order
+        This class performs a low-rank N-order
         tensor factorization for partially observered
-        non-symmetric sets. This method relies on a
-        CANDECOMP/PARAFAC (CP) tensor decomposition.
+        non-symmetric sets [1]. This method relies on a
+        CANDECOMP/PARAFAC (CP) tensor decomposition [2,3].
         Missing values are handled by an alternating
         least squares (ALS) minimization between
-        TE and TE_hat.
+        tensor and the reconstructed tensor.
 
         Parameters
         ----------
-        rank : int, optional
+        n_components : int, optional
             The underlying low-rank, will be
             equal to the number of rank 1
             components that are output. The
             higher the rank given, the more
             expensive the computation will
             be.
-        ninit : int, optional
-            The number of initialization
+        max_als_iterations : int, optional
+            Max number of Alternating Least Square (ALS).
+        tol_als : float, optional
+            The minimization -- convergence break point for
+            ALS.
+        max_rtpm_iterations : int, optional
+            Max number of Robust Tensor Power Method (RTPM)
+            iterations.
+        n_initializations : int, optional
+            The number of initial
             vectors. Larger values will
             give more accurate factorization
             but will be more computationally
             expensive.
-        iteration : int, optional
-            Max number of iterations.
-        tol : float, optional
-            The stopping point in the minimization
-            of TE and the factorization between
-            each iteration.
+        tol_rtpm : float, optional
+            The minimization -- convergence break point for
+            RTPM.
+        fillna : int, optional
+            Prevent division by zero in denominator causing nan
+            in the optimization iterations.
 
         Attributes
         ----------
-        eigenvalues : array-like
-            The singular value vectors (1,r)
-        explained_variance_ratio : array-like
+        eigvals : array-like
+            The singular value vectors (1,n_components)
+        proportion_explained : array-like
             The percent explained by each
-            rank-1 factor. (1,r)
-        sample_distance : array-like
-            The euclidean distance between
-            the sample_loading and it'self
-            transposed of shape (samples, samples)
-        conditional_loading  : array-like or list of array-like
-            The conditional loading vectors
-            of shape (conditions, r) if there is 1 type
-            of condition, and a list of such matrices if
-            there are more than 1 type of condition
-        feature_loading : array-like
-            The feature loading vectors
-            of shape (features, r)
-        sample_loading : array-like
-            The sample loading vectors
-            of shape (samples, r)
+            rank-1 factor. (1,n_components)
         loadings : list of array-like
             A list of loadings for all dimensions
             of the data
-        s : array-like
-            The r-dimension vector.
+        subjects : array-like
+            The sample loading vectors
+            of shape (subjects, n_components)
+        features : array-like
+            The feature loading vectors
+            of shape (features, n_components)
+        conditions  : array-like or list of array-like
+            The conditional loading vectors
+            of shape (conditions, n_components) if there is 1 type
+            of condition, and a list of such matrices if
+            there are more than 1 type of condition
+        subject_trajectory : list of array-like
+            The loadings of the dot product between
+            subjects and each condition in conditions.
+            For each condition in conditions the
+            loading is of shape (subjects, condition).
+        feature_trajectory : list of array-like
+            The loadings of the dot product between
+            features and each condition in conditions.
+            For each condition in conditions the
+            loading is of shape (features, condition).
+        subject_distances : list of array-like
+            The euclidean distances of the subject trajectory
+            for each condition in conditions.
+            For each condition in conditions the
+            loading is of shape (subjects, subjects).
+        feature_distances : list of array-like
+            The euclidean distances of the feature trajectory
+            for each condition in conditions.
+            For each condition in conditions the
+            loading is of shape (features, features).
         dist : array-like
             A absolute distance vector
-            between TE and TE_hat.
+            between tensor and reconstructed tensor.
 
         References
         ----------
-        .. [1] A. Anandkumar, R. Ge, D. Hsu,
+        .. [1] Jain, Prateek, and Sewoong Oh. 2014.
+               “Provable Tensor Factorization with Missing Data.”
+               In Advances in Neural Information Processing Systems
+               27, edited by Z. Ghahramani, M. Welling, C. Cortes,
+               N. D. Lawrence, and K. Q. Weinberger, 1431–39.
+               Curran Associates, Inc.
+        .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+               Guaranteed Non-Orthogonal Tensor
+               Decomposition via Alternating Rank-1
+               Updates. CoRR (2014),
+               pp. 1-36.
+        .. [3] A. Anandkumar, R. Ge, D. Hsu,
                S. M. Kakade, M. Telgarsky,
-               Tensor Decompositions for Learning
-               Latent Variable Models
-               (A Survey for ALT).
-               Lecture Notes in
-               Computer Science
+               Tensor Decompositions for Learning Latent Variable Models
+               (A Survey for ALT). Lecture Notes in Computer Science
                (2015), pp. 19–38.
-        .. [2] P. Jain, S. Oh, in Advances in Neural
-               Information Processing Systems
-               27, Z. Ghahramani, M. Welling,
-               C. Cortes, N. D. Lawrence,
-               K. Q. Weinberger, Eds.
-               (Curran Associates, Inc., 2014),
-               pp. 1431–1439.
 
         Examples
         --------
-        >>> from scipy.linalg import qr
-        >>> r = 3 # rank is 2
-        >>> n1 = 10
-        >>> n2 = 10
-        >>> n3 = 10
-        >>> U01 = np.random.rand(n1, r)
-        >>> U02 = np.random.rand(n2, r)
-        >>> U03 = np.random.rand(n3, r)
-        >>> U1, temp = qr(U01)
-        >>> U2, temp = qr(U02)
-        >>> U3, temp = qr(U03)
-        >>> U1 = U1[:, 0:r]
-        >>> U2 = U2[:, 0:r]
-        >>> U3 = U3[:, 0:r]
-        >>> T = np.zeros((n1, n2, n3))
-        >>> for i in range(n3):
-        >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
-        >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
-        >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
-        >>> E = T * E
-        >>> noise = np.random.randn(n1, n2, n3)
-        >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
-        >>> TF = TenAls()
-        >>> TF.fit(TE_noise)
+        TODO
         """
 
-        self.rank = rank
-        self.iteration = iteration
-        self.ninit = ninit
-        self.tol = tol
-        self.pseudocount = pseudocount
-        self.nitr_RTPM = nitr_RTPM
+        # save all input perameters as attributes
+        self.n_components = n_components
+        self.max_als_iterations = max_als_iterations
+        self.max_rtpm_iterations = max_rtpm_iterations
+        self.n_initializations = n_initializations
+        self.tol_als = tol_als
+        self.tol_rtpm = tol_rtpm
+        self.fillna = fillna
 
-    def fit(self, Tensor):
+    def fit(self, tensor):
         """
 
         Run _fit() a wrapper
@@ -147,18 +150,18 @@ class TenAls(_BaseImpute):
 
         Parameters
         ----------
-        Tensor : array-like
+        tensor : array-like
             A tensor, often
             compositionally transformed,
             with missing values. The missing
             values must be zeros. Canonically,
             Tensor must be of the shape:
-            first dimension = samples
+            first dimension = subjects
             second dimension = features
             rest dimensions = types of conditions
         """
 
-        self.sparse_tensor = Tensor.copy()
+        self.tensor = tensor.copy()
         self._fit()
         return self
 
@@ -170,57 +173,236 @@ class TenAls(_BaseImpute):
         """
 
         # make copy for imputation, check type
-        sparse_tensor = self.sparse_tensor
-
-        if not isinstance(sparse_tensor, np.ndarray):
+        tensor = self.tensor
+        # ensure that the data is in the format of np.ndarray.
+        if not isinstance(tensor, np.ndarray):
             raise ValueError('Input data is should be type numpy.ndarray')
-
-        if (np.count_nonzero(sparse_tensor) == np.product(sparse_tensor.shape) and
-                np.count_nonzero(~np.isnan(sparse_tensor)) == np.product(sparse_tensor.shape)):
-            raise ValueError('No missing data in the format np.nan or 0')
-
-        if np.count_nonzero(np.isinf(sparse_tensor)) != 0:
+        # ensure the data contains missing values.
+        # other methods would be better in the case of fully dense data
+        n_entries = np.product(tensor.shape)
+        if (np.count_nonzero(tensor) == n_entries and
+                np.count_nonzero(~np.isnan(tensor)) == n_entries):
+            raise ValueError('No missing data in the format np.nan or 0.')
+        # ensure there are no undefined values in the array
+        if np.count_nonzero(np.isinf(tensor)) != 0:
             raise ValueError('Contains either np.inf or -np.inf')
-
-        if self.rank > np.max(sparse_tensor.shape):
-            raise ValueError('rank must be less than the maximum shape')
-
-        # return tensor decomp
-        E = np.zeros(sparse_tensor.shape)
-        E[abs(sparse_tensor) > 0] = 1
-        loadings, s_, dist = tenals(sparse_tensor,
-                                    E,
-                                    r=self.rank,
-                                    ninit=self.ninit,
-                                    nitr=self.iteration,
-                                    nitr_RTPM=self.nitr_RTPM,
-                                    tol=self.tol,
-                                    pseudocount=self.pseudocount)
-
-        self.loadings = loadings
-        self.eigenvalues = np.diag(s_)
-        self.explained_variance_ratio = \
-            list(self.eigenvalues / self.eigenvalues.sum())
-        self.sample_distance = distance.cdist(loadings[0], loadings[0])
-        self.sample_loading = loadings[0]
-        self.feature_loading = loadings[1]
-        self.conditional_loading = loadings[2] if len(loadings[2:]) == 1 \
-            else loadings[2:]
-        self.distances = [distance.cdist(loading, loading) for loading in
-                          loadings]
-        self.eigenvalues = s_
+        # ensure there are less components that the max. shape of the tensor
+        if self.n_components > np.max(tensor.shape):
+            raise ValueError(
+                'n_components must be less than the maximum shape')
+        # obtain mask array where values of tensor are zero
+        mask = np.zeros(tensor.shape)  # mask of zeros the same shape
+        mask[abs(tensor) > 0] = 1  # set masked (missing) values to one
+        # run the tensor factorization method [2]
+        loads, s, dist = tenals(tensor,
+                                mask,
+                                n_components=self.n_components,
+                                n_initializations=self.n_initializations,
+                                max_als_iterations=self.max_als_iterations,
+                                max_rtpm_iterations=self.max_rtpm_iterations,
+                                tol_als=self.tol_als,
+                                tol_rtpm=self.tol_rtpm,
+                                fillna=self.fillna)
+        # save all raw laodings as attribute
+        self.loadings = loads
+        # all eigen values
+        self.eigvals = np.diag(s)
+        # the distance between tensor_imputed and tensor
         self.dist = dist
+        # the proortion explained for n_components
+        self.proportion_explained = list(self.eigvals**2 \
+                                         / np.sum(self.eigvals**2))
+        # save array of loadings for subjects
+        self.subjects = loads[0]
+        self.subjects = self.subjects[self.subjects[:, 0].argsort()]
+        # save array of loadings for features
+        self.features = loads[1]
+        self.features = self.features[self.features[:, 0].argsort()]
+        # save list of array(s) of loadings for conditions
+        self.conditions = [loads[2]] if len(loads[2:]) == 1 \
+            else loads[2:]
+        # generate the trajectory(s) and distances
+        # list of each condition-subject trajectory
+        self.subject_trajectory = []
+        # list of each condition-subject distance
+        self.subject_distances = []
+        # list of each condition-feature trajectory
+        self.feature_trajectory = []
+        # for each condition in conditions
+        # generate a trajectory and distance array
+        for condition in self.conditions:
+            # temporary list of components in subject trajectory
+            subject_temp_trajectory = []
+            # temporary list of components in feature trajectory
+            feature_temp_trajectory = []
+            # for each component in the rank given to TensorFactorization
+            for component in range(self.n_components):
+                # component condition-subject trajectory
+                dtmp = np.dot(loads[0][:, [component]],
+                              condition[:, [component]].T).flatten()
+                subject_temp_trajectory.append(dtmp)
+                # component condition-feature trajectory
+                dtmp = np.dot(loads[1][:, [component]],
+                              condition[:, [component]].T).flatten()
+                feature_temp_trajectory.append(dtmp)
+            # combine all n_components
+            subject_temp_trajectory = np.array(subject_temp_trajectory).T
+            feature_temp_trajectory = np.array(feature_temp_trajectory).T
+            # save subject-condition trajectory and distance matrix
+            self.subject_trajectory.append(subject_temp_trajectory)
+            self.subject_distances.append(
+                distance.cdist(subject_temp_trajectory,
+                               subject_temp_trajectory))
+            # save feature-condition trajectory and distance matrix
+            self.feature_trajectory.append(feature_temp_trajectory)
+
+    def label(self,
+              construct,
+              taxonomy=None):
+        """
+
+        Label the loadings with the constructed tensor dimension
+        labels from preprosessing.build.
+
+        Parameters
+        ----------
+        construct : constructed object from preprosessing.build
+            This object has the following attributes used here:
+                construct.mapping : DataFrame
+                    construct.mapping metadata used to build tensor
+                    rows = samples
+                    columns = categories
+                construct.subject_order : list
+                    order of subjects in tensor array
+                construct.feature_order : list
+                    order of features in tensor array
+                construct.conditions : list of category names
+                    category of conditional in metadata
+                construct.condition_orders : list of lists
+                    order of conditions for each
+                    condition in tensor array
+        taxonomy : DataFrame
+            TODO
+        """
+
+        # columns labels PC1 ... PC(n_components)
+        self.column_labels = ['PC' + str(i)
+                              for i in range(1, self.n_components + 1)]
+
+        # % var explained
+        self.proportion_explained = pd.Series(self.proportion_explained,
+                                              index=self.column_labels)
+        # eigvals
+        self.eigvals = pd.Series(self.eigvals,
+                                 index=self.column_labels)
+
+        # DataFrame single non-condition dependent loadings
+        self.subjects -= self.subjects.mean(axis=0)
+        self.subjects = pd.DataFrame(self.subjects,
+                                     columns=self.column_labels,
+                                     index=construct.subject_order)
+        self.features -= self.features.mean(axis=0)
+        self.features = pd.DataFrame(self.features,
+                                     columns=self.column_labels,
+                                     index=construct.feature_order)
+
+        # id taxonomy is given then add the taxonomic information
+        if taxonomy is not None:
+            self.features = pd.concat(
+                [self.features, taxonomy], axis=1, sort=True)
+
+        # list of DataFrame(s) for each condition loadings
+        conditions = []
+        for c_ind, condition in enumerate(construct.conditions):
+            conditions.append(
+                pd.DataFrame(
+                    self.conditions[c_ind],
+                    columns=self.column_labels,
+                    index=construct.condition_orders[c_ind]))
+        self.conditions = conditions
+
+        # label the subject trajectories
+        subject_trajectory = []
+        for c_ind, condition in enumerate(construct.conditions):
+            traj_tmp = self.subject_trajectory[c_ind]
+            #traj_tmp -= traj_tmp.mean(axis=0)
+            traj_tmp = pd.DataFrame(traj_tmp,
+                                    columns=self.column_labels)
+            ordr_ = [[subj, cond] for subj in construct.subject_order
+                     for cond in construct.condition_orders[c_ind]]
+            ordr_ = pd.DataFrame(ordr_, columns=['subject_id', condition])
+            traj_tmp = pd.concat([traj_tmp, ordr_], axis=1)
+            # add metadata for the trajectories
+            index_map = construct.condition_metadata_map[c_ind]
+            traj_tmp.index = [index_map[tuple(pair)]
+                              if tuple(pair) in index_map.keys()
+                              else '-'.join(list(map(str, pair)))
+                              for pair in zip(traj_tmp['subject_id'].values,
+                                              traj_tmp[condition].values)]
+            traj_tmp.index.name = 'sample-id'
+            subject_trajectory.append(traj_tmp)
+        self.subject_trajectory = subject_trajectory
+
+        # label the feature trajectories
+        feature_trajectory = []
+        for c_ind, condition in enumerate(construct.conditions):
+            traj_tmp = self.feature_trajectory[c_ind]
+            #traj_tmp -= traj_tmp.mean(axis=0)
+            traj_tmp = pd.DataFrame(traj_tmp,
+                                    columns=self.column_labels)
+            ordr_ = [[feat, cond] for feat in construct.feature_order
+                     for cond in construct.condition_orders[c_ind]]
+            ordr_ = pd.DataFrame(ordr_, columns=['feature_id', condition])
+            ordr_ = pd.concat([traj_tmp, ordr_], axis=1)
+            if taxonomy is not None:
+                if 'Taxon' in taxonomy.columns:
+                    feat_map = dict(taxonomy.Taxon)
+                    ordr_['Taxon'] = [feat_map[feat]
+                                      if feat in feat_map.keys()
+                                      else np.nan
+                                      for feat in ordr_.feature_id]
+                    # add taxonomic levels for grouping later (if available)
+
+                    def tax_split(tax_id, tax_level): return tax_id.split(
+                        tax_level)[1].split(';')[0]
+
+                    for level, lname in zip(['k__', 'p__', 'c__', 'o__',
+                                             'f__', 'g__', 's__'],
+                                            ['kingdom', 'phylum', 'class',
+                                             'order', 'family', 'genus',
+                                             'species']):
+                        if lname not in taxonomy.columns:
+                            taxonomy_tmp = []
+                            for tax in ordr_.Taxon:
+                                if tax is not np.nan and\
+                                   level in tax and\
+                                   len(tax_split(tax, level)) > 0:
+                                    taxonomy_tmp.append(tax_split(tax,
+                                                                  level))
+                                else:
+                                    taxonomy_tmp.append(np.nan)
+                            ordr_[lname] = taxonomy_tmp
+                if 'Confidence' in taxonomy.columns:
+                    feat_map = dict(taxonomy.Confidence)
+                    ordr_['Confidence'] = [feat_map[feat]
+                                           if feat in feat_map.keys()
+                                           else np.nan
+                                           for feat in ordr_.feature_id]
+
+            ordr_.index.name = 'featureid'
+            feature_trajectory.append(ordr_)
+        self.feature_trajectory = feature_trajectory
 
 
-def tenals(
-        TE,
-        E,
-        r=3,
-        ninit=50,
-        nitr=50,
-        nitr_RTPM=50,
-        tol=1e-8,
-        pseudocount=1.0):
+def tenals(tensor,
+           mask,
+           n_components=3,
+           n_initializations=50,
+           max_als_iterations=50,
+           max_rtpm_iterations=50,
+           tol_als=1e-8,
+           tol_rtpm=1e-8,
+           fillna=1.0):
     """
     A low-rank 3rd order tensor factorization
     for partially observered non-symmetric
@@ -228,45 +410,53 @@ def tenals(
     PARAFAC (CP) tensor decomposition. Missing
     values are handled by  and alternating
     least squares (ALS) minimization between
-    TE and TE_hat.
+    tensor and reconstructed_tensor.
 
     Parameters
     ----------
-    TE : array-like
+    tensor : array-like
         A sparse `n` order tensor with zeros
         in place of missing values.
-    E : array-like
+    mask : array-like
         A masking array of missing values.
-    r : int, optional
+    n_components : int, optional
         The underlying low-rank, will be
         equal to the number of rank 1
         components that are output. The
         higher the rank given, the more
         expensive the computation will
         be.
-    ninit : int, optional
-        The number of initialization
+    max_als_iterations : int, optional
+        Max number of Alternating Least Square (ALS).
+    tol_als : float, optional
+        The minimization -- convergence break point for
+        ALS.
+    max_rtpm_iterations : int, optional
+        Max number of Robust Tensor Power Method (RTPM)
+        iterations.
+    n_initializations : int, optional
+        The number of initial
         vectors. Larger values will
         give more accurate factorization
         but will be more computationally
         expensive.
-    nitr : int, optional
-        Max number of iterations.
-    tol : float, optional
-        The stopping point in the minimization
-        of TE and the factorization between
-        each iteration.
+    tol_rtpm : float, optional
+        The minimization -- convergence break point for
+        RTPM.
+    fillna : int, optional
+        Prevent division by zero in denominator causing nan
+        in the optimization iterations.
 
     Returns
     -------
     loadings : list array-like
-        The factors of TE. The `i`th entry of loadings corresponds to
-        the mode-`i` factors of TE and hase shape (TE.shape[i], r).
-    S : array-like
-        The r-dimension vector of eigenvalues.
+        The factors of tensor. The `i`th entry of loadings corresponds to
+        the mode-`i` factors of tensor and hase shape (tensor.shape[i], r).
+    eigvals : array-like
+        The r-dimension vector of eigvals.
     dist : array-like
         A absolute distance vector
-        between TE and TE_hat.
+        between tensor and reconstructed tensor.
 
     Raises
     ------
@@ -276,120 +466,140 @@ def tenals(
 
     References
     ----------
-    .. [1] P. Jain, S. Oh, in Advances in Neural
-            Information Processing Systems
-            27, Z. Ghahramani, M. Welling,
-            C. Cortes, N. D. Lawrence,
-            K. Q. Weinberger, Eds.
-            (Curran Associates, Inc., 2014),
-            pp. 1431–1439.
+    .. [1] Jain, Prateek, and Sewoong Oh. 2014.
+            “Provable Tensor Factorization with Missing Data.”
+            In Advances in Neural Information Processing Systems
+            27, edited by Z. Ghahramani, M. Welling, C. Cortes,
+            N. D. Lawrence, and K. Q. Weinberger, 1431–39.
+            Curran Associates, Inc.
+    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [3] A. Anandkumar, R. Ge, D. Hsu,
+            S. M. Kakade, M. Telgarsky,
+            Tensor Decompositions for Learning Latent Variable Models
+            (A Survey for ALT). Lecture Notes in Computer Science
+            (2015), pp. 19–38.
 
     Examples
     --------
-    >>> r = 3 # rank is 2
-    >>> n1 = 10
-    >>> n2 = 10
-    >>> n3 = 10
-    >>> U01 = np.random.rand(n1, r)
-    >>> U02 = np.random.rand(n2, r)
-    >>> U03 = np.random.rand(n3, r)
-    >>> U1, temp = qr(U01)
-    >>> U2, temp = qr(U02)
-    >>> U3, temp = qr(U03)
-    >>> U1 = U1[:, 0:r]
-    >>> U2 = U2[:, 0:r]
-    >>> U3 = U3[:, 0:r]
-    >>> T = np.zeros((n1, n2, n3))
-    >>> for i in range(n3):
-    >>>     T[:,:,i] = np.matmul(U1, np.matmul(np.diag(U3[i, :]), U2.T))
-    >>> p = 2 * (r ** 0.5 * np.log(n1 * n2 * n3)) / np.sqrt(n1 * n2 * n3)
-    >>> E = abs(np.ceil(np.random.rand(n1, n2, n3) - 1 + p))
-    >>> E = T * E
-    >>> noise = np.random.randn(n1, n2, n3)
-    >>> TE_noise = TE + (0.0001 / np.sqrt(n1 * n2 * n3) * noise * E)
-    >>> loadings, eigenvalues, dist = tenals(TE_noise, E)
-
+    TODO
     """
 
-    # start
-    dims = TE.shape
-
-    normTE = norm(TE)**2
-
-    # initialization by Robust Tensor Power Method (modified for non-symmetric
-    # tensors)
-    S0, U = RTPM(TE, r, ninit, nitr)
-
-    # apply alternating least squares
-    V_alt = [Un.copy() for Un in U]
-    S_alt = S0.copy()
-    for itrs in range(nitr):
-        for q in range(r):
-            S_alt = S_alt.copy()
-            S_alt[q] = 0
-            A_alt = np.multiply(CPcomp(S_alt, V_alt), E)
-            v_alt = [Vn[:, q].copy() for Vn in V_alt]
-            for Vn in V_alt:
-                Vn[:, q] = 0
-
-            # den should end up as a list of np.zeros((dim_i, 1))
-            den = [np.zeros(dim) for dim in dims]
-
-            for dim, dim_size in enumerate(dims):
-                dims_np = np.arange(len(dims))
+    # Get the shape of tensor to iterate
+    tensor_dimensions = tensor.shape
+    # Frobenius norm initial for ALS minimization.
+    initial_tensor_frobenius_norm = norm(tensor)**2
+    # initial by Robust Tensor Power Method (modified for non-symmetric
+    # tensors).
+    initial_eigvals, initial_loadings = robust_tensor_power_method(
+        tensor, n_components, n_initializations, max_rtpm_iterations, tol_rtpm)
+    # Begin alternating least squares minimization below!
+    # make a copy of inital factorization from RTPM
+    # to use in the ALS step.
+    loadings = initial_loadings.copy()
+    eigvals = initial_eigvals.copy()
+    # Iterate minimization for at maximum max_als_iterations
+    # can break if converges and satisfies tol_als.
+    for iteration in range(max_als_iterations):
+        # For each rank-1 vector in n_components (total rank)
+        for component in range(n_components):
+            # set all eigvals to zero for iteration
+            eigvals[component] = 0
+            # reconstruct the tensor from the loadings to compare to the
+            # original tensor
+            reconstructed_tensor = construct_tensor(eigvals, loadings)
+            reconstructed_tensor = np.multiply(reconstructed_tensor, mask)
+            # generate copy of loadings to reconstruct on each iterations
+            loadings_iter = [loading[:, component].copy()
+                             for loading in loadings]
+            # denominator should end up as a list of np.zeros((dim_i, 1))
+            denominator = [np.zeros(dim) for dim in tensor_dimensions]
+            # for each  dimension of the tensor optimize that dimensions
+            # loading based on the distance between the original tensor
+            # and the reconstruction
+            for dim, dim_size in enumerate(tensor_dimensions):
+                # set previous loading to zero
+                loadings[dim][:, component] = 0
+                # generate indices to perform dot-product across
+                dims_np = np.arange(len(tensor_dimensions))
                 dot_across = dims_np[dims_np != dim]
-                v_dim = np.tensordot(TE - A_alt,
-                                     v_alt[dot_across[0]],
-                                     axes=(1 if dim == 0 else 0, 0))
-                den[dim] = np.tensordot(E,
-                                        v_alt[dot_across[0]]**2,
-                                        axes=(1 if dim == 0 else 0, 0))
-
+                # outer dot-product
+                err = tensor - reconstructed_tensor
+                l_iter = loadings_iter[dot_across[0]]
+                axes = (1 if dim == 0 else 0, 0)
+                construct_loadings = np.tensordot(err,
+                                                  l_iter,
+                                                  axes=axes)
+                denominator[dim] = np.tensordot(mask,
+                                                l_iter**2,
+                                                axes=axes)
+                # inner dot-product
                 for inner_dim in dot_across[1:]:
-                    v_dim = np.tensordot(v_dim,
-                                         v_alt[inner_dim],
-                                         axes=(1 if inner_dim > dim else 0, 0))
-                    den[dim] = np.tensordot(den[dim],
-                                            v_alt[inner_dim]**2,
-                                            axes=(1 if inner_dim > dim else
-                                                  0, 0))
-
-                v_alt[dim] = V_alt[dim][:, q] + v_dim.flatten()
-                # add pseudocount to prevent division by zero causing nan.
-                den[dim][den[dim] == 0] = pseudocount
-                v_alt[dim] = v_alt[dim] / den[dim]
-
-                if dim == len(dims) - 1:
-                    S_alt[q] = norm(v_alt[dim])
-
-                v_alt[dim] = v_alt[dim] / norm(v_alt[dim])
-                V_alt[dim][:, q] = v_alt[dim]
-
-            for i, V_alt_i in enumerate(V_alt):
-                V_alt_i[:, q] = v_alt[i]
-
-        ERR = TE - E * CPcomp(S_alt, V_alt)
-        normERR = norm(ERR)**2
-        if np.sqrt(normERR / normTE) < tol:
+                    l_iter = loadings_iter[inner_dim]
+                    axes = (1 if inner_dim > dim else 0, 0)
+                    construct_loadings = np.tensordot(construct_loadings,
+                                                      l_iter, axes=axes)
+                    denominator[dim] = np.tensordot(denominator[dim],
+                                                    l_iter**2, axes=axes)
+                # update iteration's loadings
+                loadings_iter[dim] = loadings[dim][:, component] +\
+                    construct_loadings.flatten()
+                # Add fillna to prevent division by zero in denominator
+                # causing nan. This can occur in early iteration from all
+                # zero fibers in the tensor along dim. In practice this
+                # should be rare but can occur in very sparse tensors.
+                denominator[dim][denominator[dim] == 0] = fillna
+                loadings_iter[dim] = loadings_iter[dim] / \
+                    denominator[dim]
+                # If  this dimension is the last in the tensor then
+                # update the eigvals with the new loadings.
+                if dim == len(tensor_dimensions) - 1:
+                    eigvals[component] = norm(loadings_iter[dim])
+                #  update the loadings_iter in dimension (dim)
+                eigvals[component][eigvals[component] == 0] = fillna
+                loadings_iter[dim] = loadings_iter[dim] / \
+                    eigvals[component]
+                loadings[dim][:, component] = loadings_iter[dim]
+            # update the loadings with this iterations loadings
+            for i, loading in enumerate(loadings):
+                loading[:, component] = loadings_iter[i]
+        # MSE of the original tensor and the reconstructed tensor
+        # based on the loadings.
+        mean_squared_error = tensor - mask * \
+            construct_tensor(eigvals, loadings)
+        # Frobenius norm for new reconstructed tensor
+        iteration_tensor_frobenius_norm = norm(mean_squared_error)**2
+        # If the error between this iterations reconstruction and the
+        # intital tensor is below tol_als then  break the iterations.
+        err_conv =  np.sqrt(iteration_tensor_frobenius_norm /
+                            initial_tensor_frobenius_norm)
+        if err_conv < tol_als:
             break
-
-    dist = np.sqrt(normERR / normTE)
     # check that the factorization converged
-    if any(sum(sum(np.isnan(Vn))) > 0 for Vn in V_alt):
+    if any(sum(sum(np.isnan(loading))) > 0 for loading in loadings):
         raise ValueError("The factorization did not converge.",
                          "Please check the input tensor for errors.")
+    # Get the diagonal of the eigvals
+    eigvals = np.diag(eigvals.flatten())
+    # Sort the eigvals and the laodings from
+    # largest to smallest.
+    idx = np.argsort(np.diag(eigvals))[::-1]
+    eigvals = eigvals[idx, :][:, idx]
+    loadings = [loading[:, idx[::-1]]
+                for loading in loadings]
 
-    S_alt = np.diag(S_alt.flatten())
-    # sort the eigenvalues
-    idx = np.argsort(np.diag(S_alt))[::-1]
-    S_alt = S_alt[idx, :][:, idx]
-    # sort loadings
-    loadings = [Vn[:, idx] for Vn in V_alt]
-
-    return loadings, S_alt, dist
+    return loadings, eigvals, err_conv
 
 
-def RTPM(TE, r, ninit, nitr):
+def robust_tensor_power_method(tensor,
+                               n_components,
+                               n_initializations=50,
+                               max_rtpm_iterations=50,
+                               tol_rtpm=1e-10,
+                               random_state=42):
     """
     The Robust Tensor Power Method
     (RTPM). Is a generalization of
@@ -401,86 +611,105 @@ def RTPM(TE, r, ninit, nitr):
 
     Parameters
     ----------
-    TE : array-like
+    tensor : array-like
         A sparse `n` order tensor with zeros
         in place of missing values.
-    r : int, optional
+    n_components : int, optional
         The underlying low-rank, will be
         equal to the number of rank 1
         components that are output. The
         higher the rank given, the more
         expensive the computation will
         be.
-    ninit : int, optional
-        The number of initialization
+    n_initializations : int, optional
+        The number of initial
         vectors. Larger values will
         give more accurate factorization
         but will be more computationally
         expensive.
-    nitr : int, optional
+    max_rtpm_iterations : int, optional
         Max number of iterations.
+    tol_rtpm : flat, optional
+        The minimization -- convergence break point for
+        RTPM.
 
     Returns
     -------
-    S0 : array-like
-        The eigenvalues of the factorizations
-    U : list of array-like
-        The `i`-th entry of U corresponds to
-        the factors along the `i`-th mode of TE
+    eigvals : array-like
+        The eigvals of the factorizations
+    loadings : list of array-like
+        The `i`-th entry of initial_loadings corresponds to
+        the factors along the `i`-th mode of tensor
 
     References
     ----------
-    .. [1] A. Anandkumar, R. Ge, D. Hsu,
-            S. M. Kakade, M. Telgarsky,
-            Tensor Decompositions for Learning
-            Latent Variable Models
-            (A Survey for ALT).
-            Lecture Notes in
-            Computer Science
-            (2015), pp. 19–38.
     .. [2] A. Anandkumar, R. Ge, M., Janzamin,
             Guaranteed Non-Orthogonal Tensor
             Decomposition via Alternating Rank-1
             Updates. CoRR (2014),
             pp. 1-36.
-    .. [3] P. Jain, S. Oh, in Advances in Neural
-            Information Processing Systems
-            27, Z. Ghahramani, M. Welling,
-            C. Cortes, N. D. Lawrence,
-            K. Q. Weinberger, Eds.
-            (Curran Associates, Inc., 2014),
-            pp. 1431–1439.
 
     """
-    dims = TE.shape
-    U = [np.zeros((n, r)) for n in dims]
-    S0 = np.zeros((r, 1))
-    for i in range(r):
-        tU = [np.zeros((n, ninit)) for n in dims]
-        tS = np.zeros((ninit, 1))
-        for init in range(ninit):
-            initializations = RTPM_single(
-                TE - CPcomp(S0, U), max_iter=nitr)
+    
+    # tensor shape is the number of loadings
+    dims = tensor.shape
+    # for each dim. initalize a loading fiber
+    loadings = [np.ones((n, n_components)) for n in dims]
+    # initlize n_component eigvals
+    eigvals = np.ones((n_components, 1))
+    # iterate on loadings from first to last
+    for r in range(n_components):
+        # loadings and eigs to fille for
+        # each random initalization vector
+        tU = [np.zeros((n, n_initializations)) for n in dims]
+        tS = np.zeros((n_initializations, 1))
+        # random initialization
+        if random_state is None or isinstance(random_state, int):
+            rnd = np.random.RandomState(random_state)
+        elif isinstance(random_state, np.random.RandomState):
+            rnd = random_state
+        else:
+            raise ValueError('Random State must be of type ',
+                             'np.random.RandomState or int.')
+        # run n-initializations
+        for init in range(n_initializations):
+            # single random initialization
+            init_load = [rnd.random_sample((n, 1)) for n in dims]
+            init_load = [vec / norm(vec) for vec in init_load]
+            # construct tensor
+            T_con = construct_tensor(eigvals, init_load)
+            # run power iteration's for loading initialization
+            initializations = asymmetric_power_update(tensor - T_con,
+                                                      init_load,
+                                                      max_rtpm_iterations,
+                                                      tol_rtpm)
+            # fill that initalization (looking for maximum)
+            for idx, load_tmp in enumerate(initializations):
+                tU[idx][:, init] = load_tmp
+                tU[idx][:, init] = tU[idx][:, init] / norm(tU[idx][:, init])
+            # generate eigvals for that initalization
+            T_con = construct_tensor(eigvals, loadings)
+            tS[init] = eigval_update(tensor - T_con,
+                                     [ltmp[:, [init]] for ltmp in tU])
+        # find the maximum (absolute) eigval
+        max_idx = np.argmax(abs(tS))
+        # for that optimal eigval add it to
+        # the final laodings & eigvals.
+        for idx, max_load in enumerate(tU):
+            loadings[idx][:, r] = max_load[:, max_idx]
+            loadings[idx][:, r] = loadings[idx][:, r] / norm(loadings[idx][:, r])
+        # fill eigval
+        T_con = construct_tensor(eigvals, loadings)
+        eigvals[r] = eigval_update(tensor - T_con,
+                                   [ltmp[:, [r]] for ltmp in loadings])
 
-            for tUn_idx, tUn in enumerate(tU):
-                tUn[:, init] = initializations[tUn_idx]
-                tUn[:, init] = tUn[:, init] / norm(tUn[:, init])
-
-            tS[init] = TenProjAlt(TE - CPcomp(S0, U),
-                                  [tUn[:, [init]] for tUn in tU])
-
-        idx = np.argmin(tS, axis=0)[0]
-
-        for tUn, Un in zip(tU, U):
-            Un[:, i] = tUn[:, idx] / norm(tUn[:, idx])
-
-        S0[i] = TenProjAlt(TE - CPcomp(S0, U),
-                           [Un[:, [i]] for Un in U])
-
-    return S0, U
+    return eigvals, loadings
 
 
-def RTPM_single(tensor, max_iter=50):
+def asymmetric_power_update(tensor,
+                            init,
+                            max_rtpm_iterations=50,
+                            tol_rtpm=1e-10):
     """
     Completes a single iteration of optimization
     for a random start of RTPM
@@ -489,7 +718,10 @@ def RTPM_single(tensor, max_iter=50):
     ----------
     tensor : array-like
         an `n` order tensor
-    max_iter : int
+    init : list of array-like
+        randomly generated loadings
+        for each dimension of tensor
+    max_rtpm_iterations : int
         maximum iterations.
 
     Returns
@@ -499,71 +731,53 @@ def RTPM_single(tensor, max_iter=50):
         vector corresponding to the `i`th
         mode of `tensor`
 
-    References
-    ----------
-    .. [1] A. Anandkumar, R. Ge, D. Hsu,
-            S. M. Kakade, M. Telgarsky,
-            Tensor Decompositions for Learning
-            Latent Variable Models
-            (A Survey for ALT).
-            Lecture Notes in
-            Computer Science
-            (2015), pp. 19–38.
-    .. [2] A. Anandkumar, R. Ge, M., Janzamin,
-            Guaranteed Non-Orthogonal Tensor
-            Decomposition via Alternating Rank-1
-            Updates. CoRR (2014),
-            pp. 1-36.
-    .. [3] P. Jain, S. Oh, in Advances in Neural
-            Information Processing Systems
-            27, Z. Ghahramani, M. Welling,
-            C. Cortes, N. D. Lawrence,
-            K. Q. Weinberger, Eds.
-            (Curran Associates, Inc., 2014),
-            pp. 1431–1439.
-
     """
 
-    # RTPM_single
+    # tensor dims is number of loadings
     n_dims = len(tensor.shape)
-
-    all_u = [randn(n, 1) for n in tensor.shape]
-    all_u = [vec / norm(vec) for vec in all_u]
-    for itr in range(max_iter):
-        # tensordot generalization to higher dims
-        v = []
+    # begin power iterations
+    for itr in range(max_rtpm_iterations):
+        loadings = []
         dims = np.arange(n_dims)
+        # iterate on each loading (dim.)
         for dim in dims:
+            # generate updates for each loading dimention
             dot_across = dims[dims != dim]
-            v_dim = np.tensordot(tensor,
-                                 all_u[dot_across[0]],
-                                 axes=(1 if dim == 0 else 0, 0))
+            axis = (1 if dim == 0 else 0, 0)
+            load_dim = np.tensordot(tensor,
+                                    init[dot_across[0]],
+                                    axes=axis)
             for inner_dim in dot_across[1:]:
-                v_dim = np.tensordot(v_dim,
-                                     all_u[inner_dim],
-                                     axes=(1 if inner_dim > dim else 0, 0))
-            v.append(v_dim)
-
-        new_shapes = [v_n.shape[:(-1 * (len(dims) - 2))] for v_n in v]
-        v = [v_n.reshape(new_shape) for v_n, new_shape in zip(v, new_shapes)]
-
-        all_u_previous = [u for u in all_u]
-        all_u = [v_i / norm(v_i) for v_i in v]
-
-        if sum(norm(u0 - u) for u0, u in zip(all_u_previous, all_u)) < 1e-7:
+                axis = (1 if inner_dim > dim else 0, 0)
+                load_dim = np.tensordot(load_dim,
+                                        init[inner_dim],
+                                        axes=axis)
+            loadings.append(load_dim)
+        # fill the update loadings
+        new_shapes = [u_n.shape[:(-1 * (len(dims) - 2))]
+                      for u_n in loadings]
+        loadings = [u_n.reshape(new_shape)
+                    for u_n, new_shape in zip(loadings,
+                                              new_shapes)]
+        # update initalized loading and keep prev.
+        init_prev = [u for u in init]
+        init = [u_i / norm(u_i) for u_i in loadings]
+        # calulate the iteration minimization (exit case for tol_rtpm)
+        tol_itr = sum(norm(u0 - u) for u0, u in zip(init_prev, init))
+        if tol_itr < tol_rtpm:
             break
 
-    return [u.flatten() for u in all_u]
+            
+    return [loading.flatten() for loading in init]
 
 
-def CPcomp(S, U):
+def construct_tensor(S, U):
     """
     This function takes the
     CP decomposition of a 3rd
     order tensor and outputs
     the reconstructed tensor
     TE_hat.
-
     Parameters
     ----------
     S : array-like
@@ -571,7 +785,6 @@ def CPcomp(S, U):
     U : list of array-like
         Element i is a factor of shape
         (n[i], r).
-
     Returns
     -------
     T : array-like
@@ -587,14 +800,13 @@ def CPcomp(S, U):
     return T
 
 
-def TenProjAlt(D, U_list):
+def eigval_update(D, U_list):
     """
     The Orthogonal tensor
     projection created by
     the TE - TE_hat distance.
     Used in the initialization
     step with RTPM_single.
-
     Parameters
     ----------
     D : array-like
@@ -602,7 +814,6 @@ def TenProjAlt(D, U_list):
     U_list : list of array-like
         Element i is a factor of shape
         (n[i], r). Same length as D.shape
-
     Returns
     -------
     M : float
@@ -617,19 +828,15 @@ def TenProjAlt(D, U_list):
 def khatri_rao(matrices):
     """
     Returns the Khatri Rao product of a list of matrices
-
     Modified from TensorLy
-
     Parameters
     ----------
     matrices : list of array-like
         Matrices to take the Khatri Rao Product of
-
     Returns
     -------
     array-like
         The Khatri Rao Product of the matrices in `matrices`
-
     References
     ----------
     .. [1] Jean Kossaifi, Yannis Panagakis, Anima Anandkumar and Maja

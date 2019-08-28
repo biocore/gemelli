@@ -13,22 +13,8 @@ from .base import _BaseConstruct
 
 def rclr(T):
     """
-    Robust clr transform. The :math:`clr` transform
-    is defined on the following spaces:
+    Robust clr transform. is the approximate geometric mean of X.
 
-    .. math::
-       `rclr \left( x \right)  &=  \left[ \log\frac{x_{1}}{g_{r}
-       \left( x \right) }, ..., \log\frac{x_{D}}{g_{r}
-       \left( x \right) } \right]`
-
-    where
-
-    .. math::
-        `g_{r} \left( x \right)  &=
-        \left(  \prod_{i \in  \Omega _{x} }^{}x_{i}
-        \right) ^{1/ \vert  \Omega _{x} \vert }`
-
-    is the approximate geometric mean of :math:`x`.
     We know from the Central Limit Theorem that as
     we collect more independent measurements we
     approach the true geometric mean.
@@ -76,32 +62,21 @@ def rclr(T):
 
     Examples
     --------
-
-    To use directly with a
-    prebuilt tensor.
-
-    >>> from numpy import np
-    >>> T_counts = np.array([[[10, 14, 43],
-                             [ 41, 43, 14]],
-                           [[10, 14, 43],
-                            [ 41, 43, 14]],
-                           [[10, 14, 43],
-                            [ 41, 43, 14]]])
-    >>> rclr(T_counts)
+    TODO
 
     """
 
     if len(T.shape) < 2:
         raise ValueError('Tensor is less than 2-dimensions')
 
-    if (T < 0).any():
-        raise ValueError('Tensor contains negative values.')
-
     if np.count_nonzero(np.isinf(T)) != 0:
         raise ValueError('Tensor contains either np.inf or -np.inf.')
 
     if np.count_nonzero(np.isnan(T)) != 0:
         raise ValueError('Tensor contains np.nan or missing.')
+
+    if (T < 0).any():
+        raise ValueError('Tensor contains negative values.')
 
     if len(T.shape) < 3:
         # rclr on 2D matrix
@@ -152,18 +127,11 @@ def rclr_matrix(M):
 
     Examples
     --------
-
-    To use directly with a
-    prebuilt tensor.
-
-    >>> from numpy import np
-    >>> T_counts = np.array([[10, 14, 43],
-                             [ 41, 43, 14]])
-    >>> rclr_matrix(T_counts)
+    TODO
 
     """
 
-    mat = np.atleast_2d(M)
+    M = np.atleast_2d(M)
     if np.any(M < 0):
         raise ValueError("Cannot have negative proportions")
     if M.ndim > 2:
@@ -251,8 +219,8 @@ class build(_BaseConstruct):
     Warning
         If a conditional-sample pair
         has multiple IDs associated
-        with it. In this case the
-        default method is to sum them.
+        with it the multiple samples
+        are meaned.
 
     References
     ----------
@@ -264,35 +232,7 @@ class build(_BaseConstruct):
 
     Examples
     --------
-
-    To start with a 2D `table` in a DataFrame.
-
-    Along with subject and conditional columns from
-    a `metadata` DataFrame.
-
-    The subject column is given as a string and the
-    list of conditions are given as a list of strings.
-
-    All the strings given in subjects and conditions
-    must be columns in the metadata.
-
-    Furthermore, the index of `table` and `metadata`
-    must be matching.
-
-    >>> tensor = build()
-    >>> tensor.construct(table,metadata,
-                         subjects,
-                         [condition_1,
-                          condition_2])
-
-    Obtain a N-mode count tensor. The shape
-    of this tensor will be:
-
-    * First dimension = samples
-    * Second dimension = features
-    * [3..N] dimensions = conditions
-
-    >>> tensor.counts.shape
+    TODO
 
     """
 
@@ -321,7 +261,7 @@ class build(_BaseConstruct):
             columns = categories
         subjects : str, int, or float
             category of sample IDs in metadata
-        conditions : str, int, or float
+        conditions : list of strings or ints
             category of conditional in metadata
 
         Returns
@@ -346,39 +286,11 @@ class build(_BaseConstruct):
             If a conditional-sample pair
             has multiple IDs associated
             with it. In this case the
-            default method is to sum them.
+            default method is to mean them.
 
         Examples
         --------
-
-        To start with a 2D `table` in a DataFrame.
-
-        Along with subject and conditional columns from
-        a `metadata` DataFrame.
-
-        The subject column is given as a string and the
-        list of conditions are given as a list of strings.
-
-        All the strings given in subjects and conditions
-        must be columns in the metadata.
-
-        Furthermore, the index of `table` and `metadata`
-        must be matching.
-
-        >>> tensor = build()
-        >>> tensor.construct(table,metadata,
-                            subjects,
-                            [condition_1,
-                            condition_2])
-
-        Obtain a N-mode count tensor. The shape
-        of this tensor will be:
-
-        * First dimension = samples
-        * Second dimension = features
-        * [3..N] dimensions = conditions
-
-        >>> tensor.counts.shape
+        TODO
 
         """
 
@@ -394,14 +306,14 @@ class build(_BaseConstruct):
                              str(missin_cond) +
                              "] not in metadata column(s).")
 
-        if (table.values < 0).any():
-            raise ValueError('Table contains negative values.')
-
         if np.count_nonzero(np.isinf(table.values)) != 0:
             raise ValueError('Table contains either np.inf or -np.inf.')
 
         if np.count_nonzero(np.isnan(table.values)) != 0:
             raise ValueError('Table contains np.nan or missing.')
+
+        if (table.values < 0).any():
+            raise ValueError('Table contains negative values.')
 
         # store all to self
         self.table = table.copy()
@@ -424,26 +336,26 @@ class build(_BaseConstruct):
             If a conditional-subject pair
             has multiple samples associated
             with it. In this case the
-            default method is to sum them.
+            default method is to mean them.
 
         """
 
         table, mf = self.table, self.mf
 
-        ## Step 1: sum samples with multiple conditional overlaps ##
-
-        duplicated = {k: list(df.index) for k, df in mf.groupby([self.subjects]
-                                                                + self.conditions)
+        # Step 1: mean samples with multiple conditional overlaps
+        col_tmp = [self.subjects] + self.conditions
+        duplicated = {k: list(df.index)
+                      for k, df in mf.groupby(col_tmp)
                       if df.shape[0] > 1}  # get duplicated conditionals
         duplicated_ids = ','.join(
             list(set([str(k[0]) for k in duplicated.keys()])))
         warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
                                ") contains multiple ",
                                "samples. Multiple subject counts will be",
-                               " summed across samples by subject."]),
+                               " meaned across samples by subject."]),
                       RuntimeWarning)
         for id_, dup in duplicated.items():
-            # sum and keep one
+            # mean and keep one
             table[dup[0]] = table.loc[:, dup].mean(axis=1).astype(int)
             # drop the other
             table.drop(dup[1:], axis=1)
@@ -451,7 +363,7 @@ class build(_BaseConstruct):
         # save direct data
         table_counts = table.values
 
-        ## Step 2: fill the tensor (missing are all zero) ##
+        # Step 2: fill the tensor (missing are all zero)
 
         # generate all sorted mode ids
         def sortset(ids): return sorted(set(ids))
@@ -490,8 +402,16 @@ class build(_BaseConstruct):
             # fill count tensor from table
             tensor_counts[tuple(ind_)] = table_counts[:, M_ind]
 
+        # save metadat and save subject-conditional index
+        condition_metadata_map = [{(sid, con): i
+                                  for i, sid, con in zip(mf.index,
+                                                         mf[self.subjects],
+                                                         mf[con])}
+                                  for con in self.conditions]
+        self.condition_metadata_map = condition_metadata_map
         # save tensor label order
         self.counts = tensor_counts
         self.subject_order = subject_order
         self.feature_order = feature_order
         self.condition_orders = conditional_orders
+        self.mf = self.mf
