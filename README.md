@@ -19,7 +19,7 @@ To install the most up to date version of deicode, run the following command
 
 ## Using gemelli  inside [QIIME 2](https://qiime2.org/)
 
-A QIIME2 tutorial can be found [here](https://github.com/cameronmartino/gemelli/ipynb/tutorials/QIIME2-jansson-ibd-tutorial.md).
+A QIIME2 tutorial can be found [here](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/QIIME2-jansson-ibd-tutorial.md).
 
 `Note: a more formal tutorial is coming soon.`
 
