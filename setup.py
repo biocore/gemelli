@@ -114,7 +114,7 @@ setup(name='gemelli',
                     'console_scripts': standalone},
       # Inclusion of citations.bib in package_data based on how this is done in
       # q2-emperor's setup.py file
-      package_data={'deicode': ['citations.bib']},
+      package_data={'gemelli': ['citations.bib']},
       cmdclass={'install': CustomInstallCommand,
                 'develop': CustomDevelopCommand,
                 'egg_info': CustomEggInfoCommand, },
