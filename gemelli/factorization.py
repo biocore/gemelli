@@ -8,6 +8,7 @@
 
 import numpy as np
 import pandas as pd
+from scipy.linalg import svd
 from numpy.random import rand
 from numpy.linalg import norm
 from .base import _BaseImpute
@@ -23,7 +24,9 @@ class TensorFactorization(_BaseImpute):
                  max_rtpm_iterations=50,
                  n_initializations=50,
                  tol_rtpm=1e-5,
-                 fillna=1.0):
+                 fillna=1.0,
+                 center=True,
+                 check_dense=True):
         """
 
         This class performs a low-rank N-order
@@ -141,6 +144,8 @@ class TensorFactorization(_BaseImpute):
         self.tol_als = tol_als
         self.tol_rtpm = tol_rtpm
         self.fillna = fillna
+        self.center = center
+        self.check_dense = check_dense
 
     def fit(self, tensor):
         """
@@ -180,9 +185,11 @@ class TensorFactorization(_BaseImpute):
         # ensure the data contains missing values.
         # other methods would be better in the case of fully dense data
         n_entries = np.product(tensor.shape)
-        if (np.count_nonzero(tensor) == n_entries and
-                np.count_nonzero(~np.isnan(tensor)) == n_entries):
-            raise ValueError('No missing data in the format np.nan or 0.')
+        if self.check_dense: 
+            if (np.count_nonzero(tensor) == n_entries and
+                    np.count_nonzero(~np.isnan(tensor)) == n_entries):
+                err_ = 'No missing data in the format np.nan or 0.'
+                raise ValueError(err_)
         # ensure there are no undefined values in the array
         if np.count_nonzero(np.isinf(tensor)) != 0:
             raise ValueError('Contains either np.inf or -np.inf')
@@ -205,19 +212,42 @@ class TensorFactorization(_BaseImpute):
                                 fillna=self.fillna)
         # save all raw laodings as attribute
         self.loadings = loads
-        # all eigen values
-        self.eigvals = np.diag(s)
         # the distance between tensor_imputed and tensor
         self.dist = dist
-        # the proortion explained for n_components
-        self.proportion_explained = list(self.eigvals**2 \
-                                         / np.sum(self.eigvals**2))
         # save array of loadings for subjects
-        self.subjects = loads[0]
+        self.subjects = loads[0].copy()
         self.subjects = self.subjects[self.subjects[:, 0].argsort()]
         # save array of loadings for features
-        self.features = loads[1]
+        self.features = loads[1].copy()
         self.features = self.features[self.features[:, 0].argsort()]
+        # center the subject / feature biplot
+        self.subjects -= self.subjects.mean(axis=0)
+        self.features -= self.features.mean(axis=0)
+        if self.center == True:
+            # re-center using a final svd
+            X = self.subjects @ s @ self.features.T
+            possible_comp = [np.min(X.shape),
+                             self.n_components]
+            self.biplot_components = np.min(possible_comp)
+            X = X - X.mean(axis=0)
+            X = X - X.mean(axis=1).reshape(-1, 1)
+            u, s, v = svd(X)
+            u = u[:, :self.biplot_components]
+            v = v.T[:, :self.biplot_components]
+            p = s**2 / np.sum(s**2)
+            p = np.array(p[:self.biplot_components])
+            s = np.diag(s[:self.biplot_components])
+            # save the re-centered biplot
+            self.features = v
+            self.subjects = u
+        else:
+            # just make prop-exp
+            p = np.array(np.diag(s)**2 \
+                         / np.sum(np.diag(s)**2))
+        # save all eigen values
+        self.eigvals = np.diag(s)
+        # the proortion explained for n_components
+        self.proportion_explained = p
         # save list of array(s) of loadings for conditions
         self.conditions = [loads[2]] if len(loads[2:]) == 1 \
             else loads[2:]
@@ -288,22 +318,21 @@ class TensorFactorization(_BaseImpute):
         # columns labels PC1 ... PC(n_components)
         self.column_labels = ['PC' + str(i)
                               for i in range(1, self.n_components + 1)]
+        self.biplot_labels = ['PC' + str(i)
+                              for i in range(1, self.biplot_components + 1)]
 
         # % var explained
         self.proportion_explained = pd.Series(self.proportion_explained,
-                                              index=self.column_labels)
+                                              index=self.biplot_labels)
         # eigvals
         self.eigvals = pd.Series(self.eigvals,
-                                 index=self.column_labels)
-
+                                 index=self.biplot_labels)
         # DataFrame single non-condition dependent loadings
-        self.subjects -= self.subjects.mean(axis=0)
         self.subjects = pd.DataFrame(self.subjects,
-                                     columns=self.column_labels,
+                                     columns=self.biplot_labels,
                                      index=construct.subject_order)
-        self.features -= self.features.mean(axis=0)
         self.features = pd.DataFrame(self.features,
-                                     columns=self.column_labels,
+                                     columns=self.biplot_labels,
                                      index=construct.feature_order)
 
         # id taxonomy is given then add the taxonomic information
@@ -325,7 +354,6 @@ class TensorFactorization(_BaseImpute):
         subject_trajectory = []
         for c_ind, condition in enumerate(construct.conditions):
             traj_tmp = self.subject_trajectory[c_ind]
-            #traj_tmp -= traj_tmp.mean(axis=0)
             traj_tmp = pd.DataFrame(traj_tmp,
                                     columns=self.column_labels)
             ordr_ = [[subj, cond] for subj in construct.subject_order
@@ -347,7 +375,6 @@ class TensorFactorization(_BaseImpute):
         feature_trajectory = []
         for c_ind, condition in enumerate(construct.conditions):
             traj_tmp = self.feature_trajectory[c_ind]
-            #traj_tmp -= traj_tmp.mean(axis=0)
             traj_tmp = pd.DataFrame(traj_tmp,
                                     columns=self.column_labels)
             ordr_ = [[feat, cond] for feat in construct.feature_order

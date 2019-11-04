@@ -109,7 +109,7 @@ def ctf_helper(table: biom.Table,
                               "sure that the sample names between "
                               "`feature-metadata` and `table` are "
                               "consistent"))
-        feature_metadata = feature_metadata.loc[fidx]
+        feature_metadata = feature_metadata.reindex(fidx)
     sidx = subtablesids & submetadataids
     if len(sidx) == 0:
         raise ValueError(("No more features left.  Check to make sure that "
@@ -118,7 +118,7 @@ def ctf_helper(table: biom.Table,
     if feature_metadata is not None:
         table.filter(list(fidx), axis='observation', inplace=True)
     table.filter(list(sidx), axis='sample', inplace=True)
-    sample_metadata = sample_metadata.loc[sidx]
+    sample_metadata = sample_metadata.reindex(sidx)
 
     # filter and import table
     for axis, min_sum in zip(['sample',
@@ -154,8 +154,8 @@ def ctf_helper(table: biom.Table,
     if n_components == 2:
         TF.subjects['PC3'] = [0] * len(TF.subjects.index)
         TF.features['PC3'] = [0] * len(TF.features.index)
-        TF.proportion_explained.loc['PC3'] = 0
-        TF.eigvals.loc['PC3'] = 0
+        TF.proportion_explained.loc['PC3', :] = 0
+        TF.eigvals.loc['PC3', :] = 0
 
     # save ordination results
     short_method_name = 'CTF_Biplot'
@@ -190,7 +190,7 @@ def ctf_helper(table: biom.Table,
         # addtionally only keep metadata with trajectory
         # output available.
         pre_merge_cols = list(straj.columns)
-        straj = concat([straj.loc[all_sample_metadata.index, :],
+        straj = concat([straj.reindex(all_sample_metadata.index),
                         all_sample_metadata],
                         axis=1, sort=True)
         straj = straj.dropna(subset=pre_merge_cols)   

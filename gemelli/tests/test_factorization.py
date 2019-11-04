@@ -74,7 +74,7 @@ class TestTenAls(unittest.TestCase):
 
     def test_TenAls_noiseless(self):
         # TensorFactorization no noise
-        TF = TensorFactorization().fit(self.TE)
+        TF = TensorFactorization(center=False).fit(self.TE)
         L1, L2, L3 = TF.loadings
         s = TF.eigvals
         # test accuracy
@@ -94,18 +94,18 @@ class TestTenAls(unittest.TestCase):
 
     def test_TenAls_mode4_noiseless(self):
         # TODO check values
-        TF = TensorFactorization().fit(self.TE4)
+        TF = TensorFactorization(center=False).fit(self.TE4)
         L1, L2, L3, L4 = TF.loadings
         # test accuracy
 
     def test_TenAls_mode5_noiseless(self):
         # TODO check values
-        TF = TensorFactorization().fit(self.TE5)
+        TF = TensorFactorization(center=False).fit(self.TE5)
         L1, L2, L3, L4, L5 = TF.loadings
 
     def test_TenAls_noise(self):
         # TensorFactorization no noise
-        TF = TensorFactorization().fit(self.TE_noise)
+        TF = TensorFactorization(center=False).fit(self.TE_noise)
         L1, L2, L3 = TF.loadings
         s = TF.eigvals
         # test accuracy
@@ -125,12 +125,12 @@ class TestTenAls(unittest.TestCase):
 
     def test_TenAls_mode4_noise(self):
         # TODO check values
-        TF = TensorFactorization().fit(self.TE_noise4)
+        TF = TensorFactorization(center=False).fit(self.TE_noise4)
         L1, L2, L3, L4 = TF.loadings
 
     def test_TenAls_mode5_noise(self):
         # TODO check values
-        TF = TensorFactorization().fit(self.TE_noise5)
+        TF = TensorFactorization(center=False).fit(self.TE_noise5)
         L1, L2, L3, L4, L5 = TF.loadings
 
     def test_khatri_rao(self):
@@ -155,17 +155,17 @@ class TestTenAls(unittest.TestCase):
     def test_errors(self):
         # test not array
         with self.assertRaises(ValueError):
-            TensorFactorization().fit(list(range(10)))
+            TensorFactorization(center=False).fit(list(range(10)))
         # test if none missing
         with self.assertRaises(ValueError):
-            TensorFactorization().fit(np.ones((5, 5)))
+            TensorFactorization(center=False).fit(np.ones((5, 5)))
         # test no nan(s)
         TE_errors = self.TE
         TE_errors[0, :, :] = np.inf
         with self.assertRaises(ValueError):
-            TensorFactorization().fit(TE_errors)
+            TensorFactorization(center=False).fit(TE_errors)
         # test max rank
         with self.assertRaises(ValueError):
-            TensorFactorization(
+            TensorFactorization(center=False,
                 n_components=np.max(
                     self.TE_noise.shape) +10).fit(self.TE_noise)
