@@ -76,8 +76,10 @@ class TestTenAls(unittest.TestCase):
         # TensorFactorization no noise w/ centered
         TF = TensorFactorization(center=True).fit(self.TE)
         L1, L2, L3 = TF.loadings
-        self.assertTrue(L1.mean(axis=1).sum() < 1e-10)
-        self.assertTrue(L2.mean(axis=1).sum() < 1e-10)
+        for l1v in L1.mean(axis=1):
+            self.assertLess(l1v, 1)
+        for l2v in L2.mean(axis=1):
+            self.assertLess(l2v, 1)
 
     def test_TenAls_noiseless(self):
         # TensorFactorization no noise
