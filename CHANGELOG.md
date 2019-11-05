@@ -1,4 +1,14 @@
-(2019-06-12)
+v0.0.5 (2019-06-12)
+
+### Bug fixes
+
+* Fixes in `_transformer.py` and `ctf.py` to utalize QIIME2 metadata passing, this fixes the dtype bool dropping issues in metadata
+* Removed imports of QIIME2 metadata in `ctf.py`, this will allow the standalone commandline to run without having QIIME2 installed.
+* Update pandas future error of .loc[new_index, :] to .reindex(new_index)
+* Centered the subject biplot
+* Added flake8 testing to travis
+
+v0.0.4 (2019-06-12)
 
 ### Features
 

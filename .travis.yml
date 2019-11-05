@@ -24,6 +24,7 @@ install:
   - sudo pip install coveralls
 script:
   - source activate test-env
+  - flake8 gemelli setup.py  
   - nosetests -v gemelli --with-coverage --cover-package=gemelli
 after_success:
   - coveralls
