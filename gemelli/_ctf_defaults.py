@@ -41,11 +41,10 @@ QDIST = ("A sample-sample distance matrix generated from "
 QLOAD = ("Compositional biplot of subjects as points and features as arrows."
          " Where the variation between subject groupings is explained by the"
          " log-ratio between opposing arrows. "
-         "WARNING: The % variance explained is spread over n_components "
+         "WARNING: The % variance explained is only spread over n_components "
          "and can be inflated.")
 QSOAD = ("Compositional biplot of states as points and features as arrows."
          " Where the variation between subject groupings is explained by the"
          " log-ratio between opposing arrows. "
-         "WARNING: The % variance explained is spread over n_components "
+         "WARNING: The % variance explained is only spread over n_components "
          "and can be inflated.")
-OUT_PFAM = ()
