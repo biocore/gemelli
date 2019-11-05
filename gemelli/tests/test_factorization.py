@@ -166,6 +166,6 @@ class TestTenAls(unittest.TestCase):
             TensorFactorization(center=False).fit(TE_errors)
         # test max rank
         with self.assertRaises(ValueError):
+            paeram_ = np.max(self.TE_noise.shape) + 10
             TensorFactorization(center=False,
-                n_components=np.max(
-                    self.TE_noise.shape) +10).fit(self.TE_noise)
+                                n_components=paeram_).fit(self.TE_noise)

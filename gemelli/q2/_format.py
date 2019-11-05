@@ -8,7 +8,7 @@ class TrajectoryFormat(model.TextFileFormat):
             # check the header column names
             header = fh.readline()
             comp_columns = [i for i, head in enumerate(header.split('\t'))
-                      if 'PC' in head]
+                            if 'PC' in head]
             # ensure there at least two components
             if len(comp_columns) < 1:
                 raise ValidationError('No PC# columns present. '

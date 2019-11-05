@@ -9,7 +9,6 @@
 import numpy as np
 import pandas as pd
 from scipy.linalg import svd
-from numpy.random import rand
 from numpy.linalg import norm
 from .base import _BaseImpute
 from scipy.spatial import distance
@@ -185,7 +184,7 @@ class TensorFactorization(_BaseImpute):
         # ensure the data contains missing values.
         # other methods would be better in the case of fully dense data
         n_entries = np.product(tensor.shape)
-        if self.check_dense: 
+        if self.check_dense:
             if (np.count_nonzero(tensor) == n_entries and
                     np.count_nonzero(~np.isnan(tensor)) == n_entries):
                 err_ = 'No missing data in the format np.nan or 0.'
@@ -223,7 +222,7 @@ class TensorFactorization(_BaseImpute):
         # center the subject / feature biplot
         self.subjects -= self.subjects.mean(axis=0)
         self.features -= self.features.mean(axis=0)
-        if self.center == True:
+        if self.center:
             # re-center using a final svd
             X = self.subjects @ s @ self.features.T
             possible_comp = [np.min(X.shape),
@@ -242,8 +241,8 @@ class TensorFactorization(_BaseImpute):
             self.subjects = u
         else:
             # just make prop-exp
-            p = np.array(np.diag(s)**2 \
-                         / np.sum(np.diag(s)**2))
+            p = np.array(np.diag(s)**2 /
+                         np.sum(np.diag(s)**2))
         # save all eigen values
         self.eigvals = np.diag(s)
         # the proortion explained for n_components
@@ -601,8 +600,8 @@ def tenals(tensor,
         iteration_tensor_frobenius_norm = norm(mean_squared_error)**2
         # If the error between this iterations reconstruction and the
         # intital tensor is below tol_als then  break the iterations.
-        err_conv =  np.sqrt(iteration_tensor_frobenius_norm /
-                            initial_tensor_frobenius_norm)
+        err_conv = np.sqrt(iteration_tensor_frobenius_norm /
+                           initial_tensor_frobenius_norm)
         if err_conv < tol_als:
             break
     # check that the factorization converged
@@ -677,7 +676,7 @@ def robust_tensor_power_method(tensor,
             pp. 1-36.
 
     """
-    
+
     # tensor shape is the number of loadings
     dims = tensor.shape
     # for each dim. initalize a loading fiber
@@ -724,7 +723,8 @@ def robust_tensor_power_method(tensor,
         # the final laodings & eigvals.
         for idx, max_load in enumerate(tU):
             loadings[idx][:, r] = max_load[:, max_idx]
-            loadings[idx][:, r] = loadings[idx][:, r] / norm(loadings[idx][:, r])
+            loadings[idx][:, r] = (loadings[idx][:, r]
+                                   / norm(loadings[idx][:, r]))
         # fill eigval
         T_con = construct_tensor(eigvals, loadings)
         eigvals[r] = eigval_update(tensor - T_con,
@@ -793,8 +793,6 @@ def asymmetric_power_update(tensor,
         tol_itr = sum(norm(u0 - u) for u0, u in zip(init_prev, init))
         if tol_itr < tol_rtpm:
             break
-
-            
     return [loading.flatten() for loading in init]
 
 

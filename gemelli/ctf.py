@@ -2,7 +2,6 @@ import biom
 import skbio
 from pandas import concat
 from pandas import DataFrame
-from qiime2 import Metadata
 from skbio import OrdinationResults, DistanceMatrix
 from gemelli.factorization import TensorFactorization
 from gemelli.preprocessing import build, rclr
@@ -22,27 +21,28 @@ def ctf(table: biom.Table,
         max_iterations_rptm: int = DEFAULT_MAXITER,
         n_initializations: int = DEFAULT_MAXITER,
         feature_metadata: DataFrame = DEFFM) -> (OrdinationResults,
-                                                DistanceMatrix,
-                                                DataFrame,
-                                                DataFrame):
+                                                 OrdinationResults,
+                                                 DistanceMatrix,
+                                                 DataFrame,
+                                                 DataFrame):
     # run CTF helper and parse output for QIIME
-    ord_res, dists, straj, ftraj = ctf_helper(table,
-                                              sample_metadata,
-                                              individual_id_column,
-                                              [state_column],
-                                              n_components,
-                                              min_sample_count,
-                                              min_feature_count,
-                                              max_iterations_als,
-                                              max_iterations_rptm,
-                                              n_initializations,
-                                              feature_metadata)
-
-    PC_cols = ["PC%i" % (i + 1) for i in range(n_components)]
+    state_ordn, ord_res, dists, straj, ftraj = ctf_helper(table,
+                                                          sample_metadata,
+                                                          individual_id_column,
+                                                          [state_column],
+                                                          n_components,
+                                                          min_sample_count,
+                                                          min_feature_count,
+                                                          max_iterations_als,
+                                                          max_iterations_rptm,
+                                                          n_initializations,
+                                                          feature_metadata)
+    # save only first state (QIIME can't handle a list yet)
     dists = list(dists.values())[0]
     straj = list(straj.values())[0]
     ftraj = list(ftraj.values())[0]
-    return ord_res, dists, straj, ftraj
+    state_ordn = list(state_ordn.values())[0]
+    return ord_res, state_ordn, dists, straj, ftraj
 
 
 def ctf_helper(table: biom.Table,
@@ -55,22 +55,23 @@ def ctf_helper(table: biom.Table,
                max_iterations_als: int = DEFAULT_MAXITER,
                max_iterations_rptm: int = DEFAULT_MAXITER,
                n_initializations: int = DEFAULT_MAXITER,
-               feature_metadata: DataFrame = DEFFM) -> (OrdinationResults,
+               feature_metadata: DataFrame = DEFFM) -> (dict,
+                                                        OrdinationResults,
                                                         dict,
                                                         tuple):
     """ Runs  Compositional Tensor Factorization CTF.
     """
 
     # validate the metadata using q2 as a wrapper
-    if sample_metadata is not None and not isinstance(sample_metadata, DataFrame):
+    if sample_metadata is not None and not isinstance(sample_metadata,
+                                                      DataFrame):
         sample_metadata = sample_metadata.to_dataframe()
     keep_cols = state_columns + [individual_id_column]
     all_sample_metadata = sample_metadata.drop(keep_cols, axis=1)
     sample_metadata = sample_metadata[keep_cols]
     # validate the metadata using q2 as a wrapper
-    #if isinstance(feature_metadata, DataFrame):
-    #    feature_metadata = qiime2.Metadata(feature_metadata).to_dataframe()
-    if feature_metadata is not None and not isinstance(feature_metadata, DataFrame):
+    if feature_metadata is not None and not isinstance(feature_metadata,
+                                                       DataFrame):
         feature_metadata = feature_metadata.to_dataframe()
     # match the data (borrowed in part from gneiss.util.match)
     subtablefids = table.ids('observation')
@@ -143,22 +144,23 @@ def ctf_helper(table: biom.Table,
     long_method_name = 'Compositional Tensor Factorization Biplot'
     # only keep PC -- other tools merge metadata
     keep_PC = [col for col in TF.features.columns if 'PC' in col]
-    ordination = OrdinationResults(
+    subj_ordin = OrdinationResults(
         short_method_name,
         long_method_name,
         TF.eigvals,
         samples=TF.subjects[keep_PC].dropna(axis=0),
         features=TF.features[keep_PC].dropna(axis=0),
         proportion_explained=TF.proportion_explained)
-
     # save distance matrix for each condition
     distances = {}
+    state_ordn = {}
     subject_trajectories = {}
     feature_trajectories = {}
-    for condition, dist, straj, ftraj in zip(tensor.conditions,
-                                             TF.subject_distances,
-                                             TF.subject_trajectory,
-                                             TF.feature_trajectory):
+    for condition, cond, dist, straj, ftraj in zip(tensor.conditions,
+                                                   TF.conditions,
+                                                   TF.subject_distances,
+                                                   TF.subject_trajectory,
+                                                   TF.feature_trajectory):
         # match distances to metadata
         ids = straj.index
         ind_dict = dict((ind, ind_i) for ind_i, ind in enumerate(ids))
@@ -167,18 +169,29 @@ def ctf_helper(table: biom.Table,
         dist = dist[indices, :][:, indices]
         distances[condition] = skbio.stats.distance.DistanceMatrix(
             dist, ids=ids[indices])
+        # fix conditions
+        if n_components == 2:
+            cond['PC3'] = [0] * len(cond.index)
+        cond = OrdinationResults(short_method_name,
+                                 long_method_name,
+                                 TF.eigvals,
+                                 samples=cond[keep_PC].dropna(axis=0),
+                                 features=TF.features[keep_PC].dropna(axis=0),
+                                 proportion_explained=TF.proportion_explained)
+        state_ordn[condition] = cond
         # add the sample metadata before returning output
         # addtionally only keep metadata with trajectory
         # output available.
         pre_merge_cols = list(straj.columns)
         straj = concat([straj.reindex(all_sample_metadata.index),
                         all_sample_metadata],
-                        axis=1, sort=True)
-        straj = straj.dropna(subset=pre_merge_cols)   
-        # ensure index name for q2  
-        straj.index.name = "#SampleID"    
+                       axis=1, sort=True)
+        straj = straj.dropna(subset=pre_merge_cols)
+        # ensure index name for q2
+        straj.index.name = "#SampleID"
         # save traj.
         subject_trajectories[condition] = straj
         ftraj.index = ftraj.index.astype(str)
         feature_trajectories[condition] = ftraj
-    return ordination, distances, subject_trajectories, feature_trajectories
+    return (state_ordn, subj_ordin, distances,
+            subject_trajectories, feature_trajectories)

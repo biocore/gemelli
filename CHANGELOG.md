@@ -1,5 +1,9 @@
 v0.0.5 (2019-06-12)
 
+### Features
+* The output of the standalone and QIIME2 -CLI now return a state ordination
+    * Note that only the standalone can handle more than one state due to the lack of lists in QIIME2
+
 ### Bug fixes
 
 * Fixes in `_transformer.py` and `ctf.py` to utalize QIIME2 metadata passing, this fixes the dtype bool dropping issues in metadata
