@@ -118,17 +118,18 @@ def standalone_ctf(in_biom: str,
     else:
         feature_metadata = None
     # run CTF
-    ord_res, dists, straj, ftraj = ctf_helper(table,
-                                              sample_metadata,
-                                              individual_id_column,
-                                              state_columns,
-                                              n_components,
-                                              min_sample_count,
-                                              min_feature_count,
-                                              max_iterations_als,
-                                              max_iterations_rptm,
-                                              n_initializations,
-                                              feature_metadata)
+    res_ = ctf_helper(table,
+                      sample_metadata,
+                      individual_id_column,
+                      state_columns,
+                      n_components,
+                      min_sample_count,
+                      min_feature_count,
+                      max_iterations_als,
+                      max_iterations_rptm,
+                      n_initializations,
+                      feature_metadata)
+    state_ordn, ord_res, dists, straj, ftraj = res_
     # If it doesn't already exist, create the output directory.
     # Note that there is technically a race condition here: it's ostensibly
     # possible that some process could delete the output directory after we
@@ -146,6 +147,9 @@ def standalone_ctf(in_biom: str,
     for condition, dist in dists.items():
         dist.write(os.path.join(output_dir,
                                 '%s-distance-matrix.tsv' % (str(condition))))
+    # write each state ord
+    for condition, ord_ in state_ordn.items():
+        ord_.write(os.path.join(output_dir, '%s-ordination.txt' % (condition)))
     # write each trajectory
     for condition, traj in straj.items():
         traj.to_csv(

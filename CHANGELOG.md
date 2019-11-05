@@ -1,4 +1,19 @@
-(2019-06-12)
+v0.0.5 (2019-06-12)
+
+### Features
+
+* The output of the standalone and QIIME2 -CLI now return a state ordination
+    * Note that only the standalone can handle more than one state due to the lack of lists in QIIME2
+
+### Bug fixes
+
+* Fixes in `_transformer.py` and `ctf.py` to utilize QIIME2 metadata passing, this fixes the dtype bool dropping issues in metadata
+* Removed imports of QIIME2 metadata in `ctf.py`, this will allow the standalone commandline to run without having QIIME2 installed.
+* Update pandas future error of .loc[new_index, :] to .reindex(new_index)
+* Centered the subject biplot
+* Added flake8 testing to travis
+
+v0.0.4 (2019-06-12)
 
 ### Features
 
