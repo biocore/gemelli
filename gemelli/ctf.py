@@ -134,10 +134,10 @@ def ctf_helper(table: biom.Table,
     # <https://github.com/biocore/emperor/commit
     # /a93f029548c421cb0ba365b4294f7a5a6b0209ce>
     if n_components == 2:
-        TF.subjects['PC3'] = [0] * len(TF.subjects.index)
-        TF.features['PC3'] = [0] * len(TF.features.index)
-        TF.proportion_explained.loc['PC3'] = 0
-        TF.eigvals.loc['PC3'] = 0
+        TF.subjects.loc[:, 'PC3'] = [0] * len(TF.subjects.index)
+        TF.features.loc[:, 'PC3'] = [0] * len(TF.features.index)
+        TF.proportion_explained['PC3'] = 0
+        TF.eigvals['PC3'] = 0
 
     # save ordination results
     short_method_name = 'CTF_Biplot'
