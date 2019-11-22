@@ -136,8 +136,8 @@ def ctf_helper(table: biom.Table,
     if n_components == 2:
         TF.subjects['PC3'] = [0] * len(TF.subjects.index)
         TF.features['PC3'] = [0] * len(TF.features.index)
-        TF.proportion_explained.loc['PC3', :] = 0
-        TF.eigvals.loc['PC3', :] = 0
+        TF.proportion_explained.loc['PC3'] = 0
+        TF.eigvals.loc['PC3'] = 0
 
     # save ordination results
     short_method_name = 'CTF_Biplot'
