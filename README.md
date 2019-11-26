@@ -24,7 +24,7 @@ A QIIME2 tutorial can be found [here](https://github.com/cameronmartino/gemelli/
 `Note: a more formal tutorial is coming soon.`
 
 ```bash
-$qiime gemelli ctf --help
+$ qiime gemelli ctf --help
 
 Usage: qiime gemelli ctf [OPTIONS]
 
@@ -107,7 +107,7 @@ Miscellaneous:
 ## Using gemelli as a standalone tool
 
 ```bash
-$ gemelli cmartino$ gemelli --help
+$ gemelli --help
 
 Usage: gemelli [OPTIONS]
 
