@@ -68,6 +68,7 @@ class Test_qiime2_ctf(unittest.TestCase):
         self.q2meta = Metadata(self.meta_table)
         self.subj = 'host_subject_id'
         self.state = 'context'
+        self.out_ = os_path_sep.join(self.in_table.split(os_path_sep)[:-1])
 
     def test_qiime2_ctf(self):
         """Tests that the Q2 and standalone ctf results match.
@@ -90,7 +91,6 @@ class Test_qiime2_ctf(unittest.TestCase):
         # ...First, though, we need to write the contents of self.q2table to a
         # BIOM file, so gemelli can understand it.
         # Derived from a line in test_standalone_ctf()
-        out_ = os_path_sep.join(self.in_table.split(os_path_sep)[:-1])
         # Run gemelli outside of QIIME 2...
         runner = CliRunner()
         result = runner.invoke(standalone_ctf,
@@ -103,7 +103,7 @@ class Test_qiime2_ctf(unittest.TestCase):
                                 '--state-column-1',
                                 'context',
                                 '--output-dir',
-                                out_])
+                                self.out_])
         # check exit code was 0 (indicating success)
         self.assertEqual(result.exit_code, 0)
         # ...and read in the resulting output files. This code was derived from
@@ -124,6 +124,18 @@ class Test_qiime2_ctf(unittest.TestCase):
         assert_allclose(absolute_sort(feat_res[comp_col].values),
                         absolute_sort(q2ftraj[comp_col].values),
                         atol=.5)
+
+    def test_ctf_rank2(self):
+        """Tests that ctf with rank < 3
+        """
+        # Run gemelli
+        res = q2gemelli.actions.ctf(table=self.q2table,
+                                    sample_metadata=self.q2meta,
+                                    individual_id_column=self.subj,
+                                    state_column=self.state,
+                                    n_components=2)
+        # check exit code was 0 (indicating success)
+        self.assertEqual(len(res), 5)
 
 
 if __name__ == "__main__":
