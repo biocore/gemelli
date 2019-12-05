@@ -230,10 +230,10 @@ class TensorFactorization(_BaseImpute):
             self.biplot_components = np.min(possible_comp)
             X = X - X.mean(axis=0)
             X = X - X.mean(axis=1).reshape(-1, 1)
-            u, s, v = svd(X)
+            u, s, v = svd(X, full_matrices=False)
             u = u[:, :self.biplot_components]
             v = v.T[:, :self.biplot_components]
-            p = s**2 / np.sum(s**2)
+            p = s * (1 / s.sum())
             p = np.array(p[:self.biplot_components])
             s = np.diag(s[:self.biplot_components])
             # save the re-centered biplot
@@ -241,8 +241,8 @@ class TensorFactorization(_BaseImpute):
             self.subjects = u
         else:
             # just make prop-exp
-            p = np.array(np.diag(s)**2 /
-                         np.sum(np.diag(s)**2))
+            p = np.array(np.diag(s) /
+                         1 / np.sum(np.diag(s)))
         # save all eigen values
         self.eigvals = np.diag(s)
         # the proortion explained for n_components
