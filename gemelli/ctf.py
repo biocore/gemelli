@@ -190,6 +190,8 @@ def ctf_helper(table: biom.Table,
         # ensure index name for q2
         straj.index.name = "#SampleID"
         # save traj.
+        straj[keep_PC] -= straj[keep_PC].mean()
+        ftraj[keep_PC] -= ftraj[keep_PC].mean()
         subject_trajectories[condition] = straj
         ftraj.index = ftraj.index.astype(str)
         feature_trajectories[condition] = ftraj
