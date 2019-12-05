@@ -265,7 +265,7 @@ class TensorFactorization(_BaseImpute):
             # temporary list of components in feature trajectory
             feature_temp_trajectory = []
             # for each component in the rank given to TensorFactorization
-            for component in range(self.n_components):
+            for component in range(self.n_components)[::-1]:
                 # component condition-subject trajectory
                 dtmp = np.dot(loads[0][:, [component]],
                               condition[:, [component]].T).flatten()
@@ -277,6 +277,9 @@ class TensorFactorization(_BaseImpute):
             # combine all n_components
             subject_temp_trajectory = np.array(subject_temp_trajectory).T
             feature_temp_trajectory = np.array(feature_temp_trajectory).T
+            # double check check centered
+            subject_temp_trajectory -= subject_temp_trajectory.mean(axis=0)
+            feature_temp_trajectory -= feature_temp_trajectory.mean(axis=0)
             # save subject-condition trajectory and distance matrix
             self.subject_trajectory.append(subject_temp_trajectory)
             self.subject_distances.append(
