@@ -57,9 +57,9 @@ class Test_standalone_rpca(unittest.TestCase):
         # Check that the distance matrix matches our expectations
         comp_col = ['PC1', 'PC2', 'PC3']
         cent_ = samp_res[comp_col].mean().values.max()
-        self.assertLessEqual(cent_, 1e-10)
+        self.assertAlmostEqual(cent_, 0)
         cent_ = feat_res[comp_col].mean().values.max()
-        self.assertLessEqual(cent_, 1e-10)
+        self.assertAlmostEqual(cent_, 0)
         # check matched
         assert_allclose(absolute_sort(samp_res[comp_col].values),
                         absolute_sort(samp_exp[comp_col].values),
