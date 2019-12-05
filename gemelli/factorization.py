@@ -230,10 +230,10 @@ class TensorFactorization(_BaseImpute):
             self.biplot_components = np.min(possible_comp)
             X = X - X.mean(axis=0)
             X = X - X.mean(axis=1).reshape(-1, 1)
-            u, s, v = svd(X)
+            u, s, v = svd(X, full_matrices=False)
             u = u[:, :self.biplot_components]
             v = v.T[:, :self.biplot_components]
-            p = s**2 / np.sum(s**2)
+            p = s * (1 / s.sum())
             p = np.array(p[:self.biplot_components])
             s = np.diag(s[:self.biplot_components])
             # save the re-centered biplot
@@ -241,8 +241,8 @@ class TensorFactorization(_BaseImpute):
             self.subjects = u
         else:
             # just make prop-exp
-            p = np.array(np.diag(s)**2 /
-                         np.sum(np.diag(s)**2))
+            p = np.array(np.diag(s) /
+                         1 / np.sum(np.diag(s)))
         # save all eigen values
         self.eigvals = np.diag(s)
         # the proortion explained for n_components
@@ -265,7 +265,7 @@ class TensorFactorization(_BaseImpute):
             # temporary list of components in feature trajectory
             feature_temp_trajectory = []
             # for each component in the rank given to TensorFactorization
-            for component in range(self.n_components):
+            for component in range(self.n_components)[::-1]:
                 # component condition-subject trajectory
                 dtmp = np.dot(loads[0][:, [component]],
                               condition[:, [component]].T).flatten()
@@ -277,6 +277,9 @@ class TensorFactorization(_BaseImpute):
             # combine all n_components
             subject_temp_trajectory = np.array(subject_temp_trajectory).T
             feature_temp_trajectory = np.array(feature_temp_trajectory).T
+            # double check check centered
+            subject_temp_trajectory -= subject_temp_trajectory.mean(axis=0)
+            feature_temp_trajectory -= feature_temp_trajectory.mean(axis=0)
             # save subject-condition trajectory and distance matrix
             self.subject_trajectory.append(subject_temp_trajectory)
             self.subject_distances.append(
