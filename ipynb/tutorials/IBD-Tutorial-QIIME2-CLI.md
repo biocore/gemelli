@@ -131,8 +131,6 @@ There are also optional input parameters:
 * ( _Optional_ ) feature-metadata-file
     - This is a metadata file (e.g. tsv) where the rows are matched to the table features and the columns are feature metadata such as taxonomy, gene pathway, etc... 
 
-There are also additional optional parameter inputs which are described in the FAQ section [here](TODO).
-
 In this tutorial out subject id column is `host_subject_id` and our state-column is different time points denoted as `timepoint` in the sample metadata. Now we are ready to run CTF:
 
 ```bash
