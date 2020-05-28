@@ -1,9 +1,6 @@
 [![Build Status](https://travis-ci.org/cameronmartino/gemelli.svg?branch=master)](https://travis-ci.org/cameronmartino/gemelli)
 [![Coverage Status](https://coveralls.io/repos/github/cameronmartino/gemelli/badge.svg?branch=master)](https://coveralls.io/github/cameronmartino/gemelli?branch=master)
 
-**gemelli is still being developed, so backwards-incompatible changes might occur.**
-**If you have any questions, feel free to contact the development team at cmartino at eng.ucsd.edu.**
-
 Gemelli is a tool box for running tensor factorization on sparse compositional omics datasets. Gemelli performs unsupervised dimensionality reduction of spatiotemporal microbiome data. The outlut of gemelli helps to resolve spatiotemporal subject variation and the biological features that separate them. 
 
 # Installation
@@ -28,6 +25,10 @@ There are several ways to run CTF through gemelli. Here we provide a tutorial of
 ### Python API
 * [QIIME2 API](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
 * [Standalone Python API](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
+
+## FAQ
+
+
 
 ## Other Resources
 
