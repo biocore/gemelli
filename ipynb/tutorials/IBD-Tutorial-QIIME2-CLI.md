@@ -1,6 +1,3 @@
-
-# Tutorial Introduction
-
 Repeat measure experimental designs (e.g. time series) are valid and powerful method to control inter-individual variation. However, conventional dimensionality reduction methods can not account for the high-correlation of each subject to thierself at a later time point. This inherent correlation structure can cause subject grouping to confound or even outweigh important phenotype groupings. To address this we will use Compositional Tensor Factorization (CTF) which we provide in the software package [gemelli](https://github.com/cameronmartino/gemelli). CTF can account for repeated measures, compositionality, and sparsity in microbiome data.
 
 In this tutorial we use _gemelli_ to perform CTF on a time series dataset comparing Crohn's and control subjects over a period of 25 weeks published in [Vázquez-Baeza et al](https://gut.bmj.com/content/67/9/1743). First we will download the processed data originally from [here](https://qiita.ucsd.edu/study/description/2538#). The pre-processed data can be downloaded with the following links:
@@ -11,25 +8,25 @@ In this tutorial we use _gemelli_ to perform CTF on a time series dataset compar
 * **Feature Metadata** (taxonomy.qza) | [download](https://github.com/cameronmartino/gemelli/tree/master/ipynb/tutorials/IBD-2538/data/taxonomy.qza)
 * **Tree** (sepp-insertion-tree.qza) | [download](https://github.com/cameronmartino/gemelli/tree/master/ipynb/tutorials/IBD-2538/data/sepp-insertion-tree.qza)
 
-**Note**: This tutorial assumes you have installed [QIIME2](https://qiime2.org/) using one of the procedures in the [install documents](https://docs.qiime2.org/2020.2/install/) and have installed, [Qurro](https://github.com/biocore/qurro), [DEICODE](https://github.com/biocore/DEICODE), and [gemelli](https://github.com/cameronmartino/gemelli).
+**Note**: This tutorial assumes you have installed [QIIME2](https://qiime2.org/) using one of the procedures in the [install documents](https://docs.qiime2.org/2020.2/install/). This tutorial also assumed you have installed, [Qurro](https://github.com/biocore/qurro), [DEICODE](https://github.com/biocore/DEICODE), and [gemelli](https://github.com/cameronmartino/gemelli).
 
-First we will make a tutorial directory and download the data above and move the files to the `IBD-2538/data` directory:
+First, we will make a tutorial directory and download the data above and move the files to the `IBD-2538/data` directory:
 
 ```bash
 mkdir IBD-2538
 ```
 ```bash
+# move downloaded data here
 mkdir IBD-2538/data
 ```
-
-First we will demonstrate the issues with using conventional dimensionality reduction methods on time series data. To do this we will create a directory to store the results:
 
 ```bash
 # make directory to store results
 mkdir IBD-2538/core-metric-output
 ```
 
-Now we will perform PCoA dimentionality reduction on weighted and unweighted UniFrac $\beta$-diversity distances.  
+Next, we will demonstrate the issues with using conventional dimensionality reduction methods on time series data. To do this we will perform PCoA dimensionality reduction on weighted and unweighted UniFrac $\beta$-diversity distances. We will also run Aitchison Robust PCA with _DEICODE_ which is built on the same framework as CTF but does not account for repeated measures.
+
 ```bash
 qiime diversity beta-phylogenetic\
     --i-table  IBD-2538/data/rarefied-table.qza\
@@ -80,8 +77,6 @@ Saved PCoAResults to: IBD-2538/core-metric-output/weighted-unifrac-distance-pcoa
 Saved Visualization to: IBD-2538/core-metric-output/unweighted-unifrac-distance-pcoa.qzv
 Saved Visualization to: IBD-2538/core-metric-output/weighted-unifrac-distance-pcoa.qzv
 ```
-
-We will also run Aitchison Robust PCA with _DEICODE_ which is built on the same framework as CTF but does not account for repeated measures.
 ```bash
 qiime deicode rpca\
     --i-table IBD-2538/data/table.qza\
@@ -103,17 +98,19 @@ Saved Visualization to: IBD-2538/core-metric-output/RPCA-biplot.qzv
 ```
 
 Now we can visualize the sample groupings by host subject ID and IBD with [Emperor](https://biocore.github.io/emperor/). From this we can see all three metric the PCoA samples clearly separate by host subject ID which in some cases (e.g. UniFrac) can overwhelm the control (blue) v. Crohn's disease (orange) sample groupings. Even in the case where the IBD grouping is not completely lost (e.g. RPCA) we can still see confounding groupings in the control (blue) groups by subject ID. In either case this can complicate the interpretation of these analysis.    
-
+ 
 ![image.png](etc/subjectidsgroups.png)
 
 This confounding effect can also be observed in the statistics performed on pairwise $\beta$-diversity distances (e.g. PERMANOVA). In this case of exploring the distance matrices [q2-longitudinal](https://msystems.asm.org/content/3/6/e00219-18) has many excellent methods for accounting for repeated measure data. You can find the q2-longitudinal tutorial [here](https://docs.qiime2.org/2020.2/tutorials/longitudinal/).
 
+
+
 # Compositional Tensor Factorization (CTF) Introduction
 
-In order to account for the correlation from a subject to thierself we will compositional tensor factorization (CTF). CTF builds on the ability to account for compositionality and sparsityusing the robust center logratio transform covered in the RPCA tutorial (found [here](https://forum.qiime2.org/t/robust-aitchison-pca-beta-diversity-with-deicode)) but restructures and factors the data as a tensor. Here we will run CTF through _gemelli_ and explore/interpret the different results. 
+In order to account for the correlation from a subject to thierself we will compositional tensor factorization (CTF). CTF builds on the ability to account for compositionality and sparsity using the robust center log-ratio transform covered in the RPCA tutorial (found [here](https://forum.qiime2.org/t/robust-aitchison-pca-beta-diversity-with-deicode)) but restructures and factors the data as a tensor. Here we will run CTF through _gemelli_ and explore/interpret the different results. 
 
 
-To run CTF we only need to run once command (gemelli ctf). The required input requirements are:
+To run CTF we only need to run one command (gemelli ctf). The required input requirements are:
 
 1. table
     - The table is of type `FeatureTable[Frequency]` which is a table where the rows are features (e.g. ASVs/microbes), the columns are samples, and the entries are the number of sequences for each sample-feature pair.
@@ -158,8 +155,8 @@ We will now cover the output files being:
 * state_subject_ordination
 * state_feature_ordination
 
+First, we will explore the `state_subject_ordination`. The subject trajectory has PC axes like a conventional ordination (i.e. PCoA) but with time as the second axis. This can be visualized through the existing q2-longitudinal plugin. 
 
-First we will explore the `state_subject_ordination`. The subject trajectory has PC axes like a conventional ordination (i.e. PCoA) but with time as the second axis. This can be visualized through the existing q2-longitudinal plugin. 
 
 ```bash
 qiime longitudinal volatility \
@@ -175,15 +172,13 @@ qiime longitudinal volatility \
 Saved Visualization to: IBD-2538/ctf-results/state_subject_ordination.qzv
 ```
 
-The interpretation is also similar to a conventional ordination scatter plot -- where the larger the distance is between subjects at each time point the greater the difference in thier microbial communities. Here we can see that CTF can effectively show a difference between controls and crohn's subjects across time.
+The interpretation is also similar to a conventional ordination scatter plot -- where the larger the distance is between subjects at each time point the greater the difference in their microbial communities. Here we can see that CTF can effectively show a difference between controls and Crohn's subjects across time.
 
 ![image.png](etc/sample-visualization.png)
 
 There is not a strong chnage over time in this example. However, we could explore the `distance_matrix` to test the differences by IBD by looking at pairwise distances with a Mixed Effects Model. How to use and evaluate the q2-longitudinal commands is covered in depth in thier tutorial [here](https://docs.qiime2.org/2020.2/tutorials/longitudinal/).
 
-**Note:** In the python and QIIME2 API versions of this tutorial we split by time point to run PERMANOVA. However, this is difficult using the command line interface and is skipped here.
-
-Now we will explore the `subject_biplot` which is a ordination where dots represent _subjects_ not _samples_ and arrows represent features (e.g. ASVs). First, we will need to aggergate the metadata by subject. This can be done by hand or using DataFrames in python (with pandas) or R like so:
+Now we will explore the `subject_biplot` which is a ordination where dots represent _subjects_ not _samples_ and arrows represent features (e.g. ASVs). First, we will need to aggregate the metadata by subject. This can be done by hand or using DataFrames in python (with pandas) or R like so:
 
 ```python
 import pandas as pd
@@ -214,12 +209,12 @@ qiime emperor biplot\
 Saved Visualization to: IBD-2538/ctf-results/subject_biplot.qzv
 ```
 
-From this visualization we can see that the IBD type is clearly seperated in two groupings.
+From this visualization we can see that the IBD type is clearly separated in two groupings.
 
 ![image.png](etc/per_subject_biplot.png)
 
 
-We can also see that the IBD grouping is separated entirely over the first PC. We can now use [Qurro](https://github.com/biocore/qurro) to explore the feature loading partitions (arrows) in this biplot as a log-ratio of the original table counts. This allows us to relate these low-dimensional representations back to our original data. Additionally, log-ratio provide a nice set of data points for additional analysis such as LME models.
+We can also see that the IBD grouping is separated entirely over the first PC. We can now use [Qurro](https://github.com/biocore/qurro) to explore the feature loading partitions (arrows) in this biplot as a log-ratio of the original table counts. This allows us to relate these low-dimensional representations back to our original data. Additionally, log-ratio provide a nice set of data points for additional analysis such as LME models. 
 
 ```bash
 qiime qurro loading-plot\
@@ -238,7 +233,7 @@ From the Qurro output `qurro.qzv` we will simply choose the PC1 loadings above a
 
 ![image.png](etc/qurro-plot.png)
 
-We can further explore these phenotype differences by exporting the `sample_plot_data.tsv` from qurro (marked in a orange box above). We will then merge this `sample_plot_data` with our sample metadata in python or R. 
+We can further explore these phenotype differences by exporting the `sample_plot_data.tsv` from Qurro (marked in a orange box above). We will then merge this `sample_plot_data` with our sample metadata in python or R. 
 
 **Note:** Qurro will have an option to export all of the metadata or only the log-ratio soon.
 
@@ -300,5 +295,4 @@ Saved Visualization to: IBD-2538/ctf-results/lme_log_ratio.qzv
 From this LME model we can see that indeed the IBD grouping is significant across time. 
 
 ![image.png](etc/lme-logratio.png)
-
 

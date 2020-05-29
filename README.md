@@ -18,17 +18,14 @@ To install the most up to date version of deicode, run the following command
 
 There are several ways to run CTF through gemelli. Here we provide a tutorial of a time series IBD data set in each of the different formats:
 
-### Command Line Interface
-* [QIIME2 CLI](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-CLI.md)
-* [Standalone Python CLI](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-CLI.md)
+### Tutorials with QIIME2
 
-### Python API
+* [QIIME2 Command Line Interface](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-CLI.md)
 * [QIIME2 API](https://nbviewer.jupyter.org/github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
+
+### Standalone tutorial outside of QIIME2
+
 * [Standalone Python API](https://nbviewer.jupyter.org/github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
-
-## FAQ
-
-TODO
 
 ## Other Resources
 
