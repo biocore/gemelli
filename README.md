@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/cameronmartino/gemelli.svg?branch=master)](https://travis-ci.org/cameronmartino/gemelli)
-[![Coverage Status](https://coveralls.io/repos/github/cameronmartino/gemelli/badge.svg?branch=master)](https://coveralls.io/github/cameronmartino/gemelli?branch=master)
+[![Build Status](https://travis-ci.org/biocore/gemelli.svg?branch=master)](https://travis-ci.org/biocore/gemelli)
+[![Coverage Status](https://coveralls.io/repos/github/biocore/gemelli/badge.svg?branch=master)](https://coveralls.io/github/biocore/gemelli?branch=master)
 
 Gemelli is a tool box for running tensor factorization on sparse compositional omics datasets. Gemelli performs unsupervised dimensionality reduction of spatiotemporal microbiome data. The outlut of gemelli helps to resolve spatiotemporal subject variation and the biological features that separate them. 
 
@@ -20,12 +20,12 @@ There are several ways to run CTF through gemelli. Here we provide a tutorial of
 
 ### Tutorials with QIIME2
 
-* [QIIME2 Command Line Interface](https://github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-CLI.md)
-* [QIIME2 API](https://nbviewer.jupyter.org/github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
+* [QIIME2 Command Line Interface](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-CLI.md)
+* [QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
 
 ### Standalone tutorial outside of QIIME2
 
-* [Standalone Python API](https://nbviewer.jupyter.org/github.com/cameronmartino/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
+* [Standalone Python API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
 
 ## Other Resources
 
