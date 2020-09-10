@@ -5,7 +5,7 @@ Gemelli is a tool box for running tensor factorization on sparse compositional o
 
 # Installation
 
-To install the most up to date version of deicode, run the following command
+To install the most up to date version of gemelli, run the following command
 
     # pip (only supported for QIIME2 >= 2018.8)
     pip install gemelli
