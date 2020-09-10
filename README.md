@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/biocore/gemelli.svg?branch=master)](https://travis-ci.org/biocore/gemelli)
-[![Coverage Status](https://coveralls.io/repos/github/biocore/gemelli/badge.svg?branch=master)](https://coveralls.io/github/biocore/gemelli?branch=master)
 
 Gemelli is a tool box for running tensor factorization on sparse compositional omics datasets. Gemelli performs unsupervised dimensionality reduction of spatiotemporal microbiome data. The outlut of gemelli helps to resolve spatiotemporal subject variation and the biological features that separate them. 
 
