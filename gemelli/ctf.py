@@ -3,8 +3,8 @@ import skbio
 from pandas import concat
 from pandas import DataFrame
 from skbio import OrdinationResults, DistanceMatrix
-from gemelli.factorization import TensorFactorization
-from gemelli.preprocessing import build, rclr
+from gemelli.tensor_factorization import TensorFactorization
+from gemelli.preprocessing import build, tensor_rclr
 from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                    DEFAULT_MFC, DEFAULT_MAXITER,
                                    DEFAULT_FMETA as DEFFM)
@@ -125,7 +125,7 @@ def ctf_helper(table: biom.Table,
         n_components=n_components,
         max_als_iterations=max_iterations_als,
         max_rtpm_iterations=max_iterations_rptm,
-        n_initializations=n_initializations).fit(rclr(tensor.counts))
+        n_initializations=n_initializations).fit(tensor_rclr(tensor.counts))
     # label tensor loadings
     TF.label(tensor, taxonomy=feature_metadata)
 

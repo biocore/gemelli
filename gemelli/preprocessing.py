@@ -11,7 +11,7 @@ import numpy as np
 from .base import _BaseConstruct
 
 
-def rclr(T):
+def tensor_rclr(T):
     """
     Robust clr transform. is the approximate geometric mean of X.
 
@@ -79,8 +79,8 @@ def rclr(T):
         raise ValueError('Tensor contains negative values.')
 
     if len(T.shape) < 3:
-        # rclr on 2D matrix
-        return rclr_matrix(T.transpose().copy()).T
+        # tensor_rclr on 2D matrix
+        return rclr(T.transpose().copy()).T
     else:
         # flatten tensor (samples*conditions x features)
         T = T.copy()
@@ -94,12 +94,12 @@ def rclr(T):
         M = T.reshape(np.product(T.shape[:len(T.shape) - 1]),
                       T.shape[-1])
         with np.errstate(divide='ignore', invalid='ignore'):
-            M_rclr = rclr_matrix(M)
+            M_tensor_rclr = rclr(M)
         # reshape to former tensor and return tensors
-        return M_rclr.reshape(T.shape).transpose(reverse_T)
+        return M_tensor_rclr.reshape(T.shape).transpose(reverse_T)
 
 
-def rclr_matrix(M):
+def rclr(M):
     """
     Robust clr transform helper function.
     This function is built for mode 2 tensors,
@@ -146,14 +146,14 @@ def rclr_matrix(M):
     mask = np.array(mask).reshape(M_log.shape)
     mask[np.isfinite(M_log)] = False
     # sum of rows (features)
-    M_rclr = np.ma.array(M_log, mask=mask)
+    M_tensor_rclr = np.ma.array(M_log, mask=mask)
     # approx. geometric mean of the features
-    gm = M_rclr.mean(axis=-1, keepdims=True)
+    gm = M_tensor_rclr.mean(axis=-1, keepdims=True)
     # subtracted to center log
-    M_rclr = (M_rclr - gm).squeeze().data
+    M_tensor_rclr = (M_tensor_rclr - gm).squeeze().data
     # ensure any missing are zero again
-    M_rclr[~np.isfinite(M_log)] = 0.0
-    return M_rclr
+    M_tensor_rclr[~np.isfinite(M_log)] = 0.0
+    return M_tensor_rclr
 
 
 class build(_BaseConstruct):
