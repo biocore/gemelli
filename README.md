@@ -52,10 +52,14 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 
 # Citations
 
+If you found this tool useful please cite the method(s) you used:
+
 ## Citation for CTF
 
 ```
 Martino, C. and Shenhav, L. et al. Context-aware dimensionality reduction deconvolutes gut microbial community dynamics. Nat. Biotechnol. (2020) doi:10.1038/s41587-020-0660-7
+```
+
 ```
 @article {Martino2020,
 	author = {Martino, Cameron and Shenhav, Liat and Marotz, Clarisse A and Armstrong, George and McDonald, Daniel and V{\'a}zquez-Baeza, Yoshiki and Morton, James T and Jiang, Lingjing and Dominguez-Bello, Maria Gloria and Swafford, Austin D and Halperin, Eran and Knight, Rob},
@@ -63,11 +67,15 @@ Martino, C. and Shenhav, L. et al. Context-aware dimensionality reduction deconv
 	year = {2020},
 	journal = {Nature biotechnology},
 }
+```
+
 
 ## Citation for RPCA
 
 ```
 Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Perturbations. mSystems 4, (2019)
+```
+
 ```
 @article {Martino2019,
 	author = {Martino, Cameron and Morton, James T. and Marotz, Clarisse A. and Thompson, Luke R. and Tripathi, Anupriya and Knight, Rob and Zengler, Karsten},
@@ -83,6 +91,7 @@ Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Pert
 	eprint = {https://msystems.asm.org/content/4/1/e00016-19.full.pdf},
 	journal = {mSystems}
 }
+```
 
 ## Other Resources
 
