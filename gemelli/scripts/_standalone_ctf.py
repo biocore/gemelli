@@ -1,5 +1,6 @@
 import os
 import click
+from .__init__ import cli
 import pandas as pd
 from biom import load_table
 from gemelli.ctf import ctf_helper
@@ -11,8 +12,7 @@ from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                    DESC_SUBJ, DESC_COND, DESC_INIT,
                                    DESC_ITERATIONSRTPM, DEFAULT_COND)
 
-
-@click.command()
+@cli.command(name='ctf')
 @click.option(
     '--in-biom',
     required=True,
@@ -168,5 +168,5 @@ def standalone_ctf(in_biom: str,
             sep='\t')
 
 
-if __name__ == '__main__':
-    standalone_ctf()
+#if __name__ == '__main__':
+#    standalone_ctf()
