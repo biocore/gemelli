@@ -50,7 +50,10 @@ def rpca(table: biom.Table,
     table = table.filter(observation_filter, axis='observation')
     table = table.filter(frequency_filter, axis='observation')
     table = table.filter(sample_filter, axis='sample')
-    table = table.to_dataframe().T
+    # table to dataframe
+    table = pd.DataFrame(table.matrix_data.toarray(),
+                         table.ids('observation'),
+                         table.ids('sample')).T
     # check the table after filtering
     if len(table.index) != len(set(table.index)):
         raise ValueError('Data-table contains duplicate indices')

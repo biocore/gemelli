@@ -38,9 +38,8 @@ class Testpreprocessing(unittest.TestCase):
         table = pd.DataFrame(matrix_counts.T)
         # rebuild the tensor
         tensor = build()
-        with self.assertWarns(Warning):
-            tensor.construct(table, mapping,
-                             'ID', ['conditional'])
+        tensor.construct(table, mapping,
+                         'ID', ['conditional'])
         # ensure rebuild tensor is the same as it started
         npt.assert_allclose(tensor.counts,
                             self.tensor_true.astype(float))
@@ -71,9 +70,8 @@ class Testpreprocessing(unittest.TestCase):
         table = pd.DataFrame(matrix_counts.T)
         # rebuild the tensor
         tensor = build()
-        with self.assertWarns(Warning):
-            tensor.construct(table, mapping,
-                             'ID', ['conditional'])
+        tensor.construct(table, mapping,
+                         'ID', ['conditional'])
         # test less than 2D throws ValueError
         with self.assertRaises(ValueError):
             tensor_rclr(np.array(range(3)))

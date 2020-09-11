@@ -347,7 +347,7 @@ class build(_BaseConstruct):
         duplicated = {k: list(df.index)
                       for k, df in mf.groupby(col_tmp)
                       if df.shape[0] > 1}  # get duplicated conditionals
-        if len(duplicated_ids.keys()) > 0:
+        if len(duplicated.keys()) > 0:
             duplicated_ids = ','.join(
                 list(set([str(k[0]) for k in duplicated.keys()])))
             warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
