@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>
+            Qurro
+        </title>
+        <link rel="shortcut icon" href="icon.png" />
+        <link rel="stylesheet" href="vendor/bootstrap.min.css" />
+        <link rel="stylesheet" href="qurro.css" />
+        <link rel="stylesheet" href="vendor/dataTables.bootstrap4.min.css" />
+    </head>
+
+    <body>
+        <div class="centeredBlock mt-3" id="loadingMessage">
+            <strong>
+                Loading Qurro plots; this might take a few seconds...
+            </strong>
+        </div>
+        <div class="twoColumnRow">
+            <div id="topLeftDiv">
+                <div id="rankPlot"></div>
+                <!-- input group structure based on Bootstrap docs:
+                     https://getbootstrap.com/docs/4.3/components/input-group/#custom-select
+                -->
+                <div class="input-group input-group-sm mb-1">
+                    <div class="input-group-prepend">
+                        <label
+                            class="input-group-text"
+                            for="rankField"
+                            id="rankFieldLabel"
+                        ></label>
+                    </div>
+                    <select id="rankField" class="custom-select"> </select>
+                </div>
+                <div class="input-group input-group-sm mb-1">
+                    <div class="input-group-prepend">
+                        <label
+                            class="input-group-text"
+                            for="rankPlotColorScheme"
+                            >Color scheme</label
+                        >
+                    </div>
+                    <select id="rankPlotColorScheme" class="custom-select">
+                        <!-- Just normal web colors, with the exception of
+                            "Purple" (which is a bit lighter than the "Purple"
+                             web color).
+                             See https://en.wikipedia.org/wiki/Web_colors.
+                        -->
+                        <option value="#f00,#00f,#949"
+                            >Red, Blue, Purple</option
+                        >
+                        <!-- These colors were taken directly from Figure 3a in
+                             the Songbird paper (Morton/Marotz et al. 2019).
+                        -->
+                        <option value="#5fa2c8,#daa520,#029e73"
+                            >Blue, Gold, Green (Songbird paper)</option
+                        >
+                        <!-- Just normal web colors. -->
+                        <option value="#ff0,#f00,#ff8c00"
+                            >Yellow, Red, Orange</option
+                        >
+                    </select>
+                </div>
+                <div class="input-group input-group-sm mb-1">
+                    <!-- HACK: Invisibly fill space: this lets us center the
+                         inputs in this group (by default they're left-aligned)
+                    -->
+                    <input
+                        type="text"
+                        disabled
+                        class="form-control hackySpacerInput"
+                    />
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="barSizeSlider"
+                            >Bar width</label
+                        >
+                        <div class="input-group-text">
+                            <input
+                                id="barSizeSlider"
+                                type="range"
+                                min="1"
+                                max="10"
+                                value="1"
+                            />
+                        </div>
+                    </div>
+                    <div class="input-group-append">
+                        <label class="input-group-text" for="fitBarSizeCheckbox"
+                            >Fit bar widths to a constant plot width?</label
+                        >
+                        <div class="input-group-text">
+                            <input type="checkbox" id="fitBarSizeCheckbox" />
+                        </div>
+                    </div>
+                    <input
+                        type="text"
+                        disabled
+                        class="form-control hackySpacerInput"
+                    />
+                </div>
+                <p
+                    id="barSizeWarning"
+                    class="alert alert-warning centeredBlock invisible mt-3 mb-3"
+                >
+                    <strong>Warning:</strong> The rank plot is currently using a
+                    bar width of less than one pixel per bar. This means that
+                    the image shown isn't necessarily going to be an accurate
+                    representation of the rank plot.
+                </p>
+            </div>
+            <div id="topRightDiv">
+                <div id="samplePlot"></div>
+                <div class="centeredBlock">
+                    <!-- NOTE that the scale/field select values below will be
+                         literally used in the JSON.
+                         Also, the first-listed one is the default. Since the
+                         default x-axis is the balance (quant.) and the default
+                         color is the sample ID (nom.), we adjust the default
+                         scale types accordingly.
+                    -->
+                    <div class="input-group input-group-sm mb-1">
+                        <div class="input-group-prepend">
+                            <label class="input-group-text" for="xAxisField"
+                                >x-axis field</label
+                            >
+                        </div>
+                        <select class="custom-select" id="xAxisField"> </select>
+                        <div class="input-group-prepend">
+                            <label class="input-group-text" for="xAxisScale"
+                                >x-axis scale type</label
+                            >
+                        </div>
+                        <select class="custom-select" id="xAxisScale">
+                            <option value="nominal">Categorical</option>
+                            <option value="quantitative">Quantitative</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm mb-1">
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                id="colorFieldLabel"
+                                for="colorField"
+                                >Color field</label
+                            >
+                        </div>
+                        <select class="custom-select" id="colorField"> </select>
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                id="colorScaleLabel"
+                                for="colorScale"
+                                >Color scale type</label
+                            >
+                        </div>
+                        <select class="custom-select" id="colorScale">
+                            <option value="nominal">Categorical</option>
+                            <option value="quantitative">Quantitative</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm mb-1">
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                id="catColorSchemeLabel"
+                                for="catColorScheme"
+                                >Categorical color scheme</label
+                            >
+                        </div>
+                        <select class="custom-select" id="catColorScheme">
+                            <option value="accent">accent</option>
+                            <option value="category10">category10</option>
+                            <option value="category20">category20</option>
+                            <option value="category20b">category20b</option>
+                            <option value="category20c">category20c</option>
+                            <option value="dark2">dark2</option>
+                            <option value="paired">paired</option>
+                            <option value="pastel1">pastel1</option>
+                            <option value="pastel2">pastel2</option>
+                            <option value="set1">set1</option>
+                            <option value="set2">set2</option>
+                            <option value="set3">set3</option>
+                            <option value="tableau10" selected="true"
+                                >tableau10</option
+                            >
+                            <option value="tableau20">tableau20</option>
+                        </select>
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                id="quantColorSchemeLabel"
+                                for="quantColorScheme"
+                                >Quantitative color scheme</label
+                            >
+                        </div>
+                        <select class="custom-select" id="quantColorScheme">
+                            <optgroup label="Sequential Single-Hue">
+                                <option value="blues" selected="true"
+                                    >blues</option
+                                >
+                                <option value="tealblues">tealblues</option>
+                                <option value="teals">teals</option>
+                                <option value="greens">greens</option>
+                                <option value="browns">browns</option>
+                                <option value="oranges">oranges</option>
+                                <option value="reds">reds</option>
+                                <option value="purples">purples</option>
+                                <option value="warmgreys">warmgreys</option>
+                                <option value="greys">greys</option>
+                            </optgroup>
+                            <optgroup label="Sequential Multi-Hue">
+                                <option value="viridis">viridis</option>
+                                <option value="magma">magma</option>
+                                <option value="inferno">inferno</option>
+                                <option value="plasma">plasma</option>
+                                <option value="bluegreen">bluegreen</option>
+                                <option value="bluepurple">bluepurple</option>
+                                <option value="goldgreen">goldgreen</option>
+                                <option value="goldorange">goldorange</option>
+                                <option value="goldred">goldred</option>
+                                <option value="greenblue">greenblue</option>
+                                <option value="orangered">orangered</option>
+                                <option value="purplebluegreen"
+                                    >purplebluegreen</option
+                                >
+                                <option value="purpleblue">purpleblue</option>
+                                <option value="purplered">purplered</option>
+                                <option value="redpurple">redpurple</option>
+                                <option value="yellowgreenblue"
+                                    >yellowgreenblue</option
+                                >
+                                <option value="yellowgreen">yellowgreen</option>
+                                <option value="yelloworangebrown"
+                                    >yelloworangebrown</option
+                                >
+                                <option value="yelloworangered"
+                                    >yelloworangered</option
+                                >
+                                <option value="darkblue">darkblue</option>
+                                <option value="darkgold">darkgold</option>
+                                <option value="darkgreen">darkgreen</option>
+                                <option value="darkmulti">darkmulti</option>
+                                <option value="darkred">darkred</option>
+                                <option value="lightgreyred"
+                                    >lightgreyred</option
+                                >
+                                <option value="lightgreyteal"
+                                    >lightgreyteal</option
+                                >
+                                <option value="lightmulti">lightmulti</option>
+                                <option value="lightorange">lightorange</option>
+                                <option value="lighttealblue"
+                                    >lighttealblue</option
+                                >
+                            </optgroup>
+                            <optgroup label="Diverging">
+                                <option value="blueorange">blueorange</option>
+                                <option value="brownbluegreen"
+                                    >brownbluegreen</option
+                                >
+                                <option value="purplegreen">purplegreen</option>
+                                <option value="pinkyellowgreen"
+                                    >pinkyellowgreen</option
+                                >
+                                <option value="purpleorange"
+                                    >purpleorange</option
+                                >
+                                <option value="redblue">redblue</option>
+                                <option value="redgrey">redgrey</option>
+                                <option value="redyellowblue"
+                                    >redyellowblue</option
+                                >
+                                <option value="redyellowgreen"
+                                    >redyellowgreen</option
+                                >
+                                <option value="spectral">spectral</option>
+                            </optgroup>
+                            <optgroup label="Cyclical">
+                                <option value="rainbow">rainbow</option>
+                                <option value="sinebow">sinebow</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm mb-1">
+                        <input
+                            type="text"
+                            disabled
+                            class="form-control hackySpacerInput"
+                        />
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                for="boxplotCheckbox"
+                                >Use boxplots for categorical data?</label
+                            >
+                            <div class="input-group-text">
+                                <input type="checkbox" id="boxplotCheckbox" />
+                            </div>
+                        </div>
+                        <!-- TODO: un-hide and make usable (#240)
+                        <div class="input-group-prepend">
+                            <label
+                                class="input-group-text"
+                                for="borderCheckbox"
+                                >Give samples a border?</label
+                            >
+                            <div class="input-group-text">
+                                <input
+                                    type="checkbox"
+                                    id="borderCheckbox"
+                                />
+                            </div>
+                        </div>
+                        -->
+                        <input
+                            type="text"
+                            disabled
+                            class="form-control hackySpacerInput"
+                        />
+                    </div>
+                    <div
+                        id="mainSamplesDroppedDiv"
+                        class="centeredBlock sampleRemovedDiv invisible"
+                    ></div>
+                    <div
+                        id="balanceSamplesDroppedDiv"
+                        class="centeredBlock sampleRemovedDiv invisible"
+                    ></div>
+                    <div
+                        id="xAxisSamplesDroppedDiv"
+                        class="centeredBlock sampleRemovedDiv invisible"
+                    ></div>
+                    <div
+                        id="colorSamplesDroppedDiv"
+                        class="centeredBlock sampleRemovedDiv invisible"
+                    ></div>
+                    <div class="centeredBlock">
+                        <button
+                            id="exportDataButton"
+                            class="btn btn-outline-secondary mt-2 btn-sm"
+                        >
+                            Export current sample plot data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="twoColumnRow">
+            <div id="botLeftDiv">
+                <p
+                    id="commonFeatureWarning"
+                    class="alert alert-warning centeredBlock invisible mt-3 mb-2"
+                >
+                    <strong>Warning:</strong> Currently, ___ feature(s) are
+                    selected in both the numerator and denominator of the
+                    log-ratio. We strongly suggest you instead look at a
+                    log-ratio that doesn't contain common features in the
+                    numerator and denominator.
+                </p>
+                <!-- Note for future reference: whitespace between the
+                     start and end tag of a textarea is apparently
+                     interpreted as just that, and preserved in the textarea
+                     on the page.
+                     (So that's why the textarea declarations below are on
+                     long lines.)
+                -->
+                <div class="centeredBlock">
+                    <h4 id="numHeader" class="centeredHeader">
+                        Numerator Features
+                    </h4>
+                    <!-- Same table classes as in
+                         https://datatables.net/examples/styling/bootstrap4.html
+                         used, but with table-sm added.
+                    -->
+                    <table
+                        id="topFeaturesDisplay"
+                        class="table table-striped table-bordered table-sm"
+                    ></table>
+                </div>
+                <div id="divide" class="centeredBlock"></div>
+                <div class="centeredBlock">
+                    <h4 id="denHeader" class="centeredHeader">
+                        Denominator Features
+                    </h4>
+                    <table
+                        id="botFeaturesDisplay"
+                        class="table table-striped table-bordered table-sm"
+                    ></table>
+                </div>
+            </div>
+            <div id="botRightDiv">
+                <h4 class="centeredHeader">Autoselecting Features</h4>
+                <div class="input-group input-group-sm">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="autoSelectNumber">
+                            Using the current ranking, select the top and bottom
+                        </label>
+                    </div>
+                    <input
+                        type="number"
+                        class="form-control"
+                        id="autoSelectNumber"
+                    />
+                    <select class="custom-select" id="autoSelectType">
+                        <option value="autoPercent">% of features</option>
+                        <option value="autoLiteral">features</option>
+                    </select>
+                    <!-- Based on
+                         https://getbootstrap.com/docs/4.0/components/input-group/#button-addons
+                    -->
+                    <div class="input-group-append">
+                        <button
+                            class="btn btn-outline-secondary"
+                            id="autoSelectButton"
+                        >
+                            Apply
+                        </button>
+                    </div>
+                </div>
+                <h4 class="centeredHeader mt-2">
+                    Selecting Features by Filtering
+                </h4>
+                <div class="input-group input-group-sm">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="topSearch">
+                            Filter numerator to features where
+                        </label>
+                    </div>
+                    <select class="custom-select num" id="topSearch"> </select>
+                    <select class="custom-select num" id="topSearchType">
+                        <optgroup label="Text searching (case insensitive)">
+                            <option value="text">contains the text</option>
+                            <option value="nottext"
+                                >is provided, and does not contain the
+                                text</option
+                            >
+                            <option value="rank"
+                                >contains the separated text fragment(s)</option
+                            >
+                        </optgroup>
+                        <optgroup label="Numeric searching (basic)">
+                            <option value="lt">is less than</option>
+                            <option value="gt">is greater than</option>
+                            <option value="lte"
+                                >is less than or equal to</option
+                            >
+                            <option value="gte"
+                                >is greater than or equal to</option
+                            >
+                        </optgroup>
+                        <!--
+                        <optgroup label="Numeric searching (percentile)">
+                            <option value="topp"
+                                >is in this top percent of values</option
+                            >
+                            <option value="botp"
+                                >is in this bottom percent of values</option
+                            >
+                        </optgroup>
+                        -->
+                    </select>
+                </div>
+                <input type="text" class="form-control num" id="topText" />
+                <div class="input-group input-group-sm mt-2">
+                    <div class="input-group-prepend">
+                        <label class="input-group-text" for="botSearch">
+                            Filter denominator to features where
+                        </label>
+                    </div>
+                    <select class="custom-select den" id="botSearch"> </select>
+                    <select class="custom-select den" id="botSearchType">
+                        <optgroup label="Text searching (case insensitive)">
+                            <option value="text">contains the text</option>
+                            <option value="nottext"
+                                >is provided, and does not contain the
+                                text</option
+                            >
+                            <option value="rank"
+                                >contains the separated text fragment(s)</option
+                            >
+                        </optgroup>
+                        <optgroup label="Numeric searching (basic)">
+                            <option value="lt">is less than</option>
+                            <option value="gt">is greater than</option>
+                            <option value="lte"
+                                >is less than or equal to</option
+                            >
+                            <option value="gte"
+                                >is greater than or equal to</option
+                            >
+                        </optgroup>
+                        <!--
+                        <optgroup label="Numeric searching (percentile)">
+                            <option value="topp"
+                                >is in this top percent of values</option
+                            >
+                            <option value="botp"
+                                >is in this bottom percent of values</option
+                            >
+                        </optgroup>
+                        -->
+                    </select>
+                </div>
+                <input type="text" class="form-control den" id="botText" />
+
+                <!-- Invisible <a> used for downloading data URIs.
+                     Based on #downloadHelper in MetagenomeScope's viewer
+                     interface.
+                -->
+                <a id="downloadHelper" class="invisible"></a>
+                <div class="centeredBlock mt-3">
+                    <button
+                        id="multiFeatureButton"
+                        class="btn btn-outline-secondary btn-sm"
+                    >
+                        Apply Filtering
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--
+        <p>
+            <label for="selectMicrobesFileSelector">
+                <strong>
+                    Upload "Select Features" List:
+                </strong>
+            </label>
+            TODO make RRVDisplay get this input by ID
+                and set its onchange to the RRVDisplay instance's
+                particular select microbes or whatever function
+            <input type="file" id="selectMicrobesFileSelector"
+                onChange="ssmv.uploadSelectMicrobesFile();" />
+        </p>
+        <p>
+            <label for="zeroFillInput">
+                <strong>
+                    Value to fill in for zero-abundance features:
+                </strong>
+            </label>
+            <input type="number" id="zeroFillInput" min="0"
+                max="1000" value="0">
+            </input>
+        </p>
+        -->
+        <!-- This file will be edited by the Qurro python script to
+             contain definitions for the rank plot and sample plot JSON,
+             and will use these to create an instance of RRVDisplay
+             (thereby starting Qurro).
+
+             Leaving this code at the bottom of the page is sufficient to wait
+             until the rest of the stuff in the page has been loaded:
+             see https://stackoverflow.com/a/1861233.
+
+             We need to wait for the page to load before calling
+             RRVDisplay.makePlots(); otherwise, we'll get (at least) the error
+             "ERROR: Signal bind element not found: null" described at
+             https://github.com/vega/vega-embed/issues/64.
+        -->
+        <script data-main="main" src="vendor/require.js"></script>
+    </body>
+</html>

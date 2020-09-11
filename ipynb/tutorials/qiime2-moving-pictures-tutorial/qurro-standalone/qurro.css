@@ -1,0 +1,160 @@
+.centeredHeader {
+    margin-bottom: 0.25em;
+    text-align: center;
+}
+.alert {
+    font-size: small;
+    margin: 0 2em;
+}
+.twoColumnRow {
+    display: grid;
+    grid-template-columns: 50% 50%;
+}
+/* START setting up grid lines. This is kind of a hack, sorry, but being
+ * explicit in the CSS seemed cleaner than an arguably worse JS hack (I think
+ * busting out something like Sass for this project would probably be overkill)
+ */
+#topLeftDiv,
+#topRightDiv,
+#botLeftDiv,
+#botRightDiv {
+    border-radius: 3px;
+    border-color: #eee;
+    border-style: solid;
+}
+#topLeftDiv {
+    border-width: 0 1px 1px 0;
+}
+#topRightDiv {
+    border-width: 0 0 1px 1px;
+}
+#botLeftDiv {
+    border-width: 1px 1px 0 0;
+}
+#botRightDiv {
+    border-width: 1px 0 0 1px;
+}
+/* END setting up grid lines. */
+.centeredBlock {
+    display: block;
+    text-align: center;
+}
+.sampleRemovedDiv {
+    font-size: small;
+}
+/* Inspired by https://stackoverflow.com/a/42227872/10730311. */
+#divide {
+    width: 98%;
+    height: 2px;
+    background-color: #bbb;
+    margin: 1em auto;
+}
+#rankPlot {
+    float: right;
+}
+#samplePlot {
+    float: left;
+}
+#rankPlot,
+#samplePlot {
+    margin-top: 0.5em;
+    overflow: auto;
+    max-height: 420px;
+    max-width: 100%;
+}
+/* Bootstrap styles text areas to be non-horizontally-resizable, so no need to
+ * worry about that.
+ *
+ * Also, the 2em min-height figure was determined by some basic testing to
+ * look good. (It seems like a reasonable value for this.)
+ */
+textarea {
+    width: 95%;
+    min-height: 2em;
+}
+.num {
+    border-color: #f00;
+}
+.den {
+    border-color: #00f;
+}
+/* Don't completely overwrite the outline imposed by the browser on selection;
+ * instead of using the default color for the outlines, use a special darker
+ * color based on the element's border color. These colors should adhere to
+ * accessibility guidelines for contrast; see
+ * https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html and see
+ * https://www.w3.org/WAI/WCAG21/Techniques/general/G145#procedure for a
+ * description of how to verify this (tldr: you just calculate the relative
+ * luminance of both colors and look at the ratio after adding 0.05 to both
+ * parts of the ratio).
+ *
+ * Also: we manually set the border-color and box-shadow because Bootstrap
+ * automatically changes this for form-control elements. See
+ * https://blog.blakesimpson.co.uk/page.php?id=71 for context.
+ * The form-control elements won't have the cool focus used on the normal
+ * textarea elements, but they'll still have a noticeable "outline" due to the
+ * use of box-shadow.
+ */
+.num:focus {
+    border-color: #f00;
+    box-shadow: 0 0 0 1px #800;
+    outline-color: #800;
+}
+.den:focus {
+    border-color: #00f;
+    box-shadow: 0 0 0 1px #009;
+    outline-color: #009;
+}
+.invisible {
+    display: none;
+}
+/* Adjust the styling of the contents of Vega tooltips (the contents of which
+ * are stored in HTML tables). All we really care about is making them large
+ * enough to show big blocks of text (e.g. feature taxonomy).
+ *
+ * Based on the customization described in the vega-tooltip docs here:
+ * https://github.com/vega/vega-tooltip/blob/master/docs/customizing_your_tooltip.md
+ *
+ * Sidenote: worth making a PR to vega-tooltip that makes it clear that this is
+ * how you do this? Might be nice. (TODO?)
+ */
+#vg-tooltip-element.vg-tooltip.custom-theme td {
+    max-width: 550px;
+    max-height: 300px;
+}
+/* Use minimal padding for the "table" structure inside the tooltip.
+ * Bootstrap attempts to override this, so we fix it.
+ *
+ * We set this for the entire .vg-tooltip class because we want these changes
+ * to affect both the rank and sample plot (rank plot uses a custom tooltip
+ * class, sample plot uses the default [which as of writing is the "light
+ * theme"]).
+ *
+ * (Default padding values are trying to mimic what Vega* does by default, but
+ * are probably slightly off. It looks good enough for the time being.)
+ */
+#vg-tooltip-element.vg-tooltip td {
+    padding: 0px 0px 0px 2px;
+}
+
+.hackySpacerInput {
+    visibility: hidden;
+}
+
+/* formating for tables */
+th {
+    font-size: 12px;
+}
+td {
+    font-size: 11px;
+}
+
+/* Used because the Bootstrap table-sm class can cause width to go below 100%
+ * sometimes, and that looks ugly.
+ *
+ * (I'm gonna be honest here -- I don't know why this only works if you add on
+ * !important.)
+ */
+.table-sm {
+    width: 100% !important;
+}
