@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from scipy.linalg import qr
-from gemelli.factorization import TensorFactorization, khatri_rao
+from gemelli.tensor_factorization import TensorFactorization, khatri_rao
 
 
 class TestTenAls(unittest.TestCase):
