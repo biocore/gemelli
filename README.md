@@ -6,7 +6,7 @@ Gemelli is a tool box for running both Robust Aitchison PCA (RPCA) and Compositi
 
 RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). Both methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them. 
 
-The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and and introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transform the observed (nonzero) values before centering the data. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) but without the use of pseudocounts. 
+The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and a interactive introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transforms the observed (nonzero) values before centering. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) performed on dense data.
 
 # Installation
 
@@ -23,7 +23,7 @@ Gemelli can be run standalone or through [QIIME2](https://qiime2.org/) and as a 
 
 ## Cross-sectional study (i.e. one sample per subject) with RPCA
 
-If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross-sectional_study) with only one sample per subject then RPCA is the appropriate method to use in gemelli.  There are two commands within RPCA. The first is `rpca` and the second is `auto-rpca`. The only difference is that `auto-rpca` automatically estimates the underlying-rank of the matrix and requires no input for the `n_components` parameter. In the `rpca` the `n_components` must be set explicitly. For examples of running RPCA we provide tutorials below exploring the microbiome between body sites.
+If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross-sectional_study) with only one sample per subject then RPCA is the appropriate method to use in gemelli.  There are two commands within RPCA. The first is `rpca` and the second is `auto-rpca`. The only difference is that `auto-rpca` automatically estimates the underlying-rank of the matrix and requires no input for the `n_components` parameter. In the `rpca` command the `n_components` must be set explicitly. For examples of using RPCA we provide tutorials below exploring the microbiome between body sites.
 
 ### Tutorials
 
@@ -39,7 +39,7 @@ If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross
 
 ### Tutorials
 
-If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. In some cases, this can require binning time my larger windows (e.g. instead of days use months). For examples of running CTF we provide a microbiome time series IBD study in the tutorials below.
+If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. In some cases, this can require binning time my larger windows (e.g. instead of days use months). For examples of using CTF we provide a microbiome time series IBD study in the tutorials below.
 
 #### Tutorials with QIIME2
 
