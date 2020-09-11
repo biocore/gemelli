@@ -11,9 +11,10 @@ import qiime2.sdk
 import importlib
 from gemelli import __version__
 from gemelli.ctf import ctf
+from gemelli.rpca import rpca, auto_rpca
 from ._type import SampleTrajectory, FeatureTrajectory
 from ._format import TrajectoryDirectoryFormat
-from qiime2.plugin import (Properties, Int, Metadata, Str)
+from qiime2.plugin import (Properties, Int, Float, Metadata, Str)
 from q2_types.ordination import PCoAResults
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
@@ -25,6 +26,8 @@ from gemelli._ctf_defaults import (DESC_COMP, DESC_MSC,
                                    DESC_SUBJ, DESC_COND, DESC_INIT,
                                    DESC_ITERATIONSRTPM,
                                    QLOAD, QDIST, QORD, QSOAD)
+from gemelli._rpca_defaults import (DESC_RANK, DESC_MSC, DESC_MFC,
+                                    DESC_ITERATIONS, DESC_MFF)
 
 PARAMETERS = {'sample_metadata': Metadata,
               'individual_id_column': Str,
@@ -53,7 +56,8 @@ plugin = qiime2.plugin.Plugin(
     name='gemelli',
     version=__version__,
     website="https://github.com/biocore/gemelli",
-    citations=[citations['Martino2019']],
+    citations=[citations['Martino2019'],
+               citations['Martino2020']],
     short_description=('Plugin for Compositional Tensor Factorization'),
     description=('This is a QIIME 2 plugin supporting Robust Aitchison on '
                  'feature tables'),
@@ -82,6 +86,78 @@ plugin.methods.register_function(
                  " may be a time point. The output is akin to conventional "
                  "beta-diversity analyses but with the paired component "
                  "integrated in the dimensionality reduction."),
+    citations=[citations['Martino2020']]
+)
+
+plugin.methods.register_function(
+    function=rpca,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={
+        'n_components': Int,
+        'min_sample_count': Int,
+        'min_feature_count': Int,
+        'min_feature_frequency': Float,
+        'max_iterations': Int,
+    },
+    outputs=[
+        ('biplot', PCoAResults % Properties("biplot")),
+        ('distance_matrix', DistanceMatrix)
+    ],
+    input_descriptions={
+        'table': 'Input table of counts.',
+    },
+    parameter_descriptions={
+        'n_components': DESC_RANK,
+        'min_sample_count': DESC_MSC,
+        'min_feature_count': DESC_MFC,
+        'min_feature_frequency': DESC_MFF,
+        'max_iterations': DESC_ITERATIONS,
+    },
+    output_descriptions={
+        'biplot': ('A biplot of the (Robust Aitchison) RPCA feature loadings'),
+        'distance_matrix': ('The Aitchison distance of'
+                            ' the sample loadings from RPCA.')
+    },
+    name='(Robust Aitchison) RPCA Biplot',
+    description=("Performs robust center log-ratio transform "
+                 "robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=auto_rpca,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={
+        'min_sample_count': Int,
+        'min_feature_count': Int,
+        'min_feature_frequency': Float,
+        'max_iterations': Int,
+    },
+    outputs=[
+        ('biplot', PCoAResults % Properties("biplot")),
+        ('distance_matrix', DistanceMatrix)
+    ],
+    input_descriptions={
+        'table': 'Input table of counts.',
+    },
+    parameter_descriptions={
+        'min_sample_count': DESC_MSC,
+        'min_feature_count': DESC_MFC,
+        'min_feature_frequency': DESC_MFF,
+        'max_iterations': DESC_ITERATIONS,
+    },
+    output_descriptions={
+        'biplot': ('A biplot of the (Robust Aitchison) RPCA feature loadings'),
+        'distance_matrix': ('The Aitchison distance of'
+                            ' the sample loadings from RPCA.')
+    },
+    name='(Robust Aitchison) RPCA Biplot',
+    description=("Performs robust center log-ratio transform "
+                 "robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD. Automatically"
+                 " estimates the underlying rank (i.e. n-components)."),
+    citations=[citations['Martino2019']]
 )
 
 plugin.register_semantic_types(SampleTrajectory, FeatureTrajectory)
