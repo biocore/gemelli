@@ -10,6 +10,7 @@ from gemelli.testing import assert_ordinationresults_equal
 
 
 class Test_standalone_rpca(unittest.TestCase):
+
     def setUp(self):
         pass
 
@@ -25,9 +26,11 @@ class Test_standalone_rpca(unittest.TestCase):
                                ['--in-biom', in_,
                                 '--output-dir', out_])
         # Read the results
-        dist_res = pd.read_csv(get_data_path('distance-matrix.tsv', subfolder='rpca_data'), sep='\t',
+        dist_res = pd.read_csv(get_data_path('distance-matrix.tsv',
+                                             subfolder='rpca_data'), sep='\t',
                                index_col=0)
-        ord_res = OrdinationResults.read(get_data_path('ordination.txt', subfolder='rpca_data'))
+        ord_res = OrdinationResults.read(get_data_path('ordination.txt',
+                                                       subfolder='rpca_data'))
 
         # Read the expected results
         file_ = 'expected-est-distance-matrix.tsv'
@@ -67,9 +70,11 @@ class Test_standalone_rpca(unittest.TestCase):
                                 '--output-dir', out_])
         # Read the results
         dist_res = pd.read_csv(get_data_path('distance-matrix.tsv',
-                                             subfolder='rpca_data'), sep='\t',
+                                             subfolder='rpca_data'),
+                               sep='\t',
                                index_col=0)
-        ord_res = OrdinationResults.read(get_data_path('ordination.txt', subfolder='rpca_data'))
+        ord_res = OrdinationResults.read(get_data_path('ordination.txt',
+                                                       subfolder='rpca_data'))
 
         # Read the expected results
         dist_exp = pd.read_csv(get_data_path('expected-distance-matrix.tsv',

@@ -18,8 +18,6 @@ DESC_ITERATIONSRTPM = ("Max number of Robust Tensor Power Method (RTPM)"
                        " beware of overfitting) [minimum 1]")
 DESC_COMP = ("The underlying low-rank structure (suggested: 2 < rank < 10)"
              " [minimum 2]")
-DESC_MSC = "Minimum sum cutoff of sample across all features"
-DESC_MFC = "Minimum sum cutoff of features across all samples"
 DESC_OUT = "Location of output files."
 DESC_FMETA = "Feature metadata file in QIIME2 formatting."
 DESC_BIN = "Input table in biom format."

@@ -9,6 +9,7 @@ from gemelli._rpca_defaults import (DEFAULT_RANK, DEFAULT_MSC, DEFAULT_MFC,
                                     DESC_MFC, DESC_ITERATIONS, DEFAULT_MFF,
                                     DESC_MFF)
 
+
 @cli.command(name='rpca')
 @click.option('--in-biom',
               help='Input table in biom format.',
@@ -132,7 +133,3 @@ def auto_rpca(in_biom: str,
     # behavior if you specify --output-dir instead).
     ord_res.write(os.path.join(output_dir, 'ordination.txt'))
     dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
-
-
-#if __name__ == '__main__':
-#    gemelli()

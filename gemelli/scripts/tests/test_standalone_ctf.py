@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 from gemelli.testing import absolute_sort
 from gemelli.scripts._standalone_ctf import standalone_ctf
 
+
 class Test_standalone_rpca(unittest.TestCase):
     def setUp(self):
         pass

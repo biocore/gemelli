@@ -348,13 +348,13 @@ class build(_BaseConstruct):
                       for k, df in mf.groupby(col_tmp)
                       if df.shape[0] > 1}  # get duplicated conditionals
         if len(duplicated.keys()) > 0:
-            duplicated_ids = ','.join(
-                list(set([str(k[0]) for k in duplicated.keys()])))
+            duplicated_ids = ','.join(list(set([str(k[0])
+                                                for k in duplicated.keys()])))
             warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
-                                    ") contains multiple ",
-                                    "samples. Multiple subject counts will be",
-                                    " meaned across samples by subject."]),
-                            RuntimeWarning)
+                                   ") contains multiple ",
+                                   "samples. Multiple subject counts will be",
+                                   " meaned across samples by subject."]),
+                          RuntimeWarning)
         for id_, dup in duplicated.items():
             # mean and keep one
             table[dup[0]] = table.loc[:, dup].mean(axis=1).astype(int)

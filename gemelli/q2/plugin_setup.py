@@ -20,8 +20,7 @@ from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
 from q2_types.feature_table import FeatureTable, Frequency
-from gemelli._ctf_defaults import (DESC_COMP, DESC_MSC,
-                                   DESC_MFC, DESC_ITERATIONSALS,
+from gemelli._ctf_defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                    DESC_BIN, DESC_SMETA,
                                    DESC_SUBJ, DESC_COND, DESC_INIT,
                                    DESC_ITERATIONSRTPM,

@@ -6,11 +6,13 @@ from biom import load_table
 from gemelli.ctf import ctf_helper
 from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                    DEFAULT_MFC, DEFAULT_MAXITER,
-                                   DEFAULT_FMETA, DESC_COMP, DESC_MSC,
-                                   DESC_MFC, DESC_OUT, DESC_ITERATIONSALS,
+                                   DEFAULT_FMETA, DESC_COMP,
+                                   DESC_OUT, DESC_ITERATIONSALS,
                                    DESC_FMETA, DESC_BIN, DESC_SMETA,
                                    DESC_SUBJ, DESC_COND, DESC_INIT,
                                    DESC_ITERATIONSRTPM, DEFAULT_COND)
+from gemelli._rpca_defaults import (DESC_MSC, DESC_MFC)
+
 
 @cli.command(name='ctf')
 @click.option(
@@ -166,7 +168,3 @@ def standalone_ctf(in_biom: str,
                 '%s-features-ordination.tsv' %
                 (str(condition))),
             sep='\t')
-
-
-#if __name__ == '__main__':
-#    standalone_ctf()
