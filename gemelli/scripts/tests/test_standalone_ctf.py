@@ -1,4 +1,3 @@
-from gemelli.scripts._standalone_ctf import standalone_ctf
 import unittest
 import pandas as pd
 from os.path import sep as os_path_sep
@@ -6,7 +5,7 @@ from click.testing import CliRunner
 from skbio.util import get_data_path
 from numpy.testing import assert_allclose
 from gemelli.testing import absolute_sort
-
+from gemelli.scripts._standalone_ctf import standalone_ctf
 
 class Test_standalone_rpca(unittest.TestCase):
     def setUp(self):
