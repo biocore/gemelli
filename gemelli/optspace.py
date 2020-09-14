@@ -1,3 +1,12 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
+import warnings
 import numpy as np
 from numpy.matlib import repmat
 from numpy.linalg import norm
@@ -116,6 +125,13 @@ class OptSpace(object):
             if self.n_components.lower() == 'auto':
                 # estimate the rank of the matrix
                 self.n_components = rank_estimate(obs, eps)
+                # check estimate again
+                if self.n_components >= min(n, m) - 1:
+                    warnings.warn('Your matrix is estimated '
+                                  'to be high-rank.',
+                                  RuntimeWarning)
+                # print rank estimate
+                print('Estimated rank is %i' % self.n_components)
             else:
                 raise ValueError("n-components must be an "
                                  "integer or 'auto'.")
@@ -389,7 +405,7 @@ def grassmann_manifold_two(U, step_size, n_components):
 
 
 def rank_estimate(obs, eps, k=20, lam=0.05,
-                  min_rank=2, max_iter=5000):
+                  min_rank=3, max_iter=5000):
 
     """
     This function estimates the rank of a
