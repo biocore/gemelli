@@ -1,7 +1,7 @@
 import os
 import click
 from .__init__ import cli
-from biom import load_table, Table
+from biom import load_table
 from biom.util import biom_open
 from gemelli.preprocessing import rclr_transformation
 
@@ -17,7 +17,7 @@ def standalone_rclr(in_biom: str,
                     output_dir: str) -> None:
 
     """
-    Runs robust centered log-ratio transformation. 
+    Runs robust centered log-ratio transformation.
     Note: This is run automatically within CTF/RPCA/Auto-RPCA
     so there no need to run rclr before those functions.
     """

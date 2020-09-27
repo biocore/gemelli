@@ -72,8 +72,10 @@ plugin.methods.register_function(
     parameter_descriptions=None,
     output_descriptions={'rclr_table': 'A rclr transformed table. '
                                        'Note: zero/missing values have NaNs'},
-    name='Robust centered log-ratio (rclr) transformation. Note: This is run automatically '
-         ' within CTF/RPCA/Auto-RPCA so there no need to run rclr before those functions.',
+    name='Robust centered log-ratio (rclr) transformation.'
+         'Note: This is run automatically '
+         ' within CTF/RPCA/Auto-RPCA so there no '
+         'need to run rclr before those functions.',
     description=("A robust centered log-ratio transformation of only "
                  "the observed values (non-zero) of the input table."),
     citations=[citations['Martino2019']]

@@ -16,9 +16,9 @@ class Test_qiime2_rclr(unittest.TestCase):
 
     def setUp(self):
         self.cdata = np.array([[3, 3, 0],
-                                [0, 4, 2]])
+                               [0, 4, 2]])
         self.true = np.array([[0.0, 0.0, np.nan],
-                               [np.nan, 0.34657359, -0.34657359]])
+                              [np.nan, 0.34657359, -0.34657359]])
         pass
 
     def test__qiime2_rclr(self):
@@ -43,8 +43,16 @@ class Test_qiime2_rclr(unittest.TestCase):
                                   subfolder='data')
         res_table = load_table(out_table)
         standalone_mat = res_table.matrix_data.toarray().T
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
         # run QIIME2
-        q2_table_test = Artifact.import_data("FeatureTable[Frequency]", table_test)
+        q2_table_test = Artifact.import_data("FeatureTable[Frequency]",
+                                             table_test)
         q2_res = rclr_transformation(q2_table_test).rclr_table.view(Table)
         q2_res_mat = q2_res.matrix_data.toarray().T
         # check same and check both correct

@@ -8,7 +8,6 @@
 
 import warnings
 import numpy as np
-import pandas as pd
 from biom import Table
 from .base import _BaseConstruct
 
@@ -175,8 +174,8 @@ def rclr_transformation(table: Table) -> Table:
     """
     # transform table values (and return biom.Table)
     table = Table(rclr(table.matrix_data.toarray().T).T,
-                       table.ids('observation'),
-                       table.ids('sample'))   
+                  table.ids('observation'),
+                  table.ids('sample'))
     return table
 
 

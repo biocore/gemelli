@@ -14,9 +14,9 @@ class Test_standalone_rclr(unittest.TestCase):
 
     def setUp(self):
         self.cdata = np.array([[3, 3, 0],
-                                [0, 4, 2]])
+                               [0, 4, 2]])
         self.true = np.array([[0.0, 0.0, np.nan],
-                               [np.nan, 0.34657359, -0.34657359]])
+                              [np.nan, 0.34657359, -0.34657359]])
         pass
 
     def test_standalone_rclr(self):
@@ -40,3 +40,10 @@ class Test_standalone_rclr(unittest.TestCase):
         res_table = load_table(out_table)
         test_cmat = res_table.matrix_data.toarray().T
         npt.assert_allclose(test_cmat, self.true)
+        # Lastly, check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
