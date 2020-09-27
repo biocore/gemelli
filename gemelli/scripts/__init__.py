@@ -17,5 +17,6 @@ def cli(ctx):
     ctx.call_on_close(_terribly_handle_brokenpipeerror)
 
 
+import_module('gemelli.scripts._standalone_transforms')
 import_module('gemelli.scripts._standalone_ctf')
 import_module('gemelli.scripts._standalone_rpca')

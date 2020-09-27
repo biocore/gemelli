@@ -12,6 +12,7 @@ import importlib
 from gemelli import __version__
 from gemelli.ctf import ctf
 from gemelli.rpca import rpca, auto_rpca
+from gemelli.preprocessing import rclr_transformation
 from ._type import SampleTrajectory, FeatureTrajectory
 from ._format import TrajectoryDirectoryFormat
 from qiime2.plugin import (Properties, Int, Float, Metadata, Str)
@@ -19,7 +20,7 @@ from q2_types.ordination import PCoAResults
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
-from q2_types.feature_table import FeatureTable, Frequency
+from q2_types.feature_table import FeatureTable, Frequency, Composition
 from gemelli._ctf_defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                    DESC_BIN, DESC_SMETA,
                                    DESC_SUBJ, DESC_COND, DESC_INIT,
@@ -63,6 +64,22 @@ plugin = qiime2.plugin.Plugin(
     package='gemelli')
 
 plugin.methods.register_function(
+    function=rclr_transformation,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters=None,
+    outputs=[('rclr_table', FeatureTable[Composition])],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions=None,
+    output_descriptions={'rclr_table': 'A rclr transformed table. '
+                                       'Note: zero/missing values have NaNs'},
+    name='Robust centered log-ratio (rclr) transformation. Note: This is run automatically '
+         ' within CTF/RPCA/Auto-RPCA so there no need to run rclr before those functions.',
+    description=("A robust centered log-ratio transformation of only "
+                 "the observed values (non-zero) of the input table."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
     function=ctf,
     inputs={'table': FeatureTable[Frequency]},
     parameters=PARAMETERS,
@@ -78,7 +95,9 @@ plugin.methods.register_function(
                          'distance_matrix': QDIST,
                          'state_subject_ordination': QORD,
                          'state_feature_ordination': QORD},
-    name='Compositional Tensor Factorization - Mode 3',
+    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
+         'means subjects have repeated measures across only one '
+         'axis (e.g. time or space).',
     description=("Gemelli resolves spatiotemporal subject variation and the"
                  " biological features that separate them. In this case, a "
                  "subject may have several paired samples, where each sample"
@@ -117,7 +136,7 @@ plugin.methods.register_function(
         'distance_matrix': ('The Aitchison distance of'
                             ' the sample loadings from RPCA.')
     },
-    name='(Robust Aitchison) RPCA Biplot',
+    name='(Robust Aitchison) RPCA with manually chosen n_components.',
     description=("Performs robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD."),
@@ -151,7 +170,7 @@ plugin.methods.register_function(
         'distance_matrix': ('The Aitchison distance of'
                             ' the sample loadings from RPCA.')
     },
-    name='(Robust Aitchison) RPCA Biplot',
+    name='(Robust Aitchison) RPCA with n_components automatically detected.',
     description=("Performs robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD. Automatically"

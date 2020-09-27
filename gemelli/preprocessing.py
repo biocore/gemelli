@@ -8,6 +8,8 @@
 
 import warnings
 import numpy as np
+import pandas as pd
+from biom import Table
 from .base import _BaseConstruct
 
 
@@ -80,7 +82,9 @@ def tensor_rclr(T):
 
     if len(T.shape) < 3:
         # tensor_rclr on 2D matrix
-        return rclr(T.transpose().copy()).T
+        M_tensor_rclr = rclr(T.transpose().copy()).T
+        M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
+        return M_tensor_rclr
     else:
         # flatten tensor (samples*conditions x features)
         T = T.copy()
@@ -95,6 +99,7 @@ def tensor_rclr(T):
                       T.shape[-1])
         with np.errstate(divide='ignore', invalid='ignore'):
             M_tensor_rclr = rclr(M)
+        M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
         # reshape to former tensor and return tensors
         return M_tensor_rclr.reshape(T.shape).transpose(reverse_T)
 
@@ -130,13 +135,20 @@ def rclr(M):
     TODO
 
     """
-
-    M = np.atleast_2d(M)
-    if np.any(M < 0):
-        raise ValueError("Cannot have negative proportions")
+    # ensure array is at least 2D
+    M = np.atleast_2d(np.array(M))
+    # ensure array not more than 2D
     if M.ndim > 2:
         raise ValueError("Input matrix can only have two dimensions or less")
-
+    # ensure no neg values
+    if (M < 0).any():
+        raise ValueError('Array Contains Negative Values')
+    # ensure no undefined values
+    if np.count_nonzero(np.isinf(M)) != 0:
+        raise ValueError('Data-matrix contains either np.inf or -np.inf')
+    # ensure no missing values
+    if np.count_nonzero(np.isnan(M)) != 0:
+        raise ValueError('Data-matrix contains nans')
     # closure following procedure in
     # skbio.stats.composition.closure
     M_log = M / M.sum(axis=1, keepdims=True)
@@ -152,8 +164,20 @@ def rclr(M):
     # subtracted to center log
     M_tensor_rclr = (M_tensor_rclr - gm).squeeze().data
     # ensure any missing are zero again
-    M_tensor_rclr[~np.isfinite(M_log)] = 0.0
+    M_tensor_rclr[~np.isfinite(M_log)] = np.nan
     return M_tensor_rclr
+
+
+def rclr_transformation(table: Table) -> Table:
+    """
+    Takes biom table and returns
+    a rclr transformed biom table.
+    """
+    # transform table values (and return biom.Table)
+    table = Table(rclr(table.matrix_data.toarray().T).T,
+                       table.ids('observation'),
+                       table.ids('sample'))   
+    return table
 
 
 class build(_BaseConstruct):
