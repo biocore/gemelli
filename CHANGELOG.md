@@ -1,3 +1,25 @@
+v0.0.6 (2020-09-27)
+
+### Features
+
+* Robust Aitchison PCA
+    * with manually chosen n_components
+    * with auto chosen n_components
+    * associated tests added for function, standalone, & QIIME2
+* Robust centered log-ratio (rclr) transformation
+    * allows users to use the transform alone outside CTF/RPCA
+    * associated tests added and extra tests for rclr added  
+* Tutorials
+    * Cross-sectional for RPCA (standalone & QIIME2)
+    * Repeated measure for CTF (standalone & QIIME2)
+
+
+### Miscellaneous
+
+* auto_rpca rank estimation min rank now 3 
+* added citations for CTF & RPCA (linked when appropriate)
+* updated the function descriptions
+
 v0.0.5 (2019-06-12)
 
 ### Features
@@ -56,7 +78,7 @@ v0.0.4 (2019-06-12)
 * line 175 in `factorization.TenAls` to send ValueError if input is not numpy array
 
 
-(2019-05-17)
+v0.0.3 (2019-05-17)
 
 ### Features
 
@@ -85,7 +107,7 @@ v0.0.4 (2019-06-12)
 
 * various type and spacing fixes
 
-Original "working" code
+Original "working" code (v0.0.1-2)
 
 ### Features
 
