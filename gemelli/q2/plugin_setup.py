@@ -21,13 +21,13 @@ from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
 from q2_types.feature_table import FeatureTable, Frequency, Composition
-from gemelli._ctf_defaults import (DESC_COMP, DESC_ITERATIONSALS,
-                                   DESC_BIN, DESC_SMETA,
-                                   DESC_SUBJ, DESC_COND, DESC_INIT,
-                                   DESC_ITERATIONSRTPM,
-                                   QLOAD, QDIST, QORD, QSOAD)
-from gemelli._rpca_defaults import (DESC_RANK, DESC_MSC, DESC_MFC,
-                                    DESC_ITERATIONS, DESC_MFF)
+from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
+                               DESC_BIN, DESC_SMETA,
+                               DESC_SUBJ, DESC_COND, DESC_INIT,
+                               DESC_ITERATIONSRTPM,
+                               QLOAD, QDIST, QORD, QSOAD,
+                               DESC_MSC, DESC_MFC,
+                               DESC_ITERATIONS, DESC_MFF)
 
 PARAMETERS = {'sample_metadata': Metadata,
               'individual_id_column': Str,
@@ -127,7 +127,7 @@ plugin.methods.register_function(
         'table': 'Input table of counts.',
     },
     parameter_descriptions={
-        'n_components': DESC_RANK,
+        'n_components': DESC_COMP,
         'min_sample_count': DESC_MSC,
         'min_feature_count': DESC_MFC,
         'min_feature_frequency': DESC_MFF,

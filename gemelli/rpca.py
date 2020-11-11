@@ -13,17 +13,19 @@ import pandas as pd
 from typing import Union
 from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import rclr
-from gemelli._rpca_defaults import (DEFAULT_RANK, DEFAULT_MSC, DEFAULT_MFC,
-                                    DEFAULT_ITERATIONS, DEFAULT_MFF)
+from gemelli._defaults import (DEFAULT_COMP,
+                               DEFAULT_MSC, DEFAULT_MFC,
+                               DEFAULT_OPTSPACE_ITERATIONS,
+                               DEFAULT_MFF)
 from scipy.linalg import svd
 
 
 def rpca(table: biom.Table,
-         n_components: Union[int, str] = DEFAULT_RANK,
+         n_components: Union[int, str] = DEFAULT_COMP,
          min_sample_count: int = DEFAULT_MSC,
          min_feature_count: int = DEFAULT_MFC,
          min_feature_frequency: float = DEFAULT_MFF,
-         max_iterations: int = DEFAULT_ITERATIONS) -> (
+         max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         skbio.OrdinationResults,
         skbio.DistanceMatrix):
     """Runs RPCA with an rclr preprocessing step.
@@ -122,7 +124,7 @@ def auto_rpca(table: biom.Table,
               min_sample_count: int = DEFAULT_MSC,
               min_feature_count: int = DEFAULT_MFC,
               min_feature_frequency: float = DEFAULT_MFF,
-              max_iterations: int = DEFAULT_ITERATIONS) -> (
+              max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         skbio.OrdinationResults,
         skbio.DistanceMatrix):
     """Runs RPCA but with auto estimation of the

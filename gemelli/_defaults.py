@@ -1,12 +1,31 @@
+# ----------------------------------------------------------------------------
+# Copyright (c) 2019--, gemelli development team.
+#
+# Distributed under the terms of the Modified BSD License.
+#
+# The full license is in the file COPYING.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+
 # Configuration file where you can set the parameter default values and
-# descriptions.
+# descriptions. This is used by both the standalone RPCA and QIIME 2 RPCA sides
+# of gemelli.
+
 DEFAULT_COMP = 3
 DEFAULT_MSC = 0
 DEFAULT_MFC = 0
-DEFAULT_MAXITER = 25
+DEFAULT_MFF = 0
+DEFAULT_OPTSPACE_ITERATIONS = 5
+DEFAULT_TENSALS_MAXITER = 25
 DEFAULT_FMETA = None
 DEFAULT_COND = None
-
+DESC_COMP = ("The underlying low-rank structure."
+             " The input can be an integer "
+             "(suggested: 1 < rank < 10) [minimum 2]."
+             " Note: as the rank increases the runtime"
+             " will increase dramatically.")
+DESC_ITERATIONS = ("The number of iterations to optimize the solution"
+                   " (suggested to be below 100; beware of overfitting)"
+                   " [minimum 1]")
 DESC_INIT = ("The number of initialization vectors. Larger values will"
              "give more accurate factorization but will be more "
              "computationally expensive [minimum 1]")
@@ -16,8 +35,16 @@ DESC_ITERATIONSALS = ("Max number of Alternating Least Square (ALS)"
 DESC_ITERATIONSRTPM = ("Max number of Robust Tensor Power Method (RTPM)"
                        " optimization iterations (suggested to be below 100;"
                        " beware of overfitting) [minimum 1]")
-DESC_COMP = ("The underlying low-rank structure (suggested: 2 < rank < 10)"
-             " [minimum 2]")
+DESC_MSC = ("Minimum sum cutoff of sample across all features. "
+            "The value can be at minimum zero and must be an whole"
+            " integer. It is suggested to be greater than or equal"
+            " to 500.")
+DESC_MFC = ("Minimum sum cutoff of features across all samples. "
+            "The value can be at minimum zero and must be an whole"
+            " integer")
+DESC_MFF = ("Minimum percentage of samples a feature must appear"
+            " with a value greater than zero. This value can range"
+            " from 0 to 100 with decimal values allowed.")
 DESC_OUT = "Location of output files."
 DESC_FMETA = "Feature metadata file in QIIME2 formatting."
 DESC_BIN = "Input table in biom format."

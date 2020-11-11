@@ -4,10 +4,11 @@ from .__init__ import cli
 from biom import load_table
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import auto_rpca as _auto_rpca
-from gemelli._rpca_defaults import (DEFAULT_RANK, DEFAULT_MSC, DEFAULT_MFC,
-                                    DEFAULT_ITERATIONS, DESC_RANK, DESC_MSC,
-                                    DESC_MFC, DESC_ITERATIONS, DEFAULT_MFF,
-                                    DESC_MFF)
+from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
+                               DEFAULT_MFC, DEFAULT_OPTSPACE_ITERATIONS,
+                               DESC_COMP, DESC_MSC, DESC_MFC,
+                               DESC_ITERATIONS,
+                               DEFAULT_MFF, DESC_MFF)
 
 
 @cli.command(name='rpca')
@@ -18,9 +19,9 @@ from gemelli._rpca_defaults import (DEFAULT_RANK, DEFAULT_MSC, DEFAULT_MFC,
               help='Location of output files.',
               required=True)
 @click.option('--n_components',
-              default=DEFAULT_RANK,
+              default=DEFAULT_COMP,
               show_default=True,
-              help=DESC_RANK)
+              help=DESC_COMP)
 @click.option('--min-sample-count',
               default=DEFAULT_MSC,
               show_default=True,
@@ -34,7 +35,7 @@ from gemelli._rpca_defaults import (DEFAULT_RANK, DEFAULT_MSC, DEFAULT_MFC,
               show_default=True,
               help=DESC_MFF)
 @click.option('--max_iterations',
-              default=DEFAULT_ITERATIONS,
+              default=DEFAULT_OPTSPACE_ITERATIONS,
               show_default=True,
               help=DESC_ITERATIONS)
 def standalone_rpca(in_biom: str,
@@ -97,7 +98,7 @@ def standalone_rpca(in_biom: str,
     help=DESC_MFF)
 @click.option(
     '--max_iterations',
-    default=DEFAULT_ITERATIONS,
+    default=DEFAULT_OPTSPACE_ITERATIONS,
     show_default=True,
     help=DESC_ITERATIONS)
 def auto_rpca(in_biom: str,
