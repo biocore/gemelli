@@ -4,7 +4,6 @@ from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import matrix_rclr
 from gemelli.optspace import OptSpace
 from skbio.stats.composition import clr
-from gemelli.simulations import build_block_model
 from gemelli.q2.tests.test_rpca_method import create_test_table
 from nose.tools import nottest
 
@@ -60,7 +59,6 @@ class TestOptSpace(unittest.TestCase):
                 abs(V_exp[:, i]), abs(opt.feature_weights[:, i]))
             np.testing.assert_array_almost_equal(abs(U_exp[:, i]),
                                                  abs(U_res[:, i]))
-
 
     def test_OptSpace_rank_low_raises(self):
         """Tests ValueError for OptSpace() rank too low."""

@@ -63,7 +63,8 @@ def rpca(table: biom.Table,
         raise ValueError('Data-table contains duplicate columns')
     # Robust-clt (matrix_rclr) preprocessing and OptSpace (RPCA)
     opt = MatrixCompletion(n_components=n_components,
-                           max_iterations=max_iterations).fit(matrix_rclr(table))
+                           max_iterations=max_iterations).fit(
+                               matrix_rclr(table))
     # get new n-comp when applicable
     n_components = opt.s.shape[0]
     # get PC column labels for the skbio OrdinationResults

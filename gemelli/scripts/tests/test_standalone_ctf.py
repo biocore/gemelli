@@ -4,8 +4,7 @@ from os.path import sep as os_path_sep
 from click.testing import CliRunner
 from skbio.util import get_data_path
 from numpy.testing import assert_allclose
-from gemelli.testing import (assert_ordinationresults_equal,
-                             CliTestCase,
+from gemelli.testing import (CliTestCase,
                              absolute_sort)
 from gemelli.scripts._standalone_ctf import standalone_ctf
 

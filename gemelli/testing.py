@@ -107,7 +107,7 @@ class CliTestCase(unittest.TestCase):
     def assertExitCode(self, value, result):
         try:
             self.assertEqual(0, result.exit_code)
-        except:
+        except AssertionError:
             ex = result.exception
             error = Exception('Command failed with non-zero exit code')
             raise error.with_traceback(ex.__traceback__)
