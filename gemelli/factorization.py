@@ -148,7 +148,7 @@ class TensorFactorization(_BaseImpute):
         self.center = center
         self.check_dense = check_dense
 
-    def fit(self, tensor):
+    def fit(self, tensor, y=None):
         """
 
         Run _fit() a wrapper

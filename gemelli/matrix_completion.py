@@ -92,7 +92,7 @@ class MatrixCompletion(_BaseImpute):
 
         return
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         """
         Fit the model to X_sparse
         """
@@ -148,7 +148,7 @@ class MatrixCompletion(_BaseImpute):
         self.feature_weights = self.V
         self.sample_weights = self.U
 
-    def fit_transform(self, X):
+    def fit_transform(self, X, y=None):
         """
         Returns the final SVD of
 
