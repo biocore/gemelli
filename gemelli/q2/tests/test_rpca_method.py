@@ -10,7 +10,7 @@ from qiime2 import Artifact
 from qiime2.plugins import gemelli as q2gemelli
 from gemelli.rpca import rpca, auto_rpca
 from gemelli.scripts.__init__ import cli as sdc
-from gemelli.q2.tests.simulations import build_block_model
+from gemelli.simulations import build_block_model
 from click.testing import CliRunner
 from nose.tools import nottest
 

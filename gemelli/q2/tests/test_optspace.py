@@ -4,7 +4,7 @@ from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import matrix_rclr
 from gemelli.optspace import OptSpace
 from skbio.stats.composition import clr
-from gemelli.q2.tests.simulations import build_block_model
+from gemelli.simulations import build_block_model
 from nose.tools import nottest
 
 
