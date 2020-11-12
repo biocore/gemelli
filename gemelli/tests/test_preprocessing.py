@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 import numpy.testing as npt
 from skbio.stats.composition import clr
-from gemelli.preprocessing import (build, tensor_rclr, rclr)
+from gemelli.preprocessing import (build, tensor_rclr, matrix_rclr)
 
 
 class Testpreprocessing(unittest.TestCase):
 
     def setUp(self):
-        # rclr base tests
+        # matrix_rclr base tests
         self.cdata1 = np.array([[2, 2, 6],
                                 [4, 4, 2]])
         self.cdata2 = np.array([[3, 3, 0],
@@ -35,31 +35,31 @@ class Testpreprocessing(unittest.TestCase):
         pass
 
     def test_rclr_sparse(self):
-        """Test rclr on sparse data."""
+        """Test matrix_rclr on sparse data."""
         # test a case with zeros
-        cmat = rclr(self.cdata2)
+        cmat = matrix_rclr(self.cdata2)
         npt.assert_allclose(cmat, self.true2)
 
     def test_rclr_negative_raises(self):
-        """Test rclr ValueError on negative."""
+        """Test matrix_rclr ValueError on negative."""
         # test negatives throw value error
         with self.assertRaises(ValueError):
-            rclr(self.bad1)
+            matrix_rclr(self.bad1)
 
     def test_rclr_inf_raises(self):
-        """Test rclr ValueError on undefined."""
+        """Test matrix_rclr ValueError on undefined."""
         # test undefined throw value error
         with self.assertRaises(ValueError):
-            rclr(self.bad2)
+            matrix_rclr(self.bad2)
 
     def test_rclr_nan_raises(self):
-        """Test rclr ValueError on missing (as nan)."""
+        """Test matrix_rclr ValueError on missing (as nan)."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            rclr(self.bad3)
+            matrix_rclr(self.bad3)
 
     def test_build(self):
-        """Test building a tensor from metadata (multi-mode) & rclr."""
+        """Test building a tensor from metadata (multi-mode) & matrix_rclr."""
         # flatten tensor into matrix
         matrix_counts = self.tensor_true.transpose([0, 2, 1])
         reshape_shape = matrix_counts.shape
@@ -122,12 +122,12 @@ class Testpreprocessing(unittest.TestCase):
         # test nan(s) throws ValueError
         with self.assertRaises(ValueError):
             tensor_rclr(tensor_true_error)
-        # test rclr on already made tensor
+        # test matrix_rclr on already made tensor
         with self.assertRaises(ValueError):
-            rclr(self.tensor_true)
-        # test rclr on negatives
+            matrix_rclr(self.tensor_true)
+        # test matrix_rclr on negatives
         with self.assertRaises(ValueError):
-            rclr(self.tensor_true * -1)
+            matrix_rclr(self.tensor_true * -1)
         # test that missing id in mapping ValueError
         with self.assertRaises(ValueError):
             tensor.construct(table, mapping.drop(['ID'], axis=1),
@@ -164,7 +164,7 @@ class Testpreprocessing(unittest.TestCase):
                             duplicate_tensor_true.astype(float))
 
     def test_matrix_tensor_rclr(self):
-        """Test matrix == tensor rclr."""
+        """Test matrix == tensor matrix_rclr."""
         # test clr works the same if there are no zeros
         npt.assert_allclose(tensor_rclr(self.count_data_one.T).T,
                             clr(self.count_data_one))
@@ -175,7 +175,7 @@ class Testpreprocessing(unittest.TestCase):
             tensor_rclr(self.tensor_true * -1)
 
     def test_rclr_dense(self):
-        """Test rclr and clr are the same on dense datasets."""
+        """Test matrix_rclr and clr are the same on dense datasets."""
         # test clr works the same if there are no zeros
-        cmat = rclr(self.cdata1)
+        cmat = matrix_rclr(self.cdata1)
         npt.assert_allclose(cmat, clr(self.cdata1.copy()))

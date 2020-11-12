@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from gemelli.matrix_completion import MatrixCompletion
-from gemelli.preprocessing import rclr
+from gemelli.preprocessing import matrix_rclr
 from gemelli.optspace import OptSpace
 from skbio.stats.composition import clr
 from gemelli.q2.tests.simulations import build_block_model
@@ -19,11 +19,11 @@ def create_test_table():
                                       num_features=500,
                                       mapping_on=False)
 
-    # the rclr is tested in other places
+    # the matrix_rclr is tested in other places
     # this is just used as input into
     # the OptSpace tests
     test_table = np.array(test_table)
-    table_rclr = rclr(test_table)
+    table_rclr = matrix_rclr(test_table)
 
     return test_table, table_rclr
 

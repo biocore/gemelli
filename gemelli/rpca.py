@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from typing import Union
 from gemelli.matrix_completion import MatrixCompletion
-from gemelli.preprocessing import rclr
+from gemelli.preprocessing import matrix_rclr
 from gemelli._defaults import (DEFAULT_COMP,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
@@ -28,7 +28,7 @@ def rpca(table: biom.Table,
          max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         skbio.OrdinationResults,
         skbio.DistanceMatrix):
-    """Runs RPCA with an rclr preprocessing step.
+    """Runs RPCA with an matrix_rclr preprocessing step.
 
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
@@ -61,9 +61,9 @@ def rpca(table: biom.Table,
         raise ValueError('Data-table contains duplicate indices')
     if len(table.columns) != len(set(table.columns)):
         raise ValueError('Data-table contains duplicate columns')
-    # Robust-clt (rclr) preprocessing and OptSpace (RPCA)
+    # Robust-clt (matrix_rclr) preprocessing and OptSpace (RPCA)
     opt = MatrixCompletion(n_components=n_components,
-                           max_iterations=max_iterations).fit(rclr(table))
+                           max_iterations=max_iterations).fit(matrix_rclr(table))
     # get new n-comp when applicable
     n_components = opt.s.shape[0]
     # get PC column labels for the skbio OrdinationResults

@@ -81,7 +81,7 @@ def tensor_rclr(T):
 
     if len(T.shape) < 3:
         # tensor_rclr on 2D matrix
-        M_tensor_rclr = rclr(T.transpose().copy()).T
+        M_tensor_rclr = matrix_rclr(T.transpose().copy()).T
         M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
         return M_tensor_rclr
     else:
@@ -97,13 +97,13 @@ def tensor_rclr(T):
         M = T.reshape(np.product(T.shape[:len(T.shape) - 1]),
                       T.shape[-1])
         with np.errstate(divide='ignore', invalid='ignore'):
-            M_tensor_rclr = rclr(M)
+            M_tensor_rclr = matrix_rclr(M)
         M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
         # reshape to former tensor and return tensors
         return M_tensor_rclr.reshape(T.shape).transpose(reverse_T)
 
 
-def rclr(M):
+def matrix_rclr(M):
     """
     Robust clr transform helper function.
     This function is built for mode 2 tensors,
@@ -170,10 +170,10 @@ def rclr(M):
 def rclr_transformation(table: Table) -> Table:
     """
     Takes biom table and returns
-    a rclr transformed biom table.
+    a matrix_rclr transformed biom table.
     """
     # transform table values (and return biom.Table)
-    table = Table(rclr(table.matrix_data.toarray().T).T,
+    table = Table(matrix_rclr(table.matrix_data.toarray().T).T,
                   table.ids('observation'),
                   table.ids('sample'))
     return table
