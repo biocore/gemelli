@@ -8,6 +8,7 @@ from os.path import sep as os_path_sep
 from click.testing import CliRunner
 from skbio.util import get_data_path
 from gemelli.scripts.__init__ import cli as sdc
+from gemelli.testing import CliTestCase
 
 
 class Test_standalone_rclr(unittest.TestCase):
@@ -41,9 +42,4 @@ class Test_standalone_rclr(unittest.TestCase):
         test_cmat = res_table.matrix_data.toarray().T
         npt.assert_allclose(test_cmat, self.true)
         # Lastly, check that exit code was 0 (indicating success)
-        try:
-            self.assertEqual(0, result.exit_code)
-        except AssertionError:
-            ex = result.exception
-            error = Exception('Command failed with non-zero exit code')
-            raise error.with_traceback(ex.__traceback__)
+        CliTestCase().assertExitCode(0, result)

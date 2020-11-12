@@ -4,7 +4,9 @@ from os.path import sep as os_path_sep
 from click.testing import CliRunner
 from skbio.util import get_data_path
 from numpy.testing import assert_allclose
-from gemelli.testing import absolute_sort
+from gemelli.testing import (assert_ordinationresults_equal,
+                             CliTestCase,
+                             absolute_sort)
 from gemelli.scripts._standalone_ctf import standalone_ctf
 
 
@@ -35,7 +37,7 @@ class Test_standalone_rpca(unittest.TestCase):
                                 '--output-dir',
                                 out_])
         # check exit code was 0 (indicating success)
-        self.assertEqual(result.exit_code, 0)
+        CliTestCase().assertExitCode(0, result)
         # Read the results
         samp_res = pd.read_csv(
             get_data_path('context-subject-ordination.tsv'),

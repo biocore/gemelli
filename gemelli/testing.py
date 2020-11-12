@@ -6,6 +6,7 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import unittest
 from pandas.testing import assert_series_equal
 
 
@@ -99,6 +100,17 @@ def assert_ordinationresults_equal(o1, o2, precision=5, verbose=False):
             if verbose:
                 print("PC {} for the {} ordination matches.".format(col_index,
                                                                     aspect))
+
+
+class CliTestCase(unittest.TestCase):
+
+    def assertExitCode(self, value, result):
+        try:
+            self.assertEqual(0, result.exit_code)
+        except:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
 
 def absolute_sort(matt):

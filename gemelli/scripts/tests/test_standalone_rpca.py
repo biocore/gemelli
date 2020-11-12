@@ -6,7 +6,7 @@ from skbio import OrdinationResults
 from skbio.util import get_data_path
 from numpy.testing import assert_array_almost_equal
 from gemelli.scripts.__init__ import cli as sdc
-from gemelli.testing import assert_ordinationresults_equal
+from gemelli.testing import assert_ordinationresults_equal, CliTestCase
 
 
 class Test_standalone_rpca(unittest.TestCase):
@@ -48,12 +48,7 @@ class Test_standalone_rpca(unittest.TestCase):
         assert_ordinationresults_equal(ord_res, ord_exp)
 
         # Lastly, check that gemelli's exit code was 0 (indicating success)
-        try:
-            self.assertEqual(0, result.exit_code)
-        except AssertionError:
-            ex = result.exception
-            error = Exception('Command failed with non-zero exit code')
-            raise error.with_traceback(ex.__traceback__)
+        CliTestCase().assertExitCode(0, result)
 
     def test_standalone_rpca(self):
         """Checks the output produced by gemelli's RPCA standalone script.
@@ -92,7 +87,7 @@ class Test_standalone_rpca(unittest.TestCase):
         assert_ordinationresults_equal(ord_res, ord_exp)
 
         # Lastly, check that gemelli's exit code was 0 (indicating success)
-        self.assertEqual(result.exit_code, 0)
+        CliTestCase().assertExitCode(0, result)
 
     def test_standalone_rpca_n_components(self):
         """Tests the standalone RPCA script when n_components is 2
@@ -106,7 +101,7 @@ class Test_standalone_rpca(unittest.TestCase):
                                 '--output-dir', out_,
                                 '--n_components', 2,
                                 '--max_iterations', 5])
-        self.assertEqual(result.exit_code, 0)
+        CliTestCase().assertExitCode(0, result)
         ord_res = OrdinationResults.read(get_data_path('ordination.txt',
                                                        subfolder='rpca_data'))
         # check it contains three axis
