@@ -5,20 +5,16 @@ from gemelli.preprocessing import matrix_rclr
 from gemelli.optspace import OptSpace
 from skbio.stats.composition import clr
 from gemelli.simulations import build_block_model
+from gemelli.q2.tests.test_rpca_method import create_test_table
 from nose.tools import nottest
 
 
 @nottest
-def create_test_table():
-    _, test_table = build_block_model(rank=2,
-                                      hoced=20,
-                                      hsced=20,
-                                      spar=2e3,
-                                      C_=2e3,
-                                      num_samples=50,
-                                      num_features=500,
-                                      mapping_on=False)
-
+def rclr_test_table():
+    # build a table to test
+    test_table = create_test_table()
+    # export table from biom
+    test_table = test_table.matrix_data.toarray()
     # the matrix_rclr is tested in other places
     # this is just used as input into
     # the OptSpace tests
@@ -31,7 +27,7 @@ def create_test_table():
 class TestOptSpace(unittest.TestCase):
 
     def setUp(self):
-        self.test_table, self.test_rclr = create_test_table()
+        self.test_table, self.test_rclr = rclr_test_table()
         self.rank = 2
         self.iteration = 5
         self.tol = 1e-5
