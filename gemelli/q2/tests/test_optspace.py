@@ -70,22 +70,26 @@ class TestOptSpace(unittest.TestCase):
             np.testing.assert_array_almost_equal(abs(V_exp[:, i]),
                                                  abs(V_res[:, i]))
 
-    def test_OptSpace_rank_raises(self):
-        """Tests ValueError for OptSpace() rank."""
-        # test rank too low
+    def test_OptSpace_rank_low_raises(self):
+        """Tests ValueError for OptSpace() rank too low."""
         try:
             MatrixCompletion(n_components=1).fit(self.test_rclr)
         except ValueError:
             pass
         else:
             raise AssertionError("ValueError was not raised")
-        # test rank way too high
+
+    def test_OptSpace_rank_high_raises(self):
+        """Tests ValueError for OptSpace() rank too high."""
         try:
             MatrixCompletion(n_components=10000).fit(self.test_rclr)
         except ValueError:
             pass
         else:
             raise AssertionError("ValueError was not raised")
+
+    def test_OptSpace_rank_mid_raises(self):
+        """Tests ValueError for OptSpace() rank too mid."""
         try:
             MatrixCompletion(n_components=100).fit(self.test_rclr)
         except ValueError:
