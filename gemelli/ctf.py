@@ -3,7 +3,7 @@ import skbio
 from pandas import concat
 from pandas import DataFrame
 from skbio import OrdinationResults, DistanceMatrix
-from gemelli.tensor_factorization import TensorFactorization
+from gemelli.factorization import TensorFactorization
 from gemelli.preprocessing import build, tensor_rclr
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_MFC,
