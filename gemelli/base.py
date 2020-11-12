@@ -23,10 +23,6 @@ class _BaseImpute(object):
     def label(self):
         """ Placeholder for fit this
         should be implemetned by sub-method"""
-    def transform(self):
-        """ Apply imputation to X_sparse
-        """
-        return self.sample_weights
 
 
 class _BaseConstruct(object):

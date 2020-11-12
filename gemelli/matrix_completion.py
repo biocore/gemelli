@@ -166,4 +166,4 @@ class MatrixCompletion(_BaseImpute):
         X_sparse = X.copy().astype(np.float64)
         self.X_sparse = X_sparse
         self._fit()
-        return self.sample_weights, self.s, self.feature_weights
+        return self.sample_weights

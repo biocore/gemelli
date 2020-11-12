@@ -40,10 +40,9 @@ class TestOptSpace(unittest.TestCase):
         opt = MatrixCompletion(n_components=self.rank,
                                max_iterations=self.iteration,
                                tol=self.tol).fit(self.test_rclr)
-        U_res, s_res, V_res = MatrixCompletion(n_components=self.rank,
-                                               max_iterations=self.iteration,
-                                               tol=self.tol).fit_transform(
-                                                   self.test_rclr)
+        U_res = MatrixCompletion(n_components=self.rank,
+                                 max_iterations=self.iteration,
+                                 tol=self.tol).fit_transform(self.test_rclr)
         # use base optspace helper to check
         # that wrapper is not changing outcomes
         U_exp, s_exp, V_exp = OptSpace(n_components=self.rank,
@@ -61,10 +60,7 @@ class TestOptSpace(unittest.TestCase):
                 abs(V_exp[:, i]), abs(opt.feature_weights[:, i]))
             np.testing.assert_array_almost_equal(abs(U_exp[:, i]),
                                                  abs(U_res[:, i]))
-            np.testing.assert_array_almost_equal(abs(s_exp[:, i]),
-                                                 abs(s_res[:, i]))
-            np.testing.assert_array_almost_equal(abs(V_exp[:, i]),
-                                                 abs(V_res[:, i]))
+
 
     def test_OptSpace_rank_low_raises(self):
         """Tests ValueError for OptSpace() rank too low."""
