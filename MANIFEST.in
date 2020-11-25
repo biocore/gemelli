@@ -1,3 +1,10 @@
 include README.md
 include COPYING.txt
 include gemelli/citations.bib
+recursive-include gemelli/tests *.py
+recursive-include gemelli/tests/data *.mat
+recursive-include gemelli/scripts/tests *.py
+recursive-include gemelli/scripts/tests/data *.tsv *.biom *.txt
+recursive-include gemelli/scripts/tests/rpca_data *.tsv *.biom *.txt
+recursive-include gemelli/q2/tests *.py
+recursive-include gemelli/q2/tests/data *.tsv *.biom *.txt
