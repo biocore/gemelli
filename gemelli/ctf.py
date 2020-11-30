@@ -4,10 +4,11 @@ from pandas import concat
 from pandas import DataFrame
 from skbio import OrdinationResults, DistanceMatrix
 from gemelli.factorization import TensorFactorization
-from gemelli.preprocessing import build, rclr
-from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
-                                   DEFAULT_MFC, DEFAULT_MAXITER,
-                                   DEFAULT_FMETA as DEFFM)
+from gemelli.preprocessing import build, tensor_rclr
+from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
+                               DEFAULT_MFC,
+                               DEFAULT_TENSALS_MAXITER,
+                               DEFAULT_FMETA as DEFFM)
 
 
 def ctf(table: biom.Table,
@@ -17,9 +18,9 @@ def ctf(table: biom.Table,
         n_components: int = DEFAULT_COMP,
         min_sample_count: int = DEFAULT_MSC,
         min_feature_count: int = DEFAULT_MFC,
-        max_iterations_als: int = DEFAULT_MAXITER,
-        max_iterations_rptm: int = DEFAULT_MAXITER,
-        n_initializations: int = DEFAULT_MAXITER,
+        max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
+        max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
+        n_initializations: int = DEFAULT_TENSALS_MAXITER,
         feature_metadata: DataFrame = DEFFM) -> (OrdinationResults,
                                                  OrdinationResults,
                                                  DistanceMatrix,
@@ -52,9 +53,9 @@ def ctf_helper(table: biom.Table,
                n_components: int = DEFAULT_COMP,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
-               max_iterations_als: int = DEFAULT_MAXITER,
-               max_iterations_rptm: int = DEFAULT_MAXITER,
-               n_initializations: int = DEFAULT_MAXITER,
+               max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
+               max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
+               n_initializations: int = DEFAULT_TENSALS_MAXITER,
                feature_metadata: DataFrame = DEFFM) -> (dict,
                                                         OrdinationResults,
                                                         dict,
@@ -125,7 +126,7 @@ def ctf_helper(table: biom.Table,
         n_components=n_components,
         max_als_iterations=max_iterations_als,
         max_rtpm_iterations=max_iterations_rptm,
-        n_initializations=n_initializations).fit(rclr(tensor.counts))
+        n_initializations=n_initializations).fit(tensor_rclr(tensor.counts))
     # label tensor loadings
     TF.label(tensor, taxonomy=feature_metadata)
 

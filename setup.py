@@ -84,7 +84,7 @@ with open('gemelli/__init__.py', 'rb') as f:
     hit = _version_re.search(f.read().decode('utf-8')).group(1)
     version = str(ast.literal_eval(hit))
 
-standalone = ['gemelli=gemelli.scripts._standalone_ctf:standalone_ctf']
+standalone = ['gemelli=gemelli.scripts.__init__:cli']
 q2cmds = ['q2-gemelli=gemelli.q2.plugin_setup:plugin']
 
 setup(name='gemelli',

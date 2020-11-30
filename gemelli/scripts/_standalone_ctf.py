@@ -1,18 +1,21 @@
 import os
 import click
+from .__init__ import cli
 import pandas as pd
 from biom import load_table
 from gemelli.ctf import ctf_helper
-from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
-                                   DEFAULT_MFC, DEFAULT_MAXITER,
-                                   DEFAULT_FMETA, DESC_COMP, DESC_MSC,
-                                   DESC_MFC, DESC_OUT, DESC_ITERATIONSALS,
-                                   DESC_FMETA, DESC_BIN, DESC_SMETA,
-                                   DESC_SUBJ, DESC_COND, DESC_INIT,
-                                   DESC_ITERATIONSRTPM, DEFAULT_COND)
+from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
+                               DEFAULT_MFC,
+                               DESC_MSC, DESC_MFC,
+                               DEFAULT_TENSALS_MAXITER,
+                               DEFAULT_FMETA, DESC_COMP,
+                               DESC_OUT, DESC_ITERATIONSALS,
+                               DESC_FMETA, DESC_BIN, DESC_SMETA,
+                               DESC_SUBJ, DESC_COND, DESC_INIT,
+                               DESC_ITERATIONSRTPM, DEFAULT_COND)
 
 
-@click.command()
+@cli.command(name='ctf')
 @click.option(
     '--in-biom',
     required=True,
@@ -50,17 +53,17 @@ from gemelli._ctf_defaults import (DEFAULT_COMP, DEFAULT_MSC,
     help=DESC_MFC)
 @click.option(
     '--max_iterations_als',
-    default=DEFAULT_MAXITER,
+    default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_ITERATIONSALS)
 @click.option(
     '--max_iterations_rptm',
-    default=DEFAULT_MAXITER,
+    default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_ITERATIONSRTPM)
 @click.option(
     '--n_initializations',
-    default=DEFAULT_MAXITER,
+    default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_INIT)
 @click.option(
@@ -166,7 +169,3 @@ def standalone_ctf(in_biom: str,
                 '%s-features-ordination.tsv' %
                 (str(condition))),
             sep='\t')
-
-
-if __name__ == '__main__':
-    standalone_ctf()

@@ -1,6 +1,7 @@
 # Travis yml file inspired by scikit-bio
 # Check on http://lint.travis-ci.org/ after modifying it!
-sudo: false
+os: linux
+dist: xenial
 language: python
 env:
   - PYVERSION=3.5 USE_CYTHON=TRUE MAKE_DOC=TRUE

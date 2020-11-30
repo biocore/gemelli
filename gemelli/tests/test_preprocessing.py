@@ -3,12 +3,22 @@ import numpy as np
 import pandas as pd
 import numpy.testing as npt
 from skbio.stats.composition import clr
-from gemelli.preprocessing import build, rclr, rclr_matrix
+from gemelli.preprocessing import (build, tensor_rclr, matrix_rclr)
 
 
 class Testpreprocessing(unittest.TestCase):
 
     def setUp(self):
+        # matrix_rclr base tests
+        self.cdata1 = np.array([[2, 2, 6],
+                                [4, 4, 2]])
+        self.cdata2 = np.array([[3, 3, 0],
+                                [0, 4, 2]])
+        self.true2 = np.array([[0.0, 0.0, np.nan],
+                               [np.nan, 0.34657359, -0.34657359]])
+        self.bad1 = np.array([1, 2, -1])
+        self.bad2 = np.array([1, 2, np.inf])
+        self.bad3 = np.array([1, 2, np.nan])
         # test dense
         self.count_data_one = np.array([[2, 2, 6],
                                         [4, 4, 2]])
@@ -24,8 +34,32 @@ class Testpreprocessing(unittest.TestCase):
                                       [16, 17, 18]]])
         pass
 
-    def test_build(self):
+    def test_rclr_sparse(self):
+        """Test matrix_rclr on sparse data."""
+        # test a case with zeros
+        cmat = matrix_rclr(self.cdata2)
+        npt.assert_allclose(cmat, self.true2)
 
+    def test_rclr_negative_raises(self):
+        """Test matrix_rclr ValueError on negative."""
+        # test negatives throw value error
+        with self.assertRaises(ValueError):
+            matrix_rclr(self.bad1)
+
+    def test_rclr_inf_raises(self):
+        """Test matrix_rclr ValueError on undefined."""
+        # test undefined throw value error
+        with self.assertRaises(ValueError):
+            matrix_rclr(self.bad2)
+
+    def test_rclr_nan_raises(self):
+        """Test matrix_rclr ValueError on missing (as nan)."""
+        # test nan throw value error
+        with self.assertRaises(ValueError):
+            matrix_rclr(self.bad3)
+
+    def test_build(self):
+        """Test building a tensor from metadata (multi-mode) & matrix_rclr."""
         # flatten tensor into matrix
         matrix_counts = self.tensor_true.transpose([0, 2, 1])
         reshape_shape = matrix_counts.shape
@@ -38,9 +72,8 @@ class Testpreprocessing(unittest.TestCase):
         table = pd.DataFrame(matrix_counts.T)
         # rebuild the tensor
         tensor = build()
-        with self.assertWarns(Warning):
-            tensor.construct(table, mapping,
-                             'ID', ['conditional'])
+        tensor.construct(table, mapping,
+                         'ID', ['conditional'])
         # ensure rebuild tensor is the same as it started
         npt.assert_allclose(tensor.counts,
                             self.tensor_true.astype(float))
@@ -52,14 +85,14 @@ class Testpreprocessing(unittest.TestCase):
         self.assertListEqual(tensor.condition_orders[0],
                              list(range(3)))
         # test that flattened matrix has the same clr
-        # transform as the tensor rclr
+        # transform as the tensor tensor_rclr
         tensor_clr_true = clr(matrix_counts).reshape(reshape_shape)
         tensor_clr_true = tensor_clr_true.transpose([0, 2, 1])
-        npt.assert_allclose(rclr(tensor.counts),
+        npt.assert_allclose(tensor_rclr(tensor.counts),
                             tensor_clr_true)
 
     def test_errors(self):
-
+        """Test building a tensor error raises."""
         # flatten tensor into matrix
         matrix_counts = self.tensor_true.transpose([0, 2, 1])
         matrix_counts = matrix_counts.reshape(9, 2)
@@ -71,31 +104,30 @@ class Testpreprocessing(unittest.TestCase):
         table = pd.DataFrame(matrix_counts.T)
         # rebuild the tensor
         tensor = build()
-        with self.assertWarns(Warning):
-            tensor.construct(table, mapping,
-                             'ID', ['conditional'])
+        tensor.construct(table, mapping,
+                         'ID', ['conditional'])
         # test less than 2D throws ValueError
         with self.assertRaises(ValueError):
-            rclr(np.array(range(3)))
+            tensor_rclr(np.array(range(3)))
         # test negatives throws ValueError
         with self.assertRaises(ValueError):
-            rclr(tensor.counts * -1)
+            tensor_rclr(tensor.counts * -1)
         tensor_true_error = self.tensor_true.astype(float)
         tensor_true_error[tensor_true_error <= 10] = np.inf
         # test infs throws ValueError
         with self.assertRaises(ValueError):
-            rclr(tensor_true_error)
+            tensor_rclr(tensor_true_error)
         tensor_true_error = self.tensor_true.astype(float)
         tensor_true_error[tensor_true_error <= 10] = np.nan
         # test nan(s) throws ValueError
         with self.assertRaises(ValueError):
-            rclr(tensor_true_error)
-        # test rclr_matrix on already made tensor
+            tensor_rclr(tensor_true_error)
+        # test matrix_rclr on already made tensor
         with self.assertRaises(ValueError):
-            rclr_matrix(self.tensor_true)
-        # test rclr_matrix on negatives
+            matrix_rclr(self.tensor_true)
+        # test matrix_rclr on negatives
         with self.assertRaises(ValueError):
-            rclr_matrix(self.tensor_true * -1)
+            matrix_rclr(self.tensor_true * -1)
         # test that missing id in mapping ValueError
         with self.assertRaises(ValueError):
             tensor.construct(table, mapping.drop(['ID'], axis=1),
@@ -131,13 +163,19 @@ class Testpreprocessing(unittest.TestCase):
         npt.assert_allclose(tensor.counts,
                             duplicate_tensor_true.astype(float))
 
-    def test_matrix_rclr(self):
-
+    def test_matrix_tensor_rclr(self):
+        """Test matrix == tensor matrix_rclr."""
         # test clr works the same if there are no zeros
-        npt.assert_allclose(rclr(self.count_data_one.T).T,
+        npt.assert_allclose(tensor_rclr(self.count_data_one.T).T,
                             clr(self.count_data_one))
         # test a case with zeros
-        rclr(self.count_data_two)
+        tensor_rclr(self.count_data_two)
         # test negatives throw ValueError
         with self.assertRaises(ValueError):
-            rclr(self.tensor_true * -1)
+            tensor_rclr(self.tensor_true * -1)
+
+    def test_rclr_dense(self):
+        """Test matrix_rclr and clr are the same on dense datasets."""
+        # test clr works the same if there are no zeros
+        cmat = matrix_rclr(self.cdata1)
+        npt.assert_allclose(cmat, clr(self.cdata1.copy()))

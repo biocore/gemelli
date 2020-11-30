@@ -8,10 +8,11 @@
 
 import warnings
 import numpy as np
+from biom import Table
 from .base import _BaseConstruct
 
 
-def rclr(T):
+def tensor_rclr(T):
     """
     Robust clr transform. is the approximate geometric mean of X.
 
@@ -79,8 +80,10 @@ def rclr(T):
         raise ValueError('Tensor contains negative values.')
 
     if len(T.shape) < 3:
-        # rclr on 2D matrix
-        return rclr_matrix(T.transpose().copy()).T
+        # tensor_rclr on 2D matrix
+        M_tensor_rclr = matrix_rclr(T.transpose().copy()).T
+        M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
+        return M_tensor_rclr
     else:
         # flatten tensor (samples*conditions x features)
         T = T.copy()
@@ -94,12 +97,13 @@ def rclr(T):
         M = T.reshape(np.product(T.shape[:len(T.shape) - 1]),
                       T.shape[-1])
         with np.errstate(divide='ignore', invalid='ignore'):
-            M_rclr = rclr_matrix(M)
+            M_tensor_rclr = matrix_rclr(M)
+        M_tensor_rclr[~np.isfinite(M_tensor_rclr)] = 0.0
         # reshape to former tensor and return tensors
-        return M_rclr.reshape(T.shape).transpose(reverse_T)
+        return M_tensor_rclr.reshape(T.shape).transpose(reverse_T)
 
 
-def rclr_matrix(M):
+def matrix_rclr(M):
     """
     Robust clr transform helper function.
     This function is built for mode 2 tensors,
@@ -130,13 +134,20 @@ def rclr_matrix(M):
     TODO
 
     """
-
-    M = np.atleast_2d(M)
-    if np.any(M < 0):
-        raise ValueError("Cannot have negative proportions")
+    # ensure array is at least 2D
+    M = np.atleast_2d(np.array(M))
+    # ensure array not more than 2D
     if M.ndim > 2:
         raise ValueError("Input matrix can only have two dimensions or less")
-
+    # ensure no neg values
+    if (M < 0).any():
+        raise ValueError('Array Contains Negative Values')
+    # ensure no undefined values
+    if np.count_nonzero(np.isinf(M)) != 0:
+        raise ValueError('Data-matrix contains either np.inf or -np.inf')
+    # ensure no missing values
+    if np.count_nonzero(np.isnan(M)) != 0:
+        raise ValueError('Data-matrix contains nans')
     # closure following procedure in
     # skbio.stats.composition.closure
     M_log = M / M.sum(axis=1, keepdims=True)
@@ -146,14 +157,26 @@ def rclr_matrix(M):
     mask = np.array(mask).reshape(M_log.shape)
     mask[np.isfinite(M_log)] = False
     # sum of rows (features)
-    M_rclr = np.ma.array(M_log, mask=mask)
+    M_tensor_rclr = np.ma.array(M_log, mask=mask)
     # approx. geometric mean of the features
-    gm = M_rclr.mean(axis=-1, keepdims=True)
+    gm = M_tensor_rclr.mean(axis=-1, keepdims=True)
     # subtracted to center log
-    M_rclr = (M_rclr - gm).squeeze().data
+    M_tensor_rclr = (M_tensor_rclr - gm).squeeze().data
     # ensure any missing are zero again
-    M_rclr[~np.isfinite(M_log)] = 0.0
-    return M_rclr
+    M_tensor_rclr[~np.isfinite(M_log)] = np.nan
+    return M_tensor_rclr
+
+
+def rclr_transformation(table: Table) -> Table:
+    """
+    Takes biom table and returns
+    a matrix_rclr transformed biom table.
+    """
+    # transform table values (and return biom.Table)
+    table = Table(matrix_rclr(table.matrix_data.toarray().T).T,
+                  table.ids('observation'),
+                  table.ids('sample'))
+    return table
 
 
 class build(_BaseConstruct):
@@ -347,13 +370,14 @@ class build(_BaseConstruct):
         duplicated = {k: list(df.index)
                       for k, df in mf.groupby(col_tmp)
                       if df.shape[0] > 1}  # get duplicated conditionals
-        duplicated_ids = ','.join(
-            list(set([str(k[0]) for k in duplicated.keys()])))
-        warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
-                               ") contains multiple ",
-                               "samples. Multiple subject counts will be",
-                               " meaned across samples by subject."]),
-                      RuntimeWarning)
+        if len(duplicated.keys()) > 0:
+            duplicated_ids = ','.join(list(set([str(k[0])
+                                                for k in duplicated.keys()])))
+            warnings.warn(''.join(["Subject(s) (", str(duplicated_ids),
+                                   ") contains multiple ",
+                                   "samples. Multiple subject counts will be",
+                                   " meaned across samples by subject."]),
+                          RuntimeWarning)
         for id_, dup in duplicated.items():
             # mean and keep one
             table[dup[0]] = table.loc[:, dup].mean(axis=1).astype(int)
