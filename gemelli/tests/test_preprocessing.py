@@ -125,7 +125,7 @@ class Testpreprocessing(unittest.TestCase):
         """Test fast_unifrac ValueError min_splits too large."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, min_splits=5)
+            _ = fast_unifrac(self.phylo_table, self.tree, min_splits=8)
 
     def test_fast_unifrac_mindepth_raises(self):
         """Test fast_unifrac ValueError min_depth too large."""
