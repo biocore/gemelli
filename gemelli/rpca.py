@@ -11,13 +11,50 @@ import skbio
 import numpy as np
 import pandas as pd
 from typing import Union
+from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
-from gemelli.preprocessing import matrix_rclr
-from gemelli._defaults import (DEFAULT_COMP,
+from gemelli.preprocessing import matrix_rclr, fast_unifrac
+from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
+
+
+def phylogenetic_rpca(table: biom.Table,
+                      phylogeny: TreeNode,
+                      n_components: Union[int, str] = DEFAULT_COMP,
+                      min_sample_count: int = DEFAULT_MSC,
+                      min_feature_count: int = DEFAULT_MFC,
+                      min_feature_frequency: float = DEFAULT_MFF,
+                      min_depth: int = DEFAULT_MTD,
+                      min_splits: int = DEFAULT_MTD,
+                      max_postlevel: int = DEFAULT_MTD,
+                      max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+                          OrdinationResults, DistanceMatrix, TreeNode, biom.Table):
+    """Runs phylogenetic RPCA.
+
+       This code will be run by both the standalone and QIIME 2 versions of
+       gemelli.
+    """
+    
+    # use helper to process table
+    table = rpca_table_processing(table,
+                                  min_sample_count,
+                                  min_feature_count,
+                                  min_feature_frequency)
+    # build the vectorized table
+    counts_by_node, tree_index, branch_lengths, fids, otu_ids\
+        = fast_unifrac(table, phylogeny, min_depth, min_splits, max_postlevel)
+    # Robust-clt (matrix_rclr) preprocessing
+    rclr_table = matrix_rclr(counts_by_node, branch_lengths=branch_lengths)
+    # run OptSpace (RPCA)
+    ord_res, dist_res = optspace_helper(rclr_table, fids, table.ids())
+    # import expanded table
+    counts_by_node = biom.Table(counts_by_node.T,
+                                fids, table.ids())
+
+    return ord_res, dist_res, phylogeny, counts_by_node
 
 
 def rpca(table: biom.Table,
@@ -26,45 +63,38 @@ def rpca(table: biom.Table,
          min_feature_count: int = DEFAULT_MFC,
          min_feature_frequency: float = DEFAULT_MFF,
          max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        skbio.OrdinationResults,
-        skbio.DistanceMatrix):
+        OrdinationResults,
+        DistanceMatrix):
     """Runs RPCA with an matrix_rclr preprocessing step.
 
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
     """
-    # get shape of table
-    n_features, n_samples = table.shape
+    
+    # use helper to process table
+    table = rpca_table_processing(table,
+                                  min_sample_count,
+                                  min_feature_count,
+                                  min_feature_frequency)
+    # Robust-clt (matrix_rclr) preprocessing
+    rclr_table = matrix_rclr(table.matrix_data.toarray().T)
+    # run OptSpace (RPCA)
+    ord_res, dist_res = optspace_helper(rclr_table, table.ids('observation'), table.ids())
 
-    # filter sample to min seq. depth
-    def sample_filter(val, id_, md):
-        return sum(val) > min_sample_count
+    return ord_res, dist_res
 
-    # filter features to min total counts
-    def observation_filter(val, id_, md):
-        return sum(val) > min_feature_count
 
-    # filter features by N samples presence
-    def frequency_filter(val, id_, md):
-        return (np.sum(val > 0) / n_samples) > (min_feature_frequency / 100)
+def optspace_helper(rclr_table: np.array,
+                    feature_ids: list,
+                    subject_ids: list,
+                    n_components: Union[int, str] = DEFAULT_COMP,
+                    max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+                        OrdinationResults,
+                        DistanceMatrix):
 
-    # filter and import table for each filter above
-    table = table.filter(observation_filter, axis='observation')
-    table = table.filter(frequency_filter, axis='observation')
-    table = table.filter(sample_filter, axis='sample')
-    # table to dataframe
-    table = pd.DataFrame(table.matrix_data.toarray(),
-                         table.ids('observation'),
-                         table.ids('sample')).T
-    # check the table after filtering
-    if len(table.index) != len(set(table.index)):
-        raise ValueError('Data-table contains duplicate indices')
-    if len(table.columns) != len(set(table.columns)):
-        raise ValueError('Data-table contains duplicate columns')
-    # Robust-clt (matrix_rclr) preprocessing and OptSpace (RPCA)
+    # run OptSpace (RPCA)
     opt = MatrixCompletion(n_components=n_components,
-                           max_iterations=max_iterations).fit(
-                               matrix_rclr(table))
+                           max_iterations=max_iterations).fit(rclr_table)
     # get new n-comp when applicable
     n_components = opt.s.shape[0]
     # get PC column labels for the skbio OrdinationResults
@@ -84,9 +114,9 @@ def rpca(table: biom.Table,
     p = p[:n_components]
     s = s[:n_components]
     # save the loadings
-    feature_loading = pd.DataFrame(v, index=table.columns,
+    feature_loading = pd.DataFrame(v, index=feature_ids,
                                    columns=rename_cols)
-    sample_loading = pd.DataFrame(u, index=table.index,
+    sample_loading = pd.DataFrame(u, index=subject_ids,
                                   columns=rename_cols)
     # % var explained
     proportion_explained = pd.Series(p, index=rename_cols)
@@ -115,8 +145,7 @@ def rpca(table: biom.Table,
         features=feature_loading.copy(),
         proportion_explained=proportion_explained.copy())
     # save distance matrix
-    dist_res = skbio.stats.distance.DistanceMatrix(
-        opt.distance, ids=sample_loading.index)
+    dist_res = DistanceMatrix(opt.distance, ids=sample_loading.index)
 
     return ord_res, dist_res
 
@@ -126,8 +155,8 @@ def auto_rpca(table: biom.Table,
               min_feature_count: int = DEFAULT_MFC,
               min_feature_frequency: float = DEFAULT_MFF,
               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        skbio.OrdinationResults,
-        skbio.DistanceMatrix):
+        OrdinationResults,
+        DistanceMatrix):
     """Runs RPCA but with auto estimation of the
        rank peramater.
     """
@@ -138,3 +167,41 @@ def auto_rpca(table: biom.Table,
                              min_feature_frequency=min_feature_frequency,
                              max_iterations=max_iterations)
     return ord_res, dist_res
+
+
+def rpca_table_processing(table: biom.Table,
+                          min_sample_count: int = DEFAULT_MSC,
+                          min_feature_count: int = DEFAULT_MFC,
+                          min_feature_frequency: float = DEFAULT_MFF) -> (
+                              biom.Table):
+    """Filter and checks the table validity for RPCA.
+    """
+    # get shape of table
+    n_features, n_samples = table.shape
+
+    # filter sample to min seq. depth
+    def sample_filter(val, id_, md):
+        return sum(val) > min_sample_count
+
+    # filter features to min total counts
+    def observation_filter(val, id_, md):
+        return sum(val) > min_feature_count
+
+    # filter features by N samples presence
+    def frequency_filter(val, id_, md):
+        return (np.sum(val > 0) / n_samples) > (min_feature_frequency / 100)
+
+    # filter and import table for each filter above
+    table = table.filter(observation_filter, axis='observation')
+    table = table.filter(frequency_filter, axis='observation')
+    table = table.filter(sample_filter, axis='sample')
+
+    # check the table after filtering
+    if len(table.ids()) != len(set(table.ids())):
+        raise ValueError('Data-table contains duplicate indices')
+    if len(table.ids('observation')) != len(set(table.ids('observation'))):
+        raise ValueError('Data-table contains duplicate columns')
+
+    return  table
+
+
