@@ -1,13 +1,13 @@
 import os
 import click
 from .__init__ import cli
-from biom import load_table
 from skbio import TreeNode
 from biom import load_table
 from biom.util import biom_open
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from gemelli._defaults import DESC_COUNTS, DESC_TREE
+
 
 @cli.command(name='phylogenetic-rclr')
 @click.option('--in-biom',
@@ -20,8 +20,8 @@ from gemelli._defaults import DESC_COUNTS, DESC_TREE
               help='Location of output table.',
               required=True)
 def standalone_phylogenetic_rclr(in_biom: str,
-                          in_tree: str,
-                          output_dir: str) -> None:
+                                 in_tree: str,
+                                 output_dir: str) -> None:
     """
     Runs phylogenetic robust centered log-ratio transformation.
     Returns both a vectorized table and matched fully labeled phylogeny
@@ -36,7 +36,8 @@ def standalone_phylogenetic_rclr(in_biom: str,
     with in_tree.open() as fh:
         phylogeny = TreeNode.read(fh, format='newick')
     # run vectorized table and rclr transform
-    counts_by_node, rclr_table, phylogeny = phylogenetic_rclr_transformation(table, phylogeny)
+    res_ = phylogenetic_rclr_transformation(table, phylogeny)
+    counts_by_node, rclr_table, phylogeny = res_
 
     # If it doesn't already exist, create the output directory.
     # Note that there is technically a race condition here: it's ostensibly

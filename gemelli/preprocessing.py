@@ -12,7 +12,6 @@ from biom import Table
 from skbio import TreeNode
 from .base import _BaseConstruct
 from gemelli._defaults import DEFAULT_MTD
-from skbio.diversity._phylogenetic import _nodes_by_counts
 from skbio.diversity._util import _vectorize_counts_and_tree
 
 
@@ -207,8 +206,8 @@ def phylogenetic_rclr_transformation(table: Table,
                        table.ids('observation'),
                        table.ids('sample'))
     # import expanded matrix into biom.Table
-    counts_by_node = biom.Table(counts_by_node.T,
-                                fids, table.ids())
+    counts_by_node = Table(counts_by_node.T,
+                           fids, table.ids())
 
     return counts_by_node, rclr_table, phylogeny
 
@@ -241,11 +240,12 @@ def matrix_closure(mat):
     >>> closure(X)
     array([[ 0.2,  0.2,  0.6],
            [ nan,  nan,  nan]])
-     
+
     """
 
     mat = np.atleast_2d(mat)
     mat = mat / mat.sum(axis=1, keepdims=True)
+
     return mat.squeeze()
 
 
@@ -256,7 +256,7 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     and exposed as vectors in the matrix. The
     closed matrix is then multipled by the
     branch lengths to phylogenically
-    weight the data. 
+    weight the data.
 
     Parameters
     ----------
@@ -295,7 +295,7 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     Examples
     --------
     TODO
-     
+
     """
 
     # original table
@@ -317,38 +317,44 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     # check to ensure tree filters make sense
     if tree.root().n <= min_depth:
         raise ValueError('min_depth is equal to tree root value, '
-                         'this will result in a table of zero features.')
+                         'this will result in a table of zero '
+                         'features.')
     if np.max(tree.root().postlevels) <= max_postlevel:
         raise ValueError('max_postlevel is equal to max postlevel at tree'
-                         ' root, this will result in a table of zero features.')
+                         ' root, this will result in a table of zero '
+                         'features.')
     if tree.root().splits <= min_splits:
         raise ValueError('min_splits is equal to number of splits at tree'
-                         ' root, this will result in a table of zero features.')
+                         ' root, this will result in a table of zero '
+                         'features.')
     # create index to filter table
     keep_node_depth = np.array([True] * counts_by_node.shape[1])
     keep_node_splits = np.array([True] * counts_by_node.shape[1])
     keep_node_postlevel = np.array([True] * counts_by_node.shape[1])
     for count_index_, node_ in tree_index['id_index'].items():
         # total number nodes under is more than min_depth
-        keep_node_depth[count_index_] = node_.n > min_depth
+        filter_tmp_ = node_.n > min_depth
+        keep_node_depth[count_index_] = filter_tmp_
         # number of splits
-        keep_node_splits[count_index_] = node_.splits >= min_splits
+        filter_tmp_ = node_.splits >= min_splits
+        keep_node_splits[count_index_] = filter_tmp_
         # number of postlevel
-        keep_node_postlevel[count_index_] = np.max(node_.postlevels) > max_postlevel
+        filter_tmp_ = np.max(node_.postlevels) > max_postlevel
+        keep_node_postlevel[count_index_] = filter_tmp_
     # get joint set of nodes to keep
-    keep_node = (keep_node_depth & keep_node_postlevel &\
+    keep_node = (keep_node_depth & keep_node_postlevel &
                  keep_node_splits & keep_zero & node_branch_zero)
     # check all filter
     if sum(keep_node) == 0:
         raise ValueError('Combined table and tree filters resulted'
-                         ' in a table of zero features.')        
+                         ' in a table of zero features.')
     # subset the table
     counts_by_node = counts_by_node[:, keep_node]
     branch_lengths = branch_lengths[keep_node]
     fids = ['n' + i for i in list(tree_index['id'][keep_node].astype(str))]
-    tree_index['keep'] = {i:v for i, v in enumerate(keep_node)}
+    tree_index['keep'] = {i: v for i, v in enumerate(keep_node)}
     # re-label tree to return with labels
-    tree_relabel = {tid_:tree_index['id_index'][int(tid_[1:])]
+    tree_relabel = {tid_: tree_index['id_index'][int(tid_[1:])]
                     for tid_ in fids}
     # re-name nodes to match vectorized table
     for new_id, node_ in tree_relabel.items():

@@ -1,6 +1,7 @@
 import biom
 import skbio
 import numpy as np
+import pandas as pd
 from pandas import concat
 from pandas import DataFrame
 from skbio import OrdinationResults, DistanceMatrix, TreeNode
@@ -33,22 +34,23 @@ def phylogenetic_ctf(table: biom.Table,
                          TreeNode, biom.Table):
 
     # run CTF helper and parse output for QIIME
-    helper_results = phylo_ctf_helper(table,
-                                      phylogeny,
-                                      sample_metadata,
-                                      individual_id_column,
-                                      [state_column],
-                                      n_components,
-                                      min_sample_count,
-                                      min_feature_count,
-                                      min_depth,
-                                      min_splits,
-                                      max_postlevel,
-                                      max_iterations_als,
-                                      max_iterations_rptm,
-                                      n_initializations,
-                                      feature_metadata)
-    state_ordn, ord_res, dists, straj, ftraj, phylogeny, counts_by_node = helper_results
+    helper_results = phylogenetic_ctf_helper(table,
+                                             phylogeny,
+                                             sample_metadata,
+                                             individual_id_column,
+                                             [state_column],
+                                             n_components,
+                                             min_sample_count,
+                                             min_feature_count,
+                                             min_depth,
+                                             min_splits,
+                                             max_postlevel,
+                                             max_iterations_als,
+                                             max_iterations_rptm,
+                                             n_initializations,
+                                             feature_metadata)
+    (state_ordn, ord_res, dists, straj,
+     ftraj, phylogeny, counts_by_node) = helper_results
     # save only first state (QIIME can't handle a list yet)
     dists = list(dists.values())[0]
     straj = list(straj.values())[0]
@@ -78,21 +80,22 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                 TreeNode, biom.Table):
 
     # check the table for validity and then filter
-    process_results  = ctf_table_processing(table,
-                                            sample_metadata,
-                                            individual_id_column,
-                                            state_column,
-                                            min_sample_count,
-                                            min_feature_count,
-                                            feature_metadata)
-    table, sample_metadata, all_sample_metadata, feature_metadata = process_results
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           state_column,
+                                           min_sample_count,
+                                           min_feature_count,
+                                           feature_metadata)
+    (table, sample_metadata,
+     all_sample_metadata, feature_metadata) = process_results
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
         = fast_unifrac(table, phylogeny, min_depth, min_splits, max_postlevel)
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T,
-                                   fids, table.ids())
-    # add feature index place holders 
+                                fids, table.ids())
+    # add feature index place holders
     # In the future maybe label by internal node clade?
     if feature_metadata is not None:
         # add rows for taxonomy missing (if given)
@@ -100,18 +103,18 @@ def phylogenetic_ctf_helper(table: biom.Table,
         append_taxon = []
         for add_node in new_internal_nodes:
             internal_label_ = ''.join(['k__; ' + add_node,
-                                    'p__; ' + add_node,
-                                    'c__; ' + add_node,
-                                    'o__; ' + add_node,
-                                    'f__; ' + add_node,
-                                    'g__; ' + add_node,
-                                    's__' + add_node])
+                                       'p__; ' + add_node,
+                                       'c__; ' + add_node,
+                                       'o__; ' + add_node,
+                                       'f__; ' + add_node,
+                                       'g__; ' + add_node,
+                                       's__' + add_node])
             confidence_ = 1.0
             append_taxon.append([internal_label_, confidence_])
         append_taxon = pd.DataFrame(append_taxon,
                                     new_internal_nodes,
-                                    ['Taxon','Confidence'])
-        feature_metadata = pd.concat([feature_metadata, append_taxon]) 
+                                    ['Taxon', 'Confidence'])
+        feature_metadata = pd.concat([feature_metadata, append_taxon])
     # build the tensor object and factor - return results
     tensal_results = tensals_helper(counts_by_node,
                                     sample_metadata,
@@ -181,14 +184,15 @@ def ctf_helper(table: biom.Table,
                    OrdinationResults, OrdinationResults,
                    DistanceMatrix, DataFrame, DataFrame):
     # check the table for validity and then filter
-    process_results  = ctf_table_processing(table,
-                                            sample_metadata,
-                                            individual_id_column,
-                                            state_column,
-                                            min_sample_count,
-                                            min_feature_count,
-                                            feature_metadata)
-    table, sample_metadata, all_sample_metadata, feature_metadata = process_results                                           
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           state_column,
+                                           min_sample_count,
+                                           min_feature_count,
+                                           feature_metadata)
+    (table, sample_metadata,
+     all_sample_metadata, feature_metadata) = process_results
     # build the tensor object and factor - return results
     tensal_results = tensals_helper(table,
                                     sample_metadata,

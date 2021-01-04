@@ -10,9 +10,10 @@ import qiime2.plugin
 import qiime2.sdk
 import importlib
 from gemelli import __version__
-from gemelli.ctf import ctf
-from gemelli.rpca import rpca, auto_rpca
-from gemelli.preprocessing import rclr_transformation
+from gemelli.ctf import (ctf, phylogenetic_ctf)
+from gemelli.rpca import (rpca, auto_rpca, phylogenetic_rpca)
+from gemelli.preprocessing import (rclr_transformation,
+                                   phylogenetic_rclr_transformation)
 from ._type import SampleTrajectory, FeatureTrajectory
 from ._format import TrajectoryDirectoryFormat
 from qiime2.plugin import (Properties, Int, Float, Metadata, Str)
@@ -20,34 +21,17 @@ from q2_types.ordination import PCoAResults
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
+from q2_types.tree import Phylogeny, Rooted
 from q2_types.feature_table import FeatureTable, Frequency, Composition
 from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
-                               DESC_BIN, DESC_SMETA,
+                               DESC_BIN, DESC_SMETA, DESC_TREE,
                                DESC_SUBJ, DESC_COND, DESC_INIT,
-                               DESC_ITERATIONSRTPM,
-                               QLOAD, QDIST, QORD, QSOAD,
-                               DESC_MSC, DESC_MFC,
+                               DESC_ITERATIONSRTPM, DESC_MINDEPTH,
+                               DESC_MINSPLIT, DESC_MINPOST,
+                               QLOAD, QDIST, QORD, QSOAD, QRCLR,
+                               DESC_MSC, DESC_MFC, QBIPLOT,
+                               QTREE, QTREECOUNT, QADIST,
                                DESC_ITERATIONS, DESC_MFF)
-
-PARAMETERS = {'sample_metadata': Metadata,
-              'individual_id_column': Str,
-              'state_column': Str,
-              'n_components': Int,
-              'min_sample_count': Int,
-              'min_feature_count': Int,
-              'max_iterations_als': Int,
-              'max_iterations_rptm': Int,
-              'n_initializations': Int,
-              'feature_metadata': Metadata}
-PARAMETERDESC = {'sample_metadata': DESC_SMETA,
-                 'individual_id_column': DESC_SUBJ,
-                 'state_column': DESC_COND,
-                 'n_components': DESC_COMP,
-                 'min_sample_count': DESC_MSC,
-                 'min_feature_count': DESC_MFC,
-                 'max_iterations_als': DESC_ITERATIONSALS,
-                 'max_iterations_rptm': DESC_ITERATIONSRTPM,
-                 'n_initializations': DESC_INIT}
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -70,28 +54,71 @@ plugin.methods.register_function(
     outputs=[('rclr_table', FeatureTable[Composition])],
     input_descriptions={'table': DESC_BIN},
     parameter_descriptions=None,
-    output_descriptions={'rclr_table': 'A rclr transformed table. '
-                                       'Note: zero/missing values have NaNs'},
-    name='Robust centered log-ratio (rclr) transformation.'
-         'Note: This is run automatically '
-         ' within CTF/RPCA/Auto-RPCA so there no '
-         'need to run rclr before those functions.',
+    output_descriptions={'rclr_table': QRCLR},
+    name=('Robust centered log-ratio (rclr) transformation.'
+          'Note: This is run automatically '
+          'within CTF/RPCA/Auto-RPCA so there no '
+          'need to run rclr before those functions.'),
     description=("A robust centered log-ratio transformation of only "
                  "the observed values (non-zero) of the input table."),
     citations=[citations['Martino2019']]
 )
 
 plugin.methods.register_function(
+    function=phylogenetic_rclr_transformation,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'min_depth': Int,
+                'min_splits': Int,
+                'max_postlevel': Int},
+    outputs=[('counts_by_node', FeatureTable[Frequency]),
+             ('rclr_table', FeatureTable[Composition]),
+             ('counts_by_node_tree', Phylogeny[Rooted])],
+    input_descriptions={'table': DESC_BIN,
+                        'phylogeny': DESC_TREE},
+    parameter_descriptions={'min_depth': DESC_MINDEPTH,
+                            'min_splits': DESC_MINSPLIT,
+                            'max_postlevel': DESC_MINPOST},
+    output_descriptions={'counts_by_node': QTREECOUNT,
+                         'rclr_table': QRCLR,
+                         'counts_by_node_tree': QTREE},
+    name=('Phylogenetic Robust centered log-ratio (rclr) transformation.'
+          'Note: This is run automatically '
+          'within phylogenetic-CTF/RPCA so there no '
+          'need to run rclr before those functions.'),
+    description=("A phylogenetic robust centered log-ratio transformation "
+                 "of only the observed values (non-zero) of the input table."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
     function=ctf,
     inputs={'table': FeatureTable[Frequency]},
-    parameters=PARAMETERS,
+    parameters={'sample_metadata': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'max_iterations_als': Int,
+                'max_iterations_rptm': Int,
+                'n_initializations': Int,
+                'feature_metadata': Metadata},
     outputs=[('subject_biplot', PCoAResults % Properties("biplot")),
              ('state_biplot', PCoAResults % Properties("biplot")),
              ('distance_matrix', DistanceMatrix),
              ('state_subject_ordination', SampleData[SampleTrajectory]),
              ('state_feature_ordination', FeatureData[FeatureTrajectory])],
     input_descriptions={'table': DESC_BIN},
-    parameter_descriptions=PARAMETERDESC,
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_COND,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'max_iterations_als': DESC_ITERATIONSALS,
+                            'max_iterations_rptm': DESC_ITERATIONSRTPM,
+                            'n_initializations': DESC_INIT},
     output_descriptions={'subject_biplot': QLOAD,
                          'state_biplot': QSOAD,
                          'distance_matrix': QDIST,
@@ -110,34 +137,80 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
+    function=phylogenetic_ctf,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'sample_metadata': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_depth': Int,
+                'min_splits': Int,
+                'max_postlevel': Int,
+                'max_iterations_als': Int,
+                'max_iterations_rptm': Int,
+                'n_initializations': Int,
+                'feature_metadata': Metadata},
+    outputs=[('subject_biplot', PCoAResults % Properties("biplot")),
+             ('state_biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix),
+             ('state_subject_ordination', SampleData[SampleTrajectory]),
+             ('state_feature_ordination', FeatureData[FeatureTrajectory]),
+             ('counts_by_node_tree', Phylogeny[Rooted]),
+             ('counts_by_node', FeatureTable[Frequency])],
+    input_descriptions={'table': DESC_BIN,
+                        'phylogeny': DESC_TREE},
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_COND,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_depth': DESC_MINDEPTH,
+                            'min_splits': DESC_MINSPLIT,
+                            'max_postlevel': DESC_MINPOST,
+                            'max_iterations_als': DESC_ITERATIONSALS,
+                            'max_iterations_rptm': DESC_ITERATIONSRTPM,
+                            'n_initializations': DESC_INIT},
+    output_descriptions={'subject_biplot': QLOAD,
+                         'state_biplot': QSOAD,
+                         'distance_matrix': QDIST,
+                         'state_subject_ordination': QORD,
+                         'state_feature_ordination': QORD,
+                         'counts_by_node_tree': QTREE,
+                         'counts_by_node': QTREECOUNT},
+    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
+         'means subjects have repeated measures across only one '
+         'axis (e.g. time or space).',
+    description=("Gemelli resolves spatiotemporal subject variation and the"
+                 " biological features that separate them. In this case, a "
+                 "subject may have several paired samples, where each sample"
+                 " may be a time point. The output is akin to conventional "
+                 "beta-diversity analyses but with the paired component "
+                 "integrated in the dimensionality reduction."),
+    citations=[citations['Martino2020']]
+)
+
+plugin.methods.register_function(
     function=rpca,
     inputs={'table': FeatureTable[Frequency]},
-    parameters={
-        'n_components': Int,
-        'min_sample_count': Int,
-        'min_feature_count': Int,
-        'min_feature_frequency': Float,
-        'max_iterations': Int,
-    },
-    outputs=[
-        ('biplot', PCoAResults % Properties("biplot")),
-        ('distance_matrix', DistanceMatrix)
-    ],
-    input_descriptions={
-        'table': 'Input table of counts.',
-    },
-    parameter_descriptions={
-        'n_components': DESC_COMP,
-        'min_sample_count': DESC_MSC,
-        'min_feature_count': DESC_MFC,
-        'min_feature_frequency': DESC_MFF,
-        'max_iterations': DESC_ITERATIONS,
-    },
-    output_descriptions={
-        'biplot': ('A biplot of the (Robust Aitchison) RPCA feature loadings'),
-        'distance_matrix': ('The Aitchison distance of'
-                            ' the sample loadings from RPCA.')
-    },
+    parameters={'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'max_iterations': Int},
+    outputs=[('biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix)],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations': DESC_ITERATIONS},
+    output_descriptions={'biplot': QBIPLOT,
+                         'distance_matrix': QADIST},
     name='(Robust Aitchison) RPCA with manually chosen n_components.',
     description=("Performs robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
@@ -146,32 +219,59 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
-    function=auto_rpca,
-    inputs={'table': FeatureTable[Frequency]},
-    parameters={
-        'min_sample_count': Int,
-        'min_feature_count': Int,
-        'min_feature_frequency': Float,
-        'max_iterations': Int,
-    },
+    function=phylogenetic_rpca,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'min_depth': Int,
+                'min_splits': Int,
+                'max_postlevel': Int,
+                'max_iterations': Int},
     outputs=[
         ('biplot', PCoAResults % Properties("biplot")),
-        ('distance_matrix', DistanceMatrix)
-    ],
-    input_descriptions={
-        'table': 'Input table of counts.',
-    },
-    parameter_descriptions={
-        'min_sample_count': DESC_MSC,
-        'min_feature_count': DESC_MFC,
-        'min_feature_frequency': DESC_MFF,
-        'max_iterations': DESC_ITERATIONS,
-    },
+        ('distance_matrix', DistanceMatrix),
+        ('counts_by_node_tree', Phylogeny[Rooted]),
+        ('counts_by_node', FeatureTable[Frequency])],
+    input_descriptions={'table': DESC_BIN, 'phylogeny': DESC_TREE},
+    parameter_descriptions={'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'min_depth': DESC_MINDEPTH,
+                            'min_splits': DESC_MINSPLIT,
+                            'max_postlevel': DESC_MINPOST,
+                            'max_iterations': DESC_ITERATIONS},
     output_descriptions={
-        'biplot': ('A biplot of the (Robust Aitchison) RPCA feature loadings'),
-        'distance_matrix': ('The Aitchison distance of'
-                            ' the sample loadings from RPCA.')
-    },
+        'biplot': QBIPLOT,
+        'distance_matrix': QADIST,
+        'counts_by_node_tree': QTREE,
+        'counts_by_node': QTREECOUNT},
+    name='Phylogenetic (Robust Aitchison) RPCA.',
+    description=("Performs phylogenetic robust center log-ratio transform "
+                 "robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD"),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=auto_rpca,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'max_iterations': Int},
+    outputs=[('biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix)],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations': DESC_ITERATIONS},
+    output_descriptions={'biplot': QBIPLOT,
+                         'distance_matrix': QADIST},
     name='(Robust Aitchison) RPCA with n_components automatically detected.',
     description=("Performs robust center log-ratio transform "
                  "robust PCA and ranks the features by the "

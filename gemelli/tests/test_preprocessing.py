@@ -59,18 +59,18 @@ class Testpreprocessing(unittest.TestCase):
         subject_ids = ['s1', 's2']
         self.phylo_table = Table(counts, feature_ids, subject_ids)
         # fully labeled tree
-        self.ids_true = ['A','B','n2','C',
-                        'D','E','n6','n7',
-                        'F','G','H','n11','n12',
-                        'n13','n14','n15']
+        self.ids_true = ['A', 'B', 'n2', 'C',
+                         'D', 'E', 'n6', 'n7',
+                         'F', 'G', 'H', 'n11', 'n12',
+                         'n13', 'n14', 'n15']
         # true lengths
         self.branch_length_true = np.array([1., 1., 3., 1., 1., 1., 3., 2.,
-                                    1., 1., 1., 4., 4., 3., 3., 0.])
+                                           1., 1., 1., 4., 4., 3., 3., 0.])
         # true vector count table
-        self.vector_counts_true = np.array([[ 2,  0,  2,  3,  3,  1,  5,  4,
+        self.vector_counts_true = np.array([[2,  0,  2,  3,  3,  1,  5,  4,
                                             2,  3,  4,  5,  4,  9,  9, 18],
-                                            [ 2,  1,  3,  4,  1,  0,  7,  1,  1,
-                                            4,  0,  5,  0,  8,  5, 13]])
+                                            [2,  1,  3,  4,  1,  0,  7,  1,
+                                            1, 4,  0,  5,  0,  8,  5, 13]])
         pass
 
     def test_closure_missing(self):
@@ -78,7 +78,7 @@ class Testpreprocessing(unittest.TestCase):
         # test a case with zeros
         cmat_res = matrix_closure(self.close_table_zero)
         npt.assert_allclose(cmat_res, self.close_true_zero)
-    
+
     def test_closure(self):
         """Test closure without zeros."""
         # test a case with zeros
@@ -115,23 +115,23 @@ class Testpreprocessing(unittest.TestCase):
         with self.assertRaises(ValueError):
             _ = fast_unifrac(self.phylo_table, self.tree_bad)
 
-    def test_fast_unifrac_branch_raises(self):
+    def test_fast_unifrac_maxpost_raises(self):
         """Test fast_unifrac ValueError max_postlevel too large."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, max_postlevel = 8)
+            _ = fast_unifrac(self.phylo_table, self.tree, max_postlevel=8)
 
-    def test_fast_unifrac_branch_raises(self):
+    def test_fast_unifrac_minsplit_raises(self):
         """Test fast_unifrac ValueError min_splits too large."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, min_splits = 5)
+            _ = fast_unifrac(self.phylo_table, self.tree, min_splits=5)
 
-    def test_fast_unifrac_branch_raises(self):
+    def test_fast_unifrac_mindepth_raises(self):
         """Test fast_unifrac ValueError min_depth too large."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, min_depth = 8)
+            _ = fast_unifrac(self.phylo_table, self.tree, min_depth=8)
 
     def test_fast_unifrac(self):
         """Test fast_unifrac table vectorized on tree."""
