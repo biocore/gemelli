@@ -2,6 +2,8 @@ import os
 import click
 from .__init__ import cli
 import pandas as pd
+from skbio import TreeNode
+from biom.util import biom_open
 from biom import load_table
 from gemelli.ctf import (ctf_helper, phylogenetic_ctf_helper)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
@@ -89,24 +91,24 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
               default=DEFAULT_COND,
               help=DESC_COND)
 def standalone_phylogenetic_ctf(in_biom: str,
-                   in_tree: str,
-                   sample_metadata_file: str,
-                   individual_id_column: str,
-                   state_column_1: str,
-                   output_dir: str,
-                   n_components: int,
-                   min_sample_count: int,
-                   min_feature_count: int,
-                   min_depth: int,
-                   min_splits: int,
-                   max_postlevel: int,
-                   max_iterations_als: int,
-                   max_iterations_rptm: int,
-                   n_initializations: int,
-                   feature_metadata_file: str,
-                   state_column_2: str,
-                   state_column_3: str,
-                   state_column_4: str) -> None:
+                                in_tree: str,
+                                sample_metadata_file: str,
+                                individual_id_column: str,
+                                state_column_1: str,
+                                output_dir: str,
+                                n_components: int,
+                                min_sample_count: int,
+                                min_feature_count: int,
+                                min_depth: int,
+                                min_splits: int,
+                                max_postlevel: int,
+                                max_iterations_als: int,
+                                max_iterations_rptm: int,
+                                n_initializations: int,
+                                feature_metadata_file: str,
+                                state_column_2: str,
+                                state_column_3: str,
+                                state_column_4: str) -> None:
     """Runs phylogenetically informed CTF with an rclr preprocessing step."""
 
     # generate state lists
@@ -145,7 +147,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
                                    max_iterations_rptm,
                                    n_initializations,
                                    feature_metadata)
-    state_ordn, ord_res, dists, straj, ftraj, phylogeny, counts_by_node  = res_
+    state_ordn, ord_res, dists, straj, ftraj, phylogeny, counts_by_node = res_
     # If it doesn't already exist, create the output directory.
     # Note that there is technically a race condition here: it's ostensibly
     # possible that some process could delete the output directory after we

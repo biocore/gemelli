@@ -21,10 +21,10 @@ DEFAULT_OPTSPACE_ITERATIONS = 5
 DEFAULT_TENSALS_MAXITER = 25
 DEFAULT_FMETA = None
 DEFAULT_COND = None
-DESC_BIN= ("The feature table containing the "
-           "samples over which metric should be computed.")
-DESC_COUNTS= ("The feature table in biom format containing the "
-              "samples over which metric should be computed.")
+DESC_BIN = ("The feature table containing the "
+            "samples over which metric should be computed.")
+DESC_COUNTS = ("The feature table in biom format containing the "
+               "samples over which metric should be computed.")
 DESC_TREE = ("Phylogenetic tree containing tip identifiers that "
              "correspond to the feature identifiers in the table. "
              "This tree can contain tip ids that are not present "
@@ -39,9 +39,9 @@ DESC_MINSPLIT = ("Minimum number of total number of "
                  "Default value of zero will retain all nodes "
                  "(including tips).")
 DESC_MINPOST = ("Minimum allowable max postlevel "
-                 "splits to include a node. "
-                 "Default value of zero will retain all nodes "
-                 "(including tips).")
+                "splits to include a node. "
+                "Default value of zero will retain all nodes "
+                "(including tips).")
 DESC_COMP = ("The underlying low-rank structure."
              " The input can be an integer "
              "(suggested: 1 < rank < 10) [minimum 2]."
@@ -98,7 +98,7 @@ QSOAD = ("Compositional biplot of states as points and features as arrows."
          "and can be inflated.")
 QTREE = ("The input tree with all nodes matched in name to the features "
          "in the counts_by_node table.")
-QTREECOUNT = ("A table with all tree internal nodes as features with the " 
+QTREECOUNT = ("A table with all tree internal nodes as features with the "
               "sum of all children of that node (i.e. Fast UniFrac).")
 QBIPLOT = "A biplot of the (Robust Aitchison) RPCA feature loadings"
 QADIST = "The Aitchison distance of the sample loadings from RPCA."

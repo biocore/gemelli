@@ -31,13 +31,14 @@ def phylogenetic_rpca(table: biom.Table,
                       min_splits: int = DEFAULT_MTD,
                       max_postlevel: int = DEFAULT_MTD,
                       max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-                          OrdinationResults, DistanceMatrix, TreeNode, biom.Table):
+                          OrdinationResults, DistanceMatrix,
+                          TreeNode, biom.Table):
     """Runs phylogenetic RPCA.
 
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
     """
-    
+
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
@@ -70,7 +71,7 @@ def rpca(table: biom.Table,
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
     """
-    
+
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
@@ -79,7 +80,9 @@ def rpca(table: biom.Table,
     # Robust-clt (matrix_rclr) preprocessing
     rclr_table = matrix_rclr(table.matrix_data.toarray().T)
     # run OptSpace (RPCA)
-    ord_res, dist_res = optspace_helper(rclr_table, table.ids('observation'), table.ids())
+    ord_res, dist_res = optspace_helper(rclr_table,
+                                        table.ids('observation'),
+                                        table.ids())
 
     return ord_res, dist_res
 
@@ -202,6 +205,4 @@ def rpca_table_processing(table: biom.Table,
     if len(table.ids('observation')) != len(set(table.ids('observation'))):
         raise ValueError('Data-table contains duplicate columns')
 
-    return  table
-
-
+    return table
