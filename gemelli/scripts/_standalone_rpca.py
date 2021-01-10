@@ -59,7 +59,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
               show_default=True,
               help=DESC_ITERATIONS)
 def standalone_phylogenetic_rpca(in_biom: str,
-                                 in_tree: str,
+                                 in_phylogeny: str,
                                  output_dir: str,
                                  n_components: int,
                                  min_sample_count: int,
@@ -74,8 +74,7 @@ def standalone_phylogenetic_rpca(in_biom: str,
     # import table
     table = load_table(in_biom)
     # import phylogeny
-    with in_tree.open() as fh:
-        phylogeny = TreeNode.read(fh, format='newick')
+    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # run the RPCA wrapper
     phylo_res_ = _phylo_rpca(table,
                              phylogeny,
@@ -103,7 +102,7 @@ def standalone_phylogenetic_rpca(in_biom: str,
     # behavior if you specify --output-dir instead).
     ord_res.write(os.path.join(output_dir, 'ordination.txt'))
     dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
-    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.tsv'))
+    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.nwk'))
     # write the vectorized count table for Qurro / log-ratios
     with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:
         counts_by_node.to_hdf5(f, "phylo-rpca-count-table")

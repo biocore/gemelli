@@ -91,7 +91,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
               default=DEFAULT_COND,
               help=DESC_COND)
 def standalone_phylogenetic_ctf(in_biom: str,
-                                in_tree: str,
+                                in_phylogeny: str,
                                 sample_metadata_file: str,
                                 individual_id_column: str,
                                 state_column_1: str,
@@ -118,8 +118,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
     # import table
     table = load_table(in_biom)
     # import phylogeny
-    with in_tree.open() as fh:
-        phylogeny = TreeNode.read(fh, format='newick')
+    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # import sample metadata
     sample_metadata = pd.read_csv(sample_metadata_file,
                                   sep='\t', index_col=0,
@@ -185,7 +184,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
                 (str(condition))),
             sep='\t')
     # export phylogeny
-    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.tsv'))
+    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.nwk'))
     # write the vectorized count table for Qurro / log-ratios
     with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:
         counts_by_node.to_hdf5(f, "phylo-rpca-count-table")
