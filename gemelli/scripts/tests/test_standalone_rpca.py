@@ -1,5 +1,7 @@
 import unittest
 import pandas as pd
+from skbio import TreeNode
+from biom import load_table
 from os.path import sep as os_path_sep
 from click.testing import CliRunner
 from skbio import OrdinationResults
@@ -39,6 +41,68 @@ class Test_standalone_rpca(unittest.TestCase):
         ord_exp = OrdinationResults.read(get_data_path(
                                          'expected-est-ordination.txt',
                                          subfolder='rpca_data'))
+
+        # Check that the distance matrix matches our expectations
+        assert_array_almost_equal(dist_res.values, dist_exp.values)
+
+        # Check that the ordination results match our expectations -- checking
+        # each value for both features and samples
+        assert_ordinationresults_equal(ord_res, ord_exp)
+
+        # Lastly, check that gemelli's exit code was 0 (indicating success)
+        CliTestCase().assertExitCode(0, result)
+
+    def test_standalone_phylogenetic_rpca(self):
+        """Checks the output gemelli's phylogenetic RPCA standalone script.
+
+           This is more of an "integration test" than a unit test -- the
+           details of the algorithm used by the standalone RPCA script are
+           checked in more detail in gemelli/tests/test_optspace.py, etc.
+        """
+        in_ = get_data_path('test.biom', subfolder='rpca_data')
+        in_tree_ = get_data_path('tree.nwk', subfolder='rpca_data')
+        out_ = os_path_sep.join(in_.split(os_path_sep)[:-1])
+        runner = CliRunner()
+        result = runner.invoke(sdc.commands['phylogenetic-rpca'],
+                               ['--in-biom', in_,
+                                '--in-phylogeny', in_tree_,
+                                '--output-dir', out_])
+        # Read the results
+        dist_res = pd.read_csv(get_data_path('distance-matrix.tsv',
+                                             subfolder='rpca_data'),
+                               sep='\t',
+                               index_col=0)
+        ord_res = OrdinationResults.read(get_data_path('ordination.txt',
+                                                       subfolder='rpca_data'))
+        tree_res = TreeNode.read(get_data_path('labeled-phylogeny.nwk',
+                                               subfolder='rpca_data'),
+                                 format='newick')
+        bt_res = load_table(get_data_path('phylo-table.biom',
+                                          subfolder='rpca_data'))
+
+        # Read the expected results
+        dist_exp = get_data_path('expected-phylo-distance-matrix.tsv',
+                                 subfolder='rpca_data')
+        dist_exp = pd.read_csv(dist_exp, sep='\t', index_col=0)
+        ord_exp = get_data_path('expected-phylo-ordination.txt',
+                                subfolder='rpca_data')
+        ord_exp = OrdinationResults.read(ord_exp)
+        tree_exp = get_data_path('expected-labeled-phylogeny.nwk',
+                                 subfolder='rpca_data')
+        tree_exp = TreeNode.read(tree_exp,
+                                 format='newick')
+        bt_exp = load_table(get_data_path('phylo-table.biom',
+                            subfolder='rpca_data'))
+
+        # check table values match
+        assert_array_almost_equal(bt_res.matrix_data.toarray(),
+                                  bt_exp.matrix_data.toarray())
+
+        # check renamed names are consistent
+        name_check_ = [x.name == y.name for x, y in zip(tree_res.postorder(),
+                                                        tree_exp.postorder())]
+        name_check_ = all(name_check_)
+        self.assertEqual(name_check_, True)
 
         # Check that the distance matrix matches our expectations
         assert_array_almost_equal(dist_res.values, dist_exp.values)
