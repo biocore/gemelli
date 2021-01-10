@@ -13,7 +13,7 @@ from gemelli.scripts._standalone_ctf import (standalone_ctf,
                                              standalone_phylogenetic_ctf)
 
 
-class Test_standalone_rpca(unittest.TestCase):
+class Test_standalone_ctf(unittest.TestCase):
     def setUp(self):
         pass
 
@@ -109,11 +109,9 @@ class Test_standalone_rpca(unittest.TestCase):
             get_data_path('context-features-ordination.tsv'),
             sep='\t',
             index_col=0)
-        bt_res = get_data_path('phylo-table.biom',
-                               subfolder='rpca_data')
+        bt_res = get_data_path('phylogenetic-table.biom')
         bt_res = load_table(bt_res)
-        tree_res = get_data_path('expected-labeled-phylogeny.nwk',
-                                 subfolder='rpca_data')
+        tree_res = get_data_path('expected-labeled-phylogeny.nwk')
         tree_res = TreeNode.read(tree_res,
                                  format='newick')
         # Read the expected results
@@ -125,10 +123,8 @@ class Test_standalone_rpca(unittest.TestCase):
             get_data_path('expected-phylo-context-features-ordination.tsv'),
             sep='\t',
             index_col=0)
-        bt_exp = load_table(get_data_path('expected-phylo-table.biom',
-                                          subfolder='rpca_data'))
-        tree_exp = get_data_path('expected-labeled-phylogeny.nwk',
-                                 subfolder='rpca_data')
+        bt_exp = load_table(get_data_path('expected-phylo-table.biom'))
+        tree_exp = get_data_path('expected-labeled-phylogeny.nwk')
         tree_exp = TreeNode.read(tree_exp,
                                  format='newick')
         # Check that the distance matrix matches our expectations

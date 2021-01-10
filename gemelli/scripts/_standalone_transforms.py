@@ -20,7 +20,7 @@ from gemelli._defaults import DESC_COUNTS, DESC_TREE
               help='Location of output table.',
               required=True)
 def standalone_phylogenetic_rclr(in_biom: str,
-                                 in_tree: str,
+                                 in_phylogeny: str,
                                  output_dir: str) -> None:
     """
     Runs phylogenetic robust centered log-ratio transformation.
@@ -33,8 +33,7 @@ def standalone_phylogenetic_rclr(in_biom: str,
     # import table
     table = load_table(in_biom)
     # import phylogeny
-    with in_tree.open() as fh:
-        phylogeny = TreeNode.read(fh, format='newick')
+    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # run vectorized table and rclr transform
     res_ = phylogenetic_rclr_transformation(table, phylogeny)
     counts_by_node, rclr_table, phylogeny = res_
@@ -48,13 +47,13 @@ def standalone_phylogenetic_rclr(in_biom: str,
     os.makedirs(output_dir, exist_ok=True)
 
     # write files to output directory
-    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.tsv'))
-    out_path = os.path.join(output_dir, 'phylo-rclr-table.biom')
+    phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.nwk'))
+    out_path = os.path.join(output_dir, 'phylogenetic-rclr-table.biom')
     with biom_open(out_path, 'w') as wf:
-        rclr_table.to_hdf5(wf, "phylo-rclr-table")
-    out_path = os.path.join(output_dir, 'phylo-count-table.biom')
+        rclr_table.to_hdf5(wf, "phylogenetic-rclr-table")
+    out_path = os.path.join(output_dir, 'phylogenetic-count-table.biom')
     with biom_open(out_path, 'w') as wf:
-        counts_by_node.to_hdf5(wf, "phylo-table")
+        counts_by_node.to_hdf5(wf, "phylogenetic-table")
 
 
 @cli.command(name='rclr')
