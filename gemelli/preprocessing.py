@@ -202,9 +202,8 @@ def phylogenetic_rclr_transformation(table: Table,
     # Robust-clt (matrix_rclr) preprocessing
     rclr_table = matrix_rclr(counts_by_node, branch_lengths=branch_lengths)
     # import transformed matrix into biom.Table
-    rclr_table = Table(rclr_table,
-                       table.ids('observation'),
-                       table.ids('sample'))
+    rclr_table = Table(rclr_table.T,
+                       fids, table.ids('sample'))
     # import expanded matrix into biom.Table
     counts_by_node = Table(counts_by_node.T,
                            fids, table.ids())
