@@ -186,8 +186,10 @@ def standalone_phylogenetic_ctf(in_biom: str,
     # export phylogeny
     phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.nwk'))
     # write the vectorized count table for Qurro / log-ratios
-    with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:
-        counts_by_node.to_hdf5(f, "phylo-rpca-count-table")
+    table_out_path = os.path.join(output_dir,
+                                  'phylogenetic-table.biom')
+    with biom_open(table_out_path, 'w') as f:
+        counts_by_node.to_hdf5(f, "phylogenetic-rpca-count-table")
 
 
 @cli.command(name='ctf')
