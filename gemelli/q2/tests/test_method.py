@@ -26,13 +26,10 @@ def create_test_table(include_phylogeny=False):
         in_table = get_data_path('test-small.biom')
         in_meta = get_data_path('test-small.tsv')
         in_tree = get_data_path('test-small-tree.nwk')
-
-        return in_table, in_meta, in_tree    
-    
+        return in_table, in_meta, in_tree
     else:
         in_table = get_data_path('test-small.biom')
         in_meta = get_data_path('test-small.tsv')
-
         return in_table, in_meta
 
 
@@ -131,8 +128,13 @@ class Test_qiime2_ctf(unittest.TestCase):
                                 'context',
                                 '--output-dir',
                                 self.out_])
-        # check exit code was 0 (indicating success)
-        self.assertEqual(result.exit_code, 0)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
         # ...and read in the resulting output files. This code was derived from
         # test_standalone_ctf() elsewhere in gemelli's codebase.
         samp_res = read_csv(
@@ -159,11 +161,11 @@ class Test_qiime2_ctf(unittest.TestCase):
         """
 
         # Run gemelli through QIIME 2 (specifically, the Artifact API)
-        res = q2gemelli.actions.phylogenetic_ctf(table=self.q2table,
-                                                 phylogeny=self.q2phylogeny,
-                                                 sample_metadata=self.q2meta,
-                                                 individual_id_column=self.subj,
-                                                 state_column=self.state)
+        res = q2gemelli.actions.phylogenetic_ctf(self.q2table,
+                                                 self.q2phylogeny,
+                                                 self.q2meta,
+                                                 self.subj,
+                                                 self.state)
         oqza, osqza, dqza, sqza, fqza, tree, ctable = res
         # Get the underlying data from these artifacts
         q2straj = sqza.view(pd.DataFrame)
@@ -191,8 +193,13 @@ class Test_qiime2_ctf(unittest.TestCase):
                                 'context',
                                 '--output-dir',
                                 self.out_])
-        # check exit code was 0 (indicating success)
-        self.assertEqual(result.exit_code, 0)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
         # ...and read in the resulting output files. This code was derived from
         # test_standalone_ctf() elsewhere in gemelli's codebase.
         samp_res = read_csv(

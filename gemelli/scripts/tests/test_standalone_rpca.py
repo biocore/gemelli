@@ -49,8 +49,13 @@ class Test_standalone_rpca(unittest.TestCase):
         # each value for both features and samples
         assert_ordinationresults_equal(ord_res, ord_exp)
 
-        # Lastly, check that gemelli's exit code was 0 (indicating success)
-        CliTestCase().assertExitCode(0, result)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
     def test_standalone_phylogenetic_rpca(self):
         """Checks the output gemelli's phylogenetic RPCA standalone script.
@@ -111,8 +116,13 @@ class Test_standalone_rpca(unittest.TestCase):
         # each value for both features and samples
         assert_ordinationresults_equal(ord_res, ord_exp)
 
-        # Lastly, check that gemelli's exit code was 0 (indicating success)
-        CliTestCase().assertExitCode(0, result)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
     def test_standalone_rpca(self):
         """Checks the output produced by gemelli's RPCA standalone script.
@@ -150,8 +160,13 @@ class Test_standalone_rpca(unittest.TestCase):
         # each value for both features and samples
         assert_ordinationresults_equal(ord_res, ord_exp)
 
-        # Lastly, check that gemelli's exit code was 0 (indicating success)
-        CliTestCase().assertExitCode(0, result)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
     def test_standalone_rpca_n_components(self):
         """Tests the standalone RPCA script when n_components is 2
@@ -168,6 +183,13 @@ class Test_standalone_rpca(unittest.TestCase):
         CliTestCase().assertExitCode(0, result)
         ord_res = OrdinationResults.read(get_data_path('ordination.txt',
                                                        subfolder='rpca_data'))
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
         # check it contains three axis
         if len(ord_res.proportion_explained) == 3:
             pass

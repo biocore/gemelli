@@ -99,12 +99,12 @@ class Test_qiime2_rclr(unittest.TestCase):
         q2_table_test = Artifact.import_data("FeatureTable[Frequency]",
                                              table_test)
         tree_test = TreeNode.read(in_tree,
-                                  format='newick')                           
+                                  format='newick')
         q2_tree_test = Artifact.import_data("Phylogeny[Rooted]",
                                             tree_test)
         q2_res = phylogenetic_rclr_transformation(q2_table_test,
                                                   q2_tree_test)
-        cbn_table , cbn_rclr_table, cbn_tree = q2_res
+        cbn_table, cbn_rclr_table, cbn_tree = q2_res
         q2tree = cbn_tree.view(TreeNode)
         q2cbn_table = cbn_table.view(Table)
         q2cbn_rclr_table = cbn_rclr_table.view(Table)
