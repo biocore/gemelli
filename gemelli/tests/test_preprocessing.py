@@ -5,8 +5,10 @@ from biom import Table
 from skbio import TreeNode
 import numpy.testing as npt
 from skbio.stats.composition import clr
-from gemelli.preprocessing import (build, tensor_rclr, matrix_closure,
-                                   matrix_rclr, fast_unifrac)
+from gemelli.preprocessing import (build, tensor_rclr,
+                                   matrix_closure,
+                                   matrix_rclr, fast_unifrac,
+                                   calc_split_metrics)
 
 
 class Testpreprocessing(unittest.TestCase):
@@ -144,6 +146,66 @@ class Testpreprocessing(unittest.TestCase):
         npt.assert_allclose(branch_lengths_res,
                             self.branch_length_true)
         self.assertListEqual(fids_res, self.ids_true)
+
+    def test_calc_split_metrics(self):
+        """
+        Test tree metric calculations.
+        Original function comes from
+        https://github.com/biocore/wol
+        kindly provided here by Qiyun Zhu.
+        Example from Fig. 9a of Puigbo, et al., 2009, J Biol.
+                                                /-A
+                                      /n9------|
+                            /n8------|          \\-B
+                           |         |
+                  /n4------|          \\-C
+                 |         |
+                 |         |          /-D
+                 |          \n7------|
+                 |                    \\-E
+                 |
+                 |                    /-F
+        -n1------|          /n6------|
+                 |         |          \\-G
+                 |-n3------|
+                 |         |          /-H
+                 |          \n5------|
+                 |                    \\-I
+                 |
+                 |          /-J
+                  \n2------|
+                            \\-K
+        """
+        tree = TreeNode.read([
+            '((((A,B)n9,C)n8,(D,E)n7)n4,((F,G)n6,(H,I)n5)n3,(J,K)n2)n1;'
+        ])
+        calc_split_metrics(tree)
+        obs = {x.name: [getattr(x, y) for y in
+                        ('n', 'splits', 'postlevels')]
+               for x in tree.traverse()}
+        exp = {
+            'n1': [11, 9, [5, 5, 4, 4, 4, 4, 4, 4, 4, 3, 3]],
+            'n4': [5, 4, [4, 4, 3, 3, 3]],
+            'n3': [4, 3, [3, 3, 3, 3]],
+            'n2': [2, 1, [2, 2]],
+            'n8': [3, 2, [3, 3, 2]],
+            'n7': [2, 1, [2, 2]],
+            'n6': [2, 1, [2, 2]],
+            'n5': [2, 1, [2, 2]],
+            'J': [1, 0, [1]],
+            'K': [1, 0, [1]],
+            'n9': [2, 1, [2, 2]],
+            'C': [1, 0, [1]],
+            'D': [1, 0, [1]],
+            'E': [1, 0, [1]],
+            'F': [1, 0, [1]],
+            'G': [1, 0, [1]],
+            'H': [1, 0, [1]],
+            'I': [1, 0, [1]],
+            'A': [1, 0, [1]],
+            'B': [1, 0, [1]]
+        }
+        self.assertDictEqual(obs, exp)
 
     def test_build(self):
         """Test building a tensor from metadata (multi-mode) & matrix_rclr."""
