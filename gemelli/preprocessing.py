@@ -369,7 +369,9 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
 
 def calc_split_metrics(tree):
     """Calculate topology split-related metrics.
-    Parameters
+    Parameters. Original function comes from
+    https://github.com/biocore/wol
+    kindly provided here by Qiyun Zhu.
     ----------
     tree : skbio.TreeNode
         tree to calculate metrics
