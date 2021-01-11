@@ -1,18 +1,21 @@
 import unittest
-from os.path import sep as os_path_sep
 import numpy as np
+import pandas as pd
 from pandas import read_csv
-from biom import Table
-from skbio import OrdinationResults
-from skbio.stats.distance import DistanceMatrix
-from skbio.util import get_data_path
 from qiime2 import Artifact
-from qiime2.plugins import gemelli as q2gemelli
+from click.testing import CliRunner
+from nose.tools import nottest
+from biom import Table, load_table
+from skbio.util import get_data_path
+from os.path import sep as os_path_sep
 from gemelli.rpca import rpca, auto_rpca
 from gemelli.scripts.__init__ import cli as sdc
 from gemelli.simulations import build_block_model
-from click.testing import CliRunner
-from nose.tools import nottest
+from qiime2.plugins import gemelli as q2gemelli
+from skbio import OrdinationResults, TreeNode
+from skbio.stats.distance import DistanceMatrix
+from numpy.testing import assert_array_almost_equal
+from gemelli.testing import assert_ordinationresults_equal
 
 
 @nottest
@@ -89,9 +92,9 @@ class Test_qiime2_rpca(unittest.TestCase):
         tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
 
         # Run gemelli outside of QIIME 2...
-        CliRunner().invoke(sdc.commands['auto-rpca'],
-                           ['--in-biom', q2table_loc,
-                           '--output-dir', tstdir_absolute])
+        result = CliRunner().invoke(sdc.commands['auto-rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--output-dir', tstdir_absolute])
         # ...and read in the resulting output files. This code was derived from
         # test_standalone_rpca() elsewhere in gemelli's codebase.
         # stordination = OrdinationResults.read(get_data_path('ordination.txt',
@@ -111,6 +114,13 @@ class Test_qiime2_rpca(unittest.TestCase):
         # Finaly: actually check the consistency of Q2 and standalone results!
         np.testing.assert_array_almost_equal(q2distmatrix_values,
                                              stdistmatrix_values)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
     def test_qiime2_rpca(self):
         """Tests that the Q2 and standalone RPCA results match."""
@@ -132,9 +142,9 @@ class Test_qiime2_rpca(unittest.TestCase):
         tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
 
         # Run gemelli outside of QIIME 2...
-        CliRunner().invoke(sdc.commands['rpca'],
-                           ['--in-biom', q2table_loc,
-                            '--output-dir', tstdir_absolute])
+        result = CliRunner().invoke(sdc.commands['rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--output-dir', tstdir_absolute])
         # ...and read in the resulting output files. This code was derived from
         # test_standalone_rpca() elsewhere in gemelli's codebase.
         # stordination = OrdinationResults.read(get_data_path('ordination.txt',
@@ -154,6 +164,13 @@ class Test_qiime2_rpca(unittest.TestCase):
         # Finaly: actually check the consistency of Q2 and standalone results!
         np.testing.assert_array_almost_equal(q2distmatrix_values,
                                              stdistmatrix_values)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
         # NOTE: This functionality is currently not used due to the inherent
         # randomness in how the test table data is generated (and also because
@@ -173,6 +190,70 @@ class Test_qiime2_rpca(unittest.TestCase):
         # assert_gemelli_ordinationresults_equal(q2ordination, exordination)
         # np.testing.assert_array_almost_equal(q2distmatrix_values,
         #                                      exdistmatrix_values)
+
+    def test_qiime2_phylogenetic_rpca(self):
+        """Tests that the Q2 & standalone phylogenetic RPCA match."""
+
+        in_table = get_data_path('test.biom')
+        in_tree = get_data_path('tree.nwk')
+        out_ = os_path_sep.join(in_table.split(os_path_sep)[:-1])
+        runner = CliRunner()
+        result = runner.invoke(sdc.commands['phylogenetic-rpca'],
+                               ['--in-biom', in_table,
+                                '--in-phylogeny', in_tree,
+                                '--output-dir', out_])
+        # Read the results
+        dist_res = pd.read_csv(get_data_path('distance-matrix.tsv'),
+                               sep='\t',
+                               index_col=0)
+        ord_res = OrdinationResults.read(get_data_path('ordination.txt'))
+        tree_res = TreeNode.read(get_data_path('labeled-phylogeny.nwk'),
+                                 format='newick')
+        bt_res = load_table(get_data_path('phylo-table.biom'))
+
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        table_test = load_table(in_table)
+        q2_table_test = Artifact.import_data("FeatureTable[Frequency]",
+                                             table_test)
+        tree_test = TreeNode.read(in_tree,
+                                  format='newick')
+        q2_tree_test = Artifact.import_data("Phylogeny[Rooted]",
+                                            tree_test)
+        res = q2gemelli.actions.phylogenetic_rpca(q2_table_test,
+                                                  q2_tree_test)
+        # biplot, distance, count-tree, count-table
+        q2ord, q2dist, q2ctree, q2ctbl = res
+        # Get the underlying data from these artifacts
+        q2ord = q2ord.view(OrdinationResults)
+        q2dist = q2dist.view(DistanceMatrix)
+        q2dist = q2dist.to_data_frame()
+        q2ctree = q2ctree.view(TreeNode)
+        q2ctbl = q2ctbl.view(Table)
+
+        # check table values match
+        assert_array_almost_equal(bt_res.matrix_data.toarray(),
+                                  q2ctbl.matrix_data.toarray())
+
+        # check renamed names are consistent
+        name_check_ = [x.name == y.name for x, y in zip(tree_res.postorder(),
+                                                        q2ctree.postorder())]
+        name_check_ = all(name_check_)
+        self.assertEqual(name_check_, True)
+
+        # Check that the distance matrix matches our expectations
+        assert_array_almost_equal(dist_res.values, q2dist.values)
+
+        # Check that the ordination results match our expectations -- checking
+        # each value for both features and samples
+        assert_ordinationresults_equal(ord_res, q2ord)
+
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
 
 
 if __name__ == "__main__":
