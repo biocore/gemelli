@@ -531,6 +531,9 @@ def tenals(tensor,
             total_nonzeros = np.count_nonzero(mask[i, :, :].copy())
             n_, m_ = obs_tmp.shape
             eps_tmp = total_nonzeros / np.sqrt(n_ * m_)
+            if min(obs_tmp.shape) <= 2:
+                # two-subjects/time is already low-rank
+                continue
             if rank_estimate(obs_tmp, eps_tmp) >= (min(obs_tmp.shape) - 1):
                 warnings.warn('A component of your data may be high-rank.',
                               RuntimeWarning)

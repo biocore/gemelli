@@ -1,3 +1,11 @@
+v0.0.7 (2020-12-12)
+
+### Bug fixes
+
+* Fixes in `optspace.py` function `rank_estimate` and  `factorization.py` function `tenals`
+    * fixes two subject/state tensor
+    * added test in `test_method.py` for two subject or state tensor 
+
 v0.0.6 (2020-09-27)
 
 ### Features

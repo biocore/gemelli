@@ -406,7 +406,6 @@ def grassmann_manifold_two(U, step_size, n_components):
 
 def rank_estimate(obs, eps, k=20, lam=0.05,
                   min_rank=3, max_iter=5000):
-
     """
     This function estimates the rank of a
     sparse matrix (i.e. with missing values).
@@ -440,9 +439,11 @@ def rank_estimate(obs, eps, k=20, lam=0.05,
            Conference on Communication, Control,
            and Computing (Allerton) 1216–1222 (2009).
     """
-
     # dim. of the data
     n, m = obs.shape
+    # ensure rank worth estimating
+    if min(n, m) <= 2:
+        return min_rank
     # get N-singular values
     s = svds(obs,  min(k, n, m) - 1, which='LM',
              return_singular_vectors=False)[::-1]

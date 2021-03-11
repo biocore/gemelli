@@ -33,41 +33,54 @@ class Testctf(unittest.TestCase):
         self.in_table, self.in_meta = create_test_table()
         self.subj = 'host_subject_id'
         self.state = 'context'
+        self.biom_table = load_table(self.in_table)
+        self.meta_table = read_csv(self.in_meta, sep='\t', index_col=0)
+        # make metadata subjects and two-time
+        self.meta_table_two_time = self.meta_table.iloc[:22, :].copy()
+        self.meta_table_two_time[self.state] = [0] * 11 + [1] * 11
+        self.meta_table_two_time[self.subj] = [i for i in range(11)] * 2
 
     def test_ctf(self):
         """Tests the basic validity of the actual ctf() method's outputs."""
-        self.biom_table = load_table(self.in_table)
-        self.meta_table = read_csv(self.in_meta, sep='\t', index_col=0)
-        ord1, ord2, disttst, stst, ftst = ctf(table=self.biom_table,
-                                              sample_metadata=self.meta_table,
-                                              individual_id_column=self.subj,
-                                              state_column=self.state)
-        # Validate types of the ctf outputs
-        self.assertIsInstance(ord1, OrdinationResults)
-        self.assertIsInstance(ord2, OrdinationResults)
-        self.assertIsInstance(disttst, DistanceMatrix)
-        self.assertIsInstance(stst, pd.DataFrame)
-        self.assertIsInstance(ftst, pd.DataFrame)
-        # Ensure that no NaNs are in the OrdinationResults
-        # NOTE that we have to use the DataFrame .any() functions instead of
-        # python's built-in any() functions -- see #29 for details on this
-        self.assertFalse(np.isnan(ord1.features).any(axis=None))
-        self.assertFalse(np.isnan(ord1.samples).any(axis=None))
-        self.assertFalse(np.isnan(ord2.features).any(axis=None))
-        self.assertFalse(np.isnan(ord2.samples).any(axis=None))
+        for meta_classes in [self.meta_table, self.meta_table_two_time]:
+            res_tmp = ctf(table=self.biom_table,
+                          sample_metadata=meta_classes,
+                          individual_id_column=self.subj,
+                          state_column=self.state)
+            ord1, ord2, disttst, stst, ftst = res_tmp
+            # Validate types of the ctf outputs
+            self.assertIsInstance(ord1, OrdinationResults)
+            self.assertIsInstance(ord2, OrdinationResults)
+            self.assertIsInstance(disttst, DistanceMatrix)
+            self.assertIsInstance(stst, pd.DataFrame)
+            self.assertIsInstance(ftst, pd.DataFrame)
+            # Ensure that no NaNs are in the OrdinationResults
+            # NOTE that we have to use the DataFrame
+            # .any() functions instead of
+            # python's built-in any() functions --
+            # see #29 for details on this
+            self.assertFalse(np.isnan(ord1.features).any(axis=None))
+            self.assertFalse(np.isnan(ord1.samples).any(axis=None))
+            self.assertFalse(np.isnan(ord2.features).any(axis=None))
+            self.assertFalse(np.isnan(ord2.samples).any(axis=None))
 
 
 class Test_qiime2_ctf(unittest.TestCase):
 
     def setUp(self):
+        self.subj = 'host_subject_id'
+        self.state = 'context'
         self.in_table, self.in_meta = create_test_table()
         self.biom_table = load_table(self.in_table)
         self.q2table = Artifact.import_data("FeatureTable[Frequency]",
                                             self.biom_table)
         self.meta_table = read_csv(self.in_meta, sep='\t', index_col=0)
+        # make metadata subjects and two-time
+        self.meta_table_two_time = self.meta_table.iloc[:22, :].copy()
+        self.meta_table_two_time[self.state] = [0] * 11 + [1] * 11
+        self.meta_table_two_time[self.subj] = [i for i in range(11)] * 2
         self.q2meta = Metadata(self.meta_table)
-        self.subj = 'host_subject_id'
-        self.state = 'context'
+        self.q2meta_two_time = Metadata(self.meta_table)
         self.out_ = os_path_sep.join(self.in_table.split(os_path_sep)[:-1])
 
     def test_qiime2_ctf(self):
