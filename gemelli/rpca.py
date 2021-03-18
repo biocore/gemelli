@@ -21,7 +21,6 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
 from scipy.linalg import svd
 from q2_types.tree import NewickFormat
 from bp import parse_newick, to_skbio_treenode 
-from empress._plot_utils import get_bp
 
 
 def phylogenetic_rpca(table: biom.Table,
@@ -42,10 +41,12 @@ def phylogenetic_rpca(table: biom.Table,
        gemelli.
     """
 
-    # loads NewickFormat tree as bp.BP tree; loads & parses tree faster
-    phylogeny = get_bp(phylogeny)
-    phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
-    phylogeny = to_skbio_treenode(phylogeny)
+    with open(str(phylogeny)) as treefile:
+        # The file will still be closed even though we return from within the
+        # with block: see https://stackoverflow.com/a/9885287/10730311.
+        phylogeny = parse_newick(treefile.readline())
+        phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
+        phylogeny = to_skbio_treenode(phylogeny)
 
     # use helper to process table
     table = rpca_table_processing(table,
