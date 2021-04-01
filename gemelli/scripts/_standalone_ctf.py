@@ -117,8 +117,6 @@ def standalone_phylogenetic_ctf(in_biom: str,
                      if state is not None]
     # import table
     table = load_table(in_biom)
-    # import phylogeny
-    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # import sample metadata
     sample_metadata = pd.read_csv(sample_metadata_file,
                                   sep='\t', index_col=0,
@@ -132,7 +130,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
         feature_metadata = None
     # run CTF
     res_ = phylogenetic_ctf_helper(table,
-                                   phylogeny,
+                                   in_phylogeny,
                                    sample_metadata,
                                    individual_id_column,
                                    state_columns,

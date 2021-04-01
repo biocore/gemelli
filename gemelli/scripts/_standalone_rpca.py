@@ -1,7 +1,6 @@
 import os
 import click
 from .__init__ import cli
-from skbio import TreeNode
 from biom import load_table
 from biom.util import biom_open
 from gemelli.rpca import rpca as _rpca
@@ -73,11 +72,9 @@ def standalone_phylogenetic_rpca(in_biom: str,
 
     # import table
     table = load_table(in_biom)
-    # import phylogeny
-    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # run the RPCA wrapper
     phylo_res_ = _phylo_rpca(table,
-                             phylogeny,
+                             in_phylogeny,
                              n_components,
                              min_sample_count,
                              min_feature_count,
