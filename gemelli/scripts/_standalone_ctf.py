@@ -2,7 +2,6 @@ import os
 import click
 from .__init__ import cli
 import pandas as pd
-from skbio import TreeNode
 from biom.util import biom_open
 from biom import load_table
 from gemelli.ctf import (ctf_helper, phylogenetic_ctf_helper)

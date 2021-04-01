@@ -1,7 +1,6 @@
 import os
 import click
 from .__init__ import cli
-from skbio import TreeNode
 from biom import load_table
 from biom.util import biom_open
 from gemelli.preprocessing import (bp_read_phylogeny,
