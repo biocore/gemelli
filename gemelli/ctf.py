@@ -4,9 +4,12 @@ import numpy as np
 import pandas as pd
 from pandas import concat
 from pandas import DataFrame
+from q2_types.tree import NewickFormat
 from skbio import OrdinationResults, DistanceMatrix, TreeNode
 from gemelli.factorization import TensorFactorization
-from gemelli.preprocessing import build, tensor_rclr, fast_unifrac
+from gemelli.preprocessing import (build, tensor_rclr,
+                                   fast_unifrac,
+                                   bp_read_phylogeny)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_MFC, DEFAULT_BL,
                                DEFAULT_MTD,
@@ -15,7 +18,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
 
 
 def phylogenetic_ctf(table: biom.Table,
-                     phylogeny: TreeNode,
+                     phylogeny: NewickFormat,
                      sample_metadata: DataFrame,
                      individual_id_column: str,
                      state_column: str,
@@ -33,6 +36,7 @@ def phylogenetic_ctf(table: biom.Table,
                          DistanceMatrix, DataFrame, DataFrame,
                          TreeNode, biom.Table):
 
+    phylogeny = bp_read_phylogeny(table, phylogeny)
     # run CTF helper and parse output for QIIME
     helper_results = phylogenetic_ctf_helper(table,
                                              phylogeny,
