@@ -13,14 +13,15 @@ import pandas as pd
 from typing import Union
 from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
-from gemelli.preprocessing import matrix_rclr, fast_unifrac
+from gemelli.preprocessing import (matrix_rclr,
+                                   fast_unifrac,
+                                   bp_read_phylogeny)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
 from q2_types.tree import NewickFormat
-from bp import parse_newick, to_skbio_treenode 
 
 
 def phylogenetic_rpca(table: biom.Table,
@@ -41,13 +42,7 @@ def phylogenetic_rpca(table: biom.Table,
        gemelli.
     """
 
-    with open(str(phylogeny)) as treefile:
-        # The file will still be closed even though we return from within the
-        # with block: see https://stackoverflow.com/a/9885287/10730311.
-        phylogeny = parse_newick(treefile.readline())
-        phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
-        phylogeny = to_skbio_treenode(phylogeny)
-
+    phylogeny = bp_read_phylogeny(table, phylogeny)
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
