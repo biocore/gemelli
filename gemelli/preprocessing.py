@@ -13,6 +13,38 @@ from skbio import TreeNode
 from .base import _BaseConstruct
 from gemelli._defaults import DEFAULT_MTD
 from skbio.diversity._util import _vectorize_counts_and_tree
+from bp import parse_newick, to_skbio_treenode
+
+
+def bp_read_phylogeny(table, phylogeny):
+    """
+    Fast way to read in phylogeny in newick
+    format and return in TreeNode format.
+
+    Parameters
+    ----------
+    table: biom.Table - a table of shape (M,N)
+        N = Features (i.e. OTUs, metabolites)
+        M = Samples
+
+    phylogeny: str - path to file/data
+                     in newick format
+
+    Examples
+    --------
+    TODO
+
+    """
+
+    # import file path
+    with open(str(phylogeny)) as treefile:
+        # The file will still be closed even though we return from within the
+        # with block: see https://stackoverflow.com/a/9885287/10730311.
+        phylogeny = parse_newick(treefile.readline())
+        phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
+        phylogeny = to_skbio_treenode(phylogeny)
+
+    return phylogeny
 
 
 def tensor_rclr(T, branch_lengths=None):
