@@ -36,7 +36,6 @@ def phylogenetic_ctf(table: biom.Table,
                          DistanceMatrix, DataFrame, DataFrame,
                          TreeNode, biom.Table):
 
-    phylogeny = bp_read_phylogeny(table, phylogeny)
     # run CTF helper and parse output for QIIME
     helper_results = phylogenetic_ctf_helper(table,
                                              phylogeny,
@@ -65,7 +64,7 @@ def phylogenetic_ctf(table: biom.Table,
 
 
 def phylogenetic_ctf_helper(table: biom.Table,
-                            phylogeny: TreeNode,
+                            phylogeny: NewickFormat,
                             sample_metadata: DataFrame,
                             individual_id_column: str,
                             state_column: list,
@@ -83,6 +82,7 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                 DistanceMatrix, DataFrame, DataFrame,
                                 TreeNode, biom.Table):
 
+    phylogeny = bp_read_phylogeny(table, phylogeny)
     # check the table for validity and then filter
     process_results = ctf_table_processing(table,
                                            sample_metadata,
