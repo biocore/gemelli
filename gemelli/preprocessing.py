@@ -38,8 +38,6 @@ def bp_read_phylogeny(table, phylogeny):
 
     # import file path
     with open(str(phylogeny)) as treefile:
-        # The file will still be closed even though we return from within the
-        # with block: see https://stackoverflow.com/a/9885287/10730311.
         phylogeny = parse_newick(treefile.readline())
         phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
         phylogeny = to_skbio_treenode(phylogeny)
