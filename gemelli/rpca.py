@@ -13,16 +13,19 @@ import pandas as pd
 from typing import Union
 from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
-from gemelli.preprocessing import matrix_rclr, fast_unifrac
+from gemelli.preprocessing import (matrix_rclr,
+                                   fast_unifrac,
+                                   bp_read_phylogeny)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
+from q2_types.tree import NewickFormat
 
 
 def phylogenetic_rpca(table: biom.Table,
-                      phylogeny: TreeNode,
+                      phylogeny: NewickFormat,
                       n_components: Union[int, str] = DEFAULT_COMP,
                       min_sample_count: int = DEFAULT_MSC,
                       min_feature_count: int = DEFAULT_MFC,
@@ -39,6 +42,7 @@ def phylogenetic_rpca(table: biom.Table,
        gemelli.
     """
 
+    phylogeny = bp_read_phylogeny(table, phylogeny)
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,

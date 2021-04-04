@@ -2,7 +2,6 @@ import os
 import click
 from .__init__ import cli
 import pandas as pd
-from skbio import TreeNode
 from biom.util import biom_open
 from biom import load_table
 from gemelli.ctf import (ctf_helper, phylogenetic_ctf_helper)
@@ -117,8 +116,6 @@ def standalone_phylogenetic_ctf(in_biom: str,
                      if state is not None]
     # import table
     table = load_table(in_biom)
-    # import phylogeny
-    phylogeny = TreeNode.read(in_phylogeny, format='newick')
     # import sample metadata
     sample_metadata = pd.read_csv(sample_metadata_file,
                                   sep='\t', index_col=0,
@@ -132,7 +129,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
         feature_metadata = None
     # run CTF
     res_ = phylogenetic_ctf_helper(table,
-                                   phylogeny,
+                                   in_phylogeny,
                                    sample_metadata,
                                    individual_id_column,
                                    state_columns,
