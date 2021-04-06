@@ -10,7 +10,6 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DEFAULT_MFC, DEFAULT_OPTSPACE_ITERATIONS,
                                DESC_COMP, DESC_MSC, DESC_MFC,
                                DESC_ITERATIONS, DESC_MINDEPTH,
-                               DESC_MINSPLIT, DESC_MINPOST,
                                DEFAULT_MFF, DESC_MFF,
                                DESC_COUNTS, DESC_TREE)
 
@@ -45,14 +44,6 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
               default=DEFAULT_MTD,
               show_default=True,
               help=DESC_MINDEPTH)
-@click.option('--min_splits',
-              default=DEFAULT_MTD,
-              show_default=True,
-              help=DESC_MINSPLIT)
-@click.option('--max_postlevel',
-              default=DEFAULT_MTD,
-              show_default=True,
-              help=DESC_MINPOST)
 @click.option('--max_iterations',
               default=DEFAULT_OPTSPACE_ITERATIONS,
               show_default=True,
@@ -65,8 +56,6 @@ def standalone_phylogenetic_rpca(in_biom: str,
                                  min_feature_count: int,
                                  min_feature_frequency: float,
                                  min_depth: int,
-                                 min_splits: int,
-                                 max_postlevel: int,
                                  max_iterations: int) -> None:
     """Runs phylogenetically informed RPCA with an rclr preprocessing step."""
 
@@ -80,8 +69,6 @@ def standalone_phylogenetic_rpca(in_biom: str,
                              min_feature_count,
                              min_feature_frequency,
                              min_depth,
-                             min_splits,
-                             max_postlevel,
                              max_iterations)
     ord_res, dist_res, phylogeny, counts_by_node = phylo_res_
     # If it doesn't already exist, create the output directory.
