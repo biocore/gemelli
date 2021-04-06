@@ -3,8 +3,7 @@ import click
 from .__init__ import cli
 from biom import load_table
 from biom.util import biom_open
-from gemelli.preprocessing import (bp_read_phylogeny,
-                                   rclr_transformation,
+from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from gemelli._defaults import DESC_COUNTS, DESC_TREE
 
@@ -32,10 +31,8 @@ def standalone_phylogenetic_rclr(in_biom: str,
 
     # import table
     table = load_table(in_biom)
-    # import phylogeny
-    phylogeny = bp_read_phylogeny(table, in_phylogeny)
     # run vectorized table and rclr transform
-    res_ = phylogenetic_rclr_transformation(table, phylogeny)
+    res_ = phylogenetic_rclr_transformation(table, in_phylogeny)
     counts_by_node, rclr_table, phylogeny = res_
 
     # If it doesn't already exist, create the output directory.
