@@ -11,25 +11,31 @@ import numpy as np
 from biom import Table
 from skbio import TreeNode
 from .base import _BaseConstruct
+from q2_types.tree import NewickFormat
 from gemelli._defaults import DEFAULT_MTD
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
 
 
-def bp_read_phylogeny(table, phylogeny):
+def bp_read_phylogeny(table: Table,
+                      phylogeny: NewickFormat,
+                      min_depth: int = DEFAULT_MTD):
     """
     Fast way to read in phylogeny in newick
-    format and return in TreeNode format.
+    format, filter, and return in TreeNode format.
 
     Parameters
     ----------
     table: biom.Table - a table of shape (M,N)
         N = Features (i.e. OTUs, metabolites)
         M = Samples
-
     phylogeny: str - path to file/data
                      in newick format
-
+    min_depth: int
+        Minimum number of total number of
+        descendants (tips) to include a node.
+        Default value of zero will retain all nodes
+        (including tips).
     Examples
     --------
     TODO
@@ -38,9 +44,15 @@ def bp_read_phylogeny(table, phylogeny):
 
     # import file path
     with open(str(phylogeny)) as treefile:
+        # read balanced parentheses tree
         phylogeny = parse_newick(treefile.readline())
-        phylogeny = phylogeny.shear(set((table.ids('observation')).flatten()))
+        # first filter out 
+        names_to_keep = set((table.ids('observation')).flatten())
+        phylogeny = phylogeny.shear(names_to_keep).collapse()
+        # convert the tree to skbio TreeNode for processing
         phylogeny = to_skbio_treenode(phylogeny)
+        # filter internal nodes based on topology
+        tree_topology_filter(phylogeny, min_depth=min_depth)
 
     return phylogeny
 
@@ -215,10 +227,8 @@ def rclr_transformation(table: Table) -> Table:
 
 
 def phylogenetic_rclr_transformation(table: Table,
-                                     phylogeny: TreeNode,
-                                     min_depth: int = DEFAULT_MTD,
-                                     min_splits: int = DEFAULT_MTD,
-                                     max_postlevel: int = DEFAULT_MTD) -> (
+                                     phylogeny: NewickFormat,
+                                     min_depth: int = DEFAULT_MTD) -> (
                                          Table, Table, TreeNode):
     """
     Takes biom table and returns fast_unifrac style
@@ -226,9 +236,14 @@ def phylogenetic_rclr_transformation(table: Table,
     transformed biom table.
 
     """
+
+    # import the tree and filter
+    phylogeny = bp_read_phylogeny(table,
+                                  phylogeny,
+                                  min_depth)
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
-        = fast_unifrac(table, phylogeny, min_depth, min_splits, max_postlevel)
+        = fast_unifrac(table, phylogeny)
     # Robust-clt (matrix_rclr) preprocessing
     rclr_table = matrix_rclr(counts_by_node, branch_lengths=branch_lengths)
     # import transformed matrix into biom.Table
@@ -278,7 +293,7 @@ def matrix_closure(mat):
     return mat.squeeze()
 
 
-def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
+def fast_unifrac(table, tree):
     """
     A wrapper to return a vectorized Fast UniFrac
     algorithm. The nodes up the tree are summed
@@ -293,21 +308,6 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
        A biom table of counts.
     tree: skbio.TreeNode
        Tree containing the features in the table.
-    min_depth: int
-        Minimum number of total number of
-        descendants (tips) to include a node.
-        Default value of zero will retain all nodes
-        (including tips).
-    min_splits: int
-        Minimum number of total number of
-        splits to include a node.
-        Default value of zero will retain all nodes
-        (including tips).
-    max_postlevel: int
-        Minimum allowable max postlevel
-        splits to include a node.
-        Default value of zero will retain all nodes
-        (including tips).
     Returns
     -------
     counts_by_node: array_like, np.float64
@@ -341,43 +341,9 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     keep_zero = counts_by_node.sum(0) > 0
     # drop zero branch_lengths (no point to keep it)
     node_branch_zero = branch_lengths.sum(0) > 0
-    # calculate node information
-    calc_split_metrics(tree)
-    # check to ensure tree filters make sense
-    if tree.root().n <= min_depth:
-        raise ValueError('min_depth is equal to tree root value, '
-                         'this will result in a table of zero '
-                         'features.')
-    if np.max(tree.root().postlevels) <= max_postlevel:
-        raise ValueError('max_postlevel is equal to max postlevel at tree'
-                         ' root, this will result in a table of zero '
-                         'features.')
-    if tree.root().splits <= min_splits:
-        raise ValueError('min_splits is equal to number of splits at tree'
-                         ' root, this will result in a table of zero '
-                         'features.')
-    # create index to filter table
-    keep_node_depth = np.array([True] * counts_by_node.shape[1])
-    keep_node_splits = np.array([True] * counts_by_node.shape[1])
-    keep_node_postlevel = np.array([True] * counts_by_node.shape[1])
-    for count_index_, node_ in tree_index['id_index'].items():
-        # total number nodes under is more than min_depth
-        filter_tmp_ = node_.n > min_depth
-        keep_node_depth[count_index_] = filter_tmp_
-        # number of splits
-        filter_tmp_ = node_.splits >= min_splits
-        keep_node_splits[count_index_] = filter_tmp_
-        # number of postlevel
-        filter_tmp_ = np.max(node_.postlevels) > max_postlevel
-        keep_node_postlevel[count_index_] = filter_tmp_
-    # get joint set of nodes to keep
-    keep_node = (keep_node_depth & keep_node_postlevel &
-                 keep_node_splits & keep_zero & node_branch_zero)
-    # check all filter
-    if sum(keep_node) == 0:
-        raise ValueError('Combined table and tree filters resulted'
-                         ' in a table of zero features.')
-    # subset the table
+    # combine filters
+    keep_node = (keep_zero & node_branch_zero)
+    # subset the table (if need, otherwise ignored)
     counts_by_node = counts_by_node[:, keep_node]
     branch_lengths = branch_lengths[keep_node]
     fids = ['n' + i for i in list(tree_index['id'][keep_node].astype(str))]
@@ -386,8 +352,9 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     tree_relabel = {tid_: tree_index['id_index'][int(tid_[1:])]
                     for tid_ in fids}
     # re-name nodes to match vectorized table
+    otu_ids_set = set(otu_ids)
     for new_id, node_ in tree_relabel.items():
-        if node_.name in otu_ids:
+        if node_.name in otu_ids_set:
             # replace table name (leaf - nondup)
             fids[fids.index(new_id)] = node_.name
         else:
@@ -397,23 +364,28 @@ def fast_unifrac(table, tree, min_depth=0, min_splits=0, max_postlevel=0):
     return counts_by_node, tree_index, branch_lengths, fids, otu_ids
 
 
-def calc_split_metrics(tree):
-    """Calculate topology split-related metrics.
-    Parameters. Original function comes from
+def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
+    """
+    A tree topology filter based on the
+    number of descendants. This function
+    only removes internal nodes. Tips are
+    moved to the parent of the removed node.
+    
+    In part, original function comes from
     https://github.com/biocore/wol
     kindly provided here by Qiyun Zhu.
     ----------
     tree : skbio.TreeNode
         tree to calculate metrics
+    min_depth: int
+        Minimum number of total number of
+        descendants (tips) to include a node.
+        Default value of zero will retain all nodes.
     Notes
     -----
     The following metrics will be calculated for each node:
     - n : int
         number of descendants (tips)
-    - splits : int
-        total number of splits from tips
-    - prelevel : int
-        number of nodes from root
     Examples
     --------
     >>> # Example from Fig. 9a of Puigbo, et al., 2009, J Biol:
@@ -441,27 +413,58 @@ def calc_split_metrics(tree):
              |          /-J
               \\n2------|
                         \\-K
-    >>> calc_split_metrics(tree)
-    >>> tree.find('n3').n
-    4
-    >>> tree.find('n4').splits
-    4
-    >>> tree.find('n8').postlevels
-    [3, 3, 2]
+    >>> tree_topology_filter(tree, min_depth=2)
+    >>> print(tree.ascii_art())
+                               /-C
+                              |
+                     /n8------|--A
+                    |         |
+                    |          \-B
+           /n4------|
+          |         |--D
+          |         |
+          |          \-E
+          |
+          |            /-F
+          |            |
+    -n1------|         |--G
+             |-n3------|
+             |         |--H
+             |         |
+             |         \-I
+             |
+             |--J
+             |
+             \-K
+
 
     """
+
     # calculate bottom-up metrics
     for node in tree.postorder(include_self=True):
         if node.is_tip():
             node.n = 1
-            node.splits = 0
-            node.postlevels = [1]
         else:
             children = node.children
             node.n = sum(x.n for x in children)
-            node.splits = sum(x.splits for x in children) + 1
-            node.postlevels = [y + 1 for x in node.children for y in
-                               x.postlevels]
+    # check to ensure tree filters make sense
+    # (this has to be done after building the metrics above)
+    if tree.root().n <= min_depth:
+        raise ValueError('min_depth is equal to tree root value, '
+                        'this will result in a table of zero '
+                        'features.')
+    # non-tip nodes to remove (below the depth filter)    
+    nodes_to_remove = [node for node in tree.postorder(include_self=True)
+                       if (not node.is_tip()) & (node.n <= min_depth)]
+    # remove nodes in the tree by moving tips up to parents
+    for node_to_remove in nodes_to_remove:
+        tips_to_move_up = list(node_to_remove.tips())
+        for tip_to_move_up in tips_to_move_up:
+            node_to_remove.parent.append(tip_to_move_up)
+        node_to_remove.parent.remove(node_to_remove)
+    # reconstruct correct topology after removing nodes
+    tree.prune()
+
 
 
 class build(_BaseConstruct):

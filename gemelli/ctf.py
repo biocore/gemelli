@@ -26,8 +26,6 @@ def phylogenetic_ctf(table: biom.Table,
                      min_sample_count: int = DEFAULT_MSC,
                      min_feature_count: int = DEFAULT_MFC,
                      min_depth: int = DEFAULT_MTD,
-                     min_splits: int = DEFAULT_MTD,
-                     max_postlevel: int = DEFAULT_MTD,
                      max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                      max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
                      n_initializations: int = DEFAULT_TENSALS_MAXITER,
@@ -46,8 +44,6 @@ def phylogenetic_ctf(table: biom.Table,
                                              min_sample_count,
                                              min_feature_count,
                                              min_depth,
-                                             min_splits,
-                                             max_postlevel,
                                              max_iterations_als,
                                              max_iterations_rptm,
                                              n_initializations,
@@ -72,8 +68,6 @@ def phylogenetic_ctf_helper(table: biom.Table,
                             min_sample_count: int = DEFAULT_MSC,
                             min_feature_count: int = DEFAULT_MFC,
                             min_depth: int = DEFAULT_MTD,
-                            min_splits: int = DEFAULT_MTD,
-                            max_postlevel: int = DEFAULT_MTD,
                             max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                             max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
                             n_initializations: int = DEFAULT_TENSALS_MAXITER,
@@ -82,7 +76,6 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                 DistanceMatrix, DataFrame, DataFrame,
                                 TreeNode, biom.Table):
 
-    phylogeny = bp_read_phylogeny(table, phylogeny)
     # check the table for validity and then filter
     process_results = ctf_table_processing(table,
                                            sample_metadata,
@@ -93,9 +86,11 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                            feature_metadata)
     (table, sample_metadata,
      all_sample_metadata, feature_metadata) = process_results
+    # import the tree
+    phylogeny = bp_read_phylogeny(table, phylogeny, min_depth)
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
-        = fast_unifrac(table, phylogeny, min_depth, min_splits, max_postlevel)
+        = fast_unifrac(table, phylogeny)
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T,
                                 fids, table.ids())

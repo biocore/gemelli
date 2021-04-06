@@ -34,14 +34,6 @@ DESC_MINDEPTH = ("Minimum number of total number of "
                  "descendants (tips) to include a node. "
                  "Default value of zero will retain all nodes "
                  "(including tips).")
-DESC_MINSPLIT = ("Minimum number of total number of "
-                 "splits to include a node. "
-                 "Default value of zero will retain all nodes "
-                 "(including tips).")
-DESC_MINPOST = ("Minimum allowable max postlevel "
-                "splits to include a node. "
-                "Default value of zero will retain all nodes "
-                "(including tips).")
 DESC_COMP = ("The underlying low-rank structure."
              " The input can be an integer "
              "(suggested: 1 < rank < 10) [minimum 2]."
