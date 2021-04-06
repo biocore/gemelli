@@ -31,8 +31,6 @@ def phylogenetic_rpca(table: biom.Table,
                       min_feature_count: int = DEFAULT_MFC,
                       min_feature_frequency: float = DEFAULT_MFF,
                       min_depth: int = DEFAULT_MTD,
-                      min_splits: int = DEFAULT_MTD,
-                      max_postlevel: int = DEFAULT_MTD,
                       max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
                           OrdinationResults, DistanceMatrix,
                           TreeNode, biom.Table):
@@ -42,15 +40,19 @@ def phylogenetic_rpca(table: biom.Table,
        gemelli.
     """
 
-    phylogeny = bp_read_phylogeny(table, phylogeny)
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
                                   min_feature_count,
                                   min_feature_frequency)
+
+    # import the tree based on filtered table
+    phylogeny = bp_read_phylogeny(table,
+                                  phylogeny,
+                                  min_depth)
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
-        = fast_unifrac(table, phylogeny, min_depth, min_splits, max_postlevel)
+        = fast_unifrac(table, phylogeny)
     # Robust-clt (matrix_rclr) preprocessing
     rclr_table = matrix_rclr(counts_by_node, branch_lengths=branch_lengths)
     # run OptSpace (RPCA)
