@@ -5,10 +5,13 @@ from biom import Table
 from skbio import TreeNode
 import numpy.testing as npt
 from skbio.stats.composition import clr
+from skbio.util import get_data_path
 from gemelli.preprocessing import (build, tensor_rclr,
                                    matrix_closure,
-                                   matrix_rclr, fast_unifrac,
-                                   calc_split_metrics)
+                                   matrix_rclr,
+                                   bp_read_phylogeny,
+                                   fast_unifrac,
+                                   tree_topology_filter)
 
 
 class Testpreprocessing(unittest.TestCase):
@@ -117,23 +120,14 @@ class Testpreprocessing(unittest.TestCase):
         with self.assertRaises(ValueError):
             _ = fast_unifrac(self.phylo_table, self.tree_bad)
 
-    def test_fast_unifrac_maxpost_raises(self):
-        """Test fast_unifrac ValueError max_postlevel too large."""
+    def test_bp_read_phylogeny_mindepth_raises(self):
+        """Test bp_read_phylogeny ValueError min_depth too large."""
         # test nan throw value error
         with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, max_postlevel=8)
-
-    def test_fast_unifrac_minsplit_raises(self):
-        """Test fast_unifrac ValueError min_splits too large."""
-        # test nan throw value error
-        with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, min_splits=8)
-
-    def test_fast_unifrac_mindepth_raises(self):
-        """Test fast_unifrac ValueError min_depth too large."""
-        # test nan throw value error
-        with self.assertRaises(ValueError):
-            _ = fast_unifrac(self.phylo_table, self.tree, min_depth=8)
+            _ = bp_read_phylogeny(self.phylo_table,
+                                  get_data_path('test_tree.nwk',
+                                                subfolder='data'),
+                                  min_depth=8)
 
     def test_fast_unifrac(self):
         """Test fast_unifrac table vectorized on tree."""
@@ -147,7 +141,7 @@ class Testpreprocessing(unittest.TestCase):
                             self.branch_length_true)
         self.assertListEqual(fids_res, self.ids_true)
 
-    def test_calc_split_metrics(self):
+    def test_tree_topology_filter(self):
         """
         Test tree metric calculations.
         Original function comes from
@@ -179,31 +173,31 @@ class Testpreprocessing(unittest.TestCase):
         tree = TreeNode.read([
             '((((A,B)n9,C)n8,(D,E)n7)n4,((F,G)n6,(H,I)n5)n3,(J,K)n2)n1;'
         ])
-        calc_split_metrics(tree)
+        tree_topology_filter(tree)
         obs = {x.name: [getattr(x, y) for y in
-                        ('n', 'splits', 'postlevels')]
+                        ('n')]
                for x in tree.traverse()}
         exp = {
-            'n1': [11, 9, [5, 5, 4, 4, 4, 4, 4, 4, 4, 3, 3]],
-            'n4': [5, 4, [4, 4, 3, 3, 3]],
-            'n3': [4, 3, [3, 3, 3, 3]],
-            'n2': [2, 1, [2, 2]],
-            'n8': [3, 2, [3, 3, 2]],
-            'n7': [2, 1, [2, 2]],
-            'n6': [2, 1, [2, 2]],
-            'n5': [2, 1, [2, 2]],
-            'J': [1, 0, [1]],
-            'K': [1, 0, [1]],
-            'n9': [2, 1, [2, 2]],
-            'C': [1, 0, [1]],
-            'D': [1, 0, [1]],
-            'E': [1, 0, [1]],
-            'F': [1, 0, [1]],
-            'G': [1, 0, [1]],
-            'H': [1, 0, [1]],
-            'I': [1, 0, [1]],
-            'A': [1, 0, [1]],
-            'B': [1, 0, [1]]
+            'n1': [11],
+            'n4': [5],
+            'n3': [4],
+            'n2': [2],
+            'n8': [3],
+            'n7': [2],
+            'n6': [2],
+            'n5': [2],
+            'J': [1],
+            'K': [1],
+            'n9': [2],
+            'C': [1],
+            'D': [1],
+            'E': [1],
+            'F': [1],
+            'G': [1],
+            'H': [1],
+            'I': [1],
+            'A': [1],
+            'B': [1]
         }
         self.assertDictEqual(obs, exp)
 
