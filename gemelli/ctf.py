@@ -7,12 +7,13 @@ from pandas import DataFrame
 from q2_types.tree import NewickFormat
 from skbio import OrdinationResults, DistanceMatrix, TreeNode
 from gemelli.factorization import TensorFactorization
+from gemelli.rpca import rpca_table_processing
 from gemelli.preprocessing import (build, tensor_rclr,
                                    fast_unifrac,
                                    bp_read_phylogeny)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_MFC, DEFAULT_BL,
-                               DEFAULT_MTD,
+                               DEFAULT_MTD, DEFAULT_MFF,
                                DEFAULT_TENSALS_MAXITER,
                                DEFAULT_FMETA as DEFFM)
 
@@ -25,6 +26,7 @@ def phylogenetic_ctf(table: biom.Table,
                      n_components: int = DEFAULT_COMP,
                      min_sample_count: int = DEFAULT_MSC,
                      min_feature_count: int = DEFAULT_MFC,
+                     min_feature_frequency: float = DEFAULT_MFF,
                      min_depth: int = DEFAULT_MTD,
                      max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                      max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
@@ -43,6 +45,7 @@ def phylogenetic_ctf(table: biom.Table,
                                              n_components,
                                              min_sample_count,
                                              min_feature_count,
+                                             min_feature_frequency,
                                              min_depth,
                                              max_iterations_als,
                                              max_iterations_rptm,
@@ -67,6 +70,7 @@ def phylogenetic_ctf_helper(table: biom.Table,
                             n_components: int = DEFAULT_COMP,
                             min_sample_count: int = DEFAULT_MSC,
                             min_feature_count: int = DEFAULT_MFC,
+                            min_feature_frequency: float = DEFAULT_MFF,
                             min_depth: int = DEFAULT_MTD,
                             max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                             max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
@@ -83,6 +87,7 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                            state_column,
                                            min_sample_count,
                                            min_feature_count,
+                                           min_feature_frequency,
                                            feature_metadata)
     (table, sample_metadata,
      all_sample_metadata, feature_metadata) = process_results
@@ -138,6 +143,7 @@ def ctf(table: biom.Table,
         n_components: int = DEFAULT_COMP,
         min_sample_count: int = DEFAULT_MSC,
         min_feature_count: int = DEFAULT_MFC,
+        min_feature_frequency: float = DEFAULT_MFF,
         max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
         max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
         n_initializations: int = DEFAULT_TENSALS_MAXITER,
@@ -155,6 +161,7 @@ def ctf(table: biom.Table,
                                 n_components,
                                 min_sample_count,
                                 min_feature_count,
+                                min_feature_frequency,
                                 max_iterations_als,
                                 max_iterations_rptm,
                                 n_initializations,
@@ -176,6 +183,7 @@ def ctf_helper(table: biom.Table,
                n_components: int = DEFAULT_COMP,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
+               min_feature_frequency: float = DEFAULT_MFF,
                max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
                n_initializations: int = DEFAULT_TENSALS_MAXITER,
@@ -189,6 +197,7 @@ def ctf_helper(table: biom.Table,
                                            state_column,
                                            min_sample_count,
                                            min_feature_count,
+                                           min_feature_frequency,
                                            feature_metadata)
     (table, sample_metadata,
      all_sample_metadata, feature_metadata) = process_results
@@ -215,6 +224,7 @@ def ctf_table_processing(table: biom.Table,
                          state_columns: list,
                          min_sample_count: int = DEFAULT_MSC,
                          min_feature_count: int = DEFAULT_MFC,
+                         min_feature_frequency: float = DEFAULT_MFF,
                          feature_metadata: DataFrame = DEFFM) -> (
                              dict, OrdinationResults, dict, tuple):
     """ Runs  Compositional Tensor Factorization CTF.
@@ -260,19 +270,20 @@ def ctf_table_processing(table: biom.Table,
     table.filter(list(sidx), axis='sample', inplace=True)
     sample_metadata = sample_metadata.reindex(sidx)
 
-    # filter and import table
-    for axis, min_sum in zip(['sample',
-                              'observation'],
-                             [min_sample_count,
-                              min_feature_count]):
-        table = table.filter(table.ids(axis)[table.sum(axis) >= min_sum],
-                             axis=axis, inplace=True)
+    # filter the table (same as RPCA)
+    table = rpca_table_processing(table,
+                                  min_sample_count,
+                                  min_feature_count,
+                                  min_feature_frequency)
 
     # return data based on input
     if feature_metadata is not None:
-        return table, sample_metadata, feature_metadata
+        return (table, sample_metadata,
+                all_sample_metadata,
+                feature_metadata)
     else:
-        return table, sample_metadata, all_sample_metadata, None
+        return (table, sample_metadata,
+                all_sample_metadata, None)
 
 
 def tensals_helper(table: biom.Table,
