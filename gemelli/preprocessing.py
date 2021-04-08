@@ -46,7 +46,7 @@ def bp_read_phylogeny(table: Table,
     with open(str(phylogeny)) as treefile:
         # read balanced parentheses tree
         phylogeny = parse_newick(treefile.readline())
-        # first filter out 
+        # first filter out
         names_to_keep = set((table.ids('observation')).flatten())
         phylogeny = phylogeny.shear(names_to_keep).collapse()
         # convert the tree to skbio TreeNode for processing
@@ -370,7 +370,7 @@ def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
     number of descendants. This function
     only removes internal nodes. Tips are
     moved to the parent of the removed node.
-    
+
     In part, original function comes from
     https://github.com/biocore/wol
     kindly provided here by Qiyun Zhu.
@@ -419,11 +419,11 @@ def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
                               |
                      /n8------|--A
                     |         |
-                    |          \-B
+                    |          \\-B
            /n4------|
           |         |--D
           |         |
-          |          \-E
+          |          \\-E
           |
           |            /-F
           |            |
@@ -431,11 +431,11 @@ def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
              |-n3------|
              |         |--H
              |         |
-             |         \-I
+             |         \\-I
              |
              |--J
              |
-             \-K
+             \\-K
 
 
     """
@@ -451,9 +451,9 @@ def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
     # (this has to be done after building the metrics above)
     if tree.root().n <= min_depth:
         raise ValueError('min_depth is equal to tree root value, '
-                        'this will result in a table of zero '
-                        'features.')
-    # non-tip nodes to remove (below the depth filter)    
+                         'this will result in a table of zero '
+                         'features.')
+    # non-tip nodes to remove (below the depth filter)
     nodes_to_remove = [node for node in tree.postorder(include_self=True)
                        if (not node.is_tip()) & (node.n <= min_depth)]
     # remove nodes in the tree by moving tips up to parents
@@ -464,7 +464,6 @@ def tree_topology_filter(tree, min_depth=DEFAULT_MTD):
         node_to_remove.parent.remove(node_to_remove)
     # reconstruct correct topology after removing nodes
     tree.prune()
-
 
 
 class build(_BaseConstruct):
