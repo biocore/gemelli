@@ -26,7 +26,7 @@ DESC_COMP = ("The underlying low-rank structure."
 DESC_ITERATIONS = ("The number of iterations to optimize the solution"
                    " (suggested to be below 100; beware of overfitting)"
                    " [minimum 1]")
-DESC_INIT = ("The number of initialization vectors. Larger values will"
+DESC_INIT = ("The number of initialization vectors. Larger values will "
              "give more accurate factorization but will be more "
              "computationally expensive [minimum 1]")
 DESC_ITERATIONSALS = ("Max number of Alternating Least Square (ALS)"
