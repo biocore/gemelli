@@ -1,14 +1,139 @@
 import biom
 import skbio
+import numpy as np
+import pandas as pd
 from pandas import concat
 from pandas import DataFrame
-from skbio import OrdinationResults, DistanceMatrix
+from q2_types.tree import NewickFormat
+from skbio import OrdinationResults, DistanceMatrix, TreeNode
 from gemelli.factorization import TensorFactorization
-from gemelli.preprocessing import build, tensor_rclr
+from gemelli.rpca import rpca_table_processing
+from gemelli.preprocessing import (build, tensor_rclr,
+                                   fast_unifrac,
+                                   bp_read_phylogeny)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
-                               DEFAULT_MFC,
+                               DEFAULT_MFC, DEFAULT_BL,
+                               DEFAULT_MTD, DEFAULT_MFF,
                                DEFAULT_TENSALS_MAXITER,
                                DEFAULT_FMETA as DEFFM)
+
+
+def phylogenetic_ctf(table: biom.Table,
+                     phylogeny: NewickFormat,
+                     sample_metadata: DataFrame,
+                     individual_id_column: str,
+                     state_column: str,
+                     n_components: int = DEFAULT_COMP,
+                     min_sample_count: int = DEFAULT_MSC,
+                     min_feature_count: int = DEFAULT_MFC,
+                     min_feature_frequency: float = DEFAULT_MFF,
+                     min_depth: int = DEFAULT_MTD,
+                     max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
+                     max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
+                     n_initializations: int = DEFAULT_TENSALS_MAXITER,
+                     feature_metadata: DataFrame = DEFFM) -> (
+                         OrdinationResults, OrdinationResults,
+                         DistanceMatrix, DataFrame, DataFrame,
+                         TreeNode, biom.Table):
+
+    # run CTF helper and parse output for QIIME
+    helper_results = phylogenetic_ctf_helper(table,
+                                             phylogeny,
+                                             sample_metadata,
+                                             individual_id_column,
+                                             [state_column],
+                                             n_components,
+                                             min_sample_count,
+                                             min_feature_count,
+                                             min_feature_frequency,
+                                             min_depth,
+                                             max_iterations_als,
+                                             max_iterations_rptm,
+                                             n_initializations,
+                                             feature_metadata)
+    (state_ordn, ord_res, dists, straj,
+     ftraj, phylogeny, counts_by_node) = helper_results
+    # save only first state (QIIME can't handle a list yet)
+    dists = list(dists.values())[0]
+    straj = list(straj.values())[0]
+    ftraj = list(ftraj.values())[0]
+    state_ordn = list(state_ordn.values())[0]
+
+    return ord_res, state_ordn, dists, straj, ftraj, phylogeny, counts_by_node
+
+
+def phylogenetic_ctf_helper(table: biom.Table,
+                            phylogeny: NewickFormat,
+                            sample_metadata: DataFrame,
+                            individual_id_column: str,
+                            state_column: list,
+                            n_components: int = DEFAULT_COMP,
+                            min_sample_count: int = DEFAULT_MSC,
+                            min_feature_count: int = DEFAULT_MFC,
+                            min_feature_frequency: float = DEFAULT_MFF,
+                            min_depth: int = DEFAULT_MTD,
+                            max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
+                            max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
+                            n_initializations: int = DEFAULT_TENSALS_MAXITER,
+                            feature_metadata: DataFrame = DEFFM) -> (
+                                OrdinationResults, OrdinationResults,
+                                DistanceMatrix, DataFrame, DataFrame,
+                                TreeNode, biom.Table):
+
+    # check the table for validity and then filter
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           state_column,
+                                           min_sample_count,
+                                           min_feature_count,
+                                           min_feature_frequency,
+                                           feature_metadata)
+    (table, sample_metadata,
+     all_sample_metadata, feature_metadata) = process_results
+    # import the tree
+    phylogeny = bp_read_phylogeny(table, phylogeny, min_depth)
+    # build the vectorized table
+    counts_by_node, tree_index, branch_lengths, fids, otu_ids\
+        = fast_unifrac(table, phylogeny)
+    # import expanded table
+    counts_by_node = biom.Table(counts_by_node.T,
+                                fids, table.ids())
+    # add feature index place holders
+    # In the future maybe label by internal node clade?
+    if feature_metadata is not None:
+        # add rows for taxonomy missing (if given)
+        new_internal_nodes = set(fids) - set(feature_metadata.index)
+        append_taxon = []
+        for add_node in new_internal_nodes:
+            internal_label_ = ''.join(['k__; ' + add_node,
+                                       'p__; ' + add_node,
+                                       'c__; ' + add_node,
+                                       'o__; ' + add_node,
+                                       'f__; ' + add_node,
+                                       'g__; ' + add_node,
+                                       's__' + add_node])
+            confidence_ = 1.0
+            append_taxon.append([internal_label_, confidence_])
+        append_taxon = pd.DataFrame(append_taxon,
+                                    new_internal_nodes,
+                                    ['Taxon', 'Confidence'])
+        feature_metadata = pd.concat([feature_metadata, append_taxon])
+    # build the tensor object and factor - return results
+    tensal_results = tensals_helper(counts_by_node,
+                                    sample_metadata,
+                                    all_sample_metadata,
+                                    individual_id_column,
+                                    state_column,
+                                    branch_lengths,
+                                    n_components,
+                                    max_iterations_als,
+                                    max_iterations_rptm,
+                                    n_initializations,
+                                    feature_metadata)
+    state_ordn, ord_res, dists, straj, ftraj = tensal_results
+
+    return state_ordn, ord_res, dists, straj, ftraj, phylogeny, counts_by_node
 
 
 def ctf(table: biom.Table,
@@ -18,6 +143,7 @@ def ctf(table: biom.Table,
         n_components: int = DEFAULT_COMP,
         min_sample_count: int = DEFAULT_MSC,
         min_feature_count: int = DEFAULT_MFC,
+        min_feature_frequency: float = DEFAULT_MFF,
         max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
         max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
         n_initializations: int = DEFAULT_TENSALS_MAXITER,
@@ -26,40 +152,81 @@ def ctf(table: biom.Table,
                                                  DistanceMatrix,
                                                  DataFrame,
                                                  DataFrame):
+
     # run CTF helper and parse output for QIIME
-    state_ordn, ord_res, dists, straj, ftraj = ctf_helper(table,
-                                                          sample_metadata,
-                                                          individual_id_column,
-                                                          [state_column],
-                                                          n_components,
-                                                          min_sample_count,
-                                                          min_feature_count,
-                                                          max_iterations_als,
-                                                          max_iterations_rptm,
-                                                          n_initializations,
-                                                          feature_metadata)
+    helper_results = ctf_helper(table,
+                                sample_metadata,
+                                individual_id_column,
+                                [state_column],
+                                n_components,
+                                min_sample_count,
+                                min_feature_count,
+                                min_feature_frequency,
+                                max_iterations_als,
+                                max_iterations_rptm,
+                                n_initializations,
+                                feature_metadata)
+    state_ordn, ord_res, dists, straj, ftraj = helper_results
     # save only first state (QIIME can't handle a list yet)
     dists = list(dists.values())[0]
     straj = list(straj.values())[0]
     ftraj = list(ftraj.values())[0]
     state_ordn = list(state_ordn.values())[0]
+
     return ord_res, state_ordn, dists, straj, ftraj
 
 
 def ctf_helper(table: biom.Table,
                sample_metadata: DataFrame,
                individual_id_column: str,
-               state_columns: list,
+               state_column: list,
                n_components: int = DEFAULT_COMP,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
+               min_feature_frequency: float = DEFAULT_MFF,
                max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
                max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
                n_initializations: int = DEFAULT_TENSALS_MAXITER,
-               feature_metadata: DataFrame = DEFFM) -> (dict,
-                                                        OrdinationResults,
-                                                        dict,
-                                                        tuple):
+               feature_metadata: DataFrame = DEFFM) -> (
+                   OrdinationResults, OrdinationResults,
+                   DistanceMatrix, DataFrame, DataFrame):
+    # check the table for validity and then filter
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           state_column,
+                                           min_sample_count,
+                                           min_feature_count,
+                                           min_feature_frequency,
+                                           feature_metadata)
+    (table, sample_metadata,
+     all_sample_metadata, feature_metadata) = process_results
+    # build the tensor object and factor - return results
+    tensal_results = tensals_helper(table,
+                                    sample_metadata,
+                                    all_sample_metadata,
+                                    individual_id_column,
+                                    state_column,
+                                    None,
+                                    n_components,
+                                    max_iterations_als,
+                                    max_iterations_rptm,
+                                    n_initializations,
+                                    feature_metadata)
+    state_ordn, ord_res, dists, straj, ftraj = tensal_results
+
+    return state_ordn, ord_res, dists, straj, ftraj
+
+
+def ctf_table_processing(table: biom.Table,
+                         sample_metadata: DataFrame,
+                         individual_id_column: str,
+                         state_columns: list,
+                         min_sample_count: int = DEFAULT_MSC,
+                         min_feature_count: int = DEFAULT_MFC,
+                         min_feature_frequency: float = DEFAULT_MFF,
+                         feature_metadata: DataFrame = DEFFM) -> (
+                             dict, OrdinationResults, dict, tuple):
     """ Runs  Compositional Tensor Factorization CTF.
     """
 
@@ -103,13 +270,36 @@ def ctf_helper(table: biom.Table,
     table.filter(list(sidx), axis='sample', inplace=True)
     sample_metadata = sample_metadata.reindex(sidx)
 
-    # filter and import table
-    for axis, min_sum in zip(['sample',
-                              'observation'],
-                             [min_sample_count,
-                              min_feature_count]):
-        table = table.filter(table.ids(axis)[table.sum(axis) >= min_sum],
-                             axis=axis, inplace=True)
+    # filter the table (same as RPCA)
+    table = rpca_table_processing(table,
+                                  min_sample_count,
+                                  min_feature_count,
+                                  min_feature_frequency)
+
+    # return data based on input
+    if feature_metadata is not None:
+        return (table, sample_metadata,
+                all_sample_metadata,
+                feature_metadata)
+    else:
+        return (table, sample_metadata,
+                all_sample_metadata, None)
+
+
+def tensals_helper(table: biom.Table,
+                   sample_metadata: DataFrame,
+                   all_sample_metadata: DataFrame,
+                   individual_id_column: str,
+                   state_columns: list,
+                   branch_lengths: np.array = DEFAULT_BL,
+                   n_components: int = DEFAULT_COMP,
+                   max_iterations_als: int = DEFAULT_TENSALS_MAXITER,
+                   max_iterations_rptm: int = DEFAULT_TENSALS_MAXITER,
+                   n_initializations: int = DEFAULT_TENSALS_MAXITER,
+                   feature_metadata: DataFrame = DEFFM) -> (
+                       dict, OrdinationResults, dict, tuple):
+    """ Runs  Compositional Tensor Factorization CTF.
+    """
 
     # table to dataframe
     table = DataFrame(table.matrix_data.toarray(),
@@ -119,14 +309,20 @@ def ctf_helper(table: biom.Table,
     # tensor building
     tensor = build()
     tensor.construct(table, sample_metadata,
-                     individual_id_column, state_columns)
+                     individual_id_column,
+                     state_columns)
+
+    # rclr of slices
+    transformed_counts = tensor_rclr(tensor.counts,
+                                     branch_lengths=branch_lengths)
 
     # factorize
     TF = TensorFactorization(
         n_components=n_components,
         max_als_iterations=max_iterations_als,
         max_rtpm_iterations=max_iterations_rptm,
-        n_initializations=n_initializations).fit(tensor_rclr(tensor.counts))
+        n_initializations=n_initializations).fit(transformed_counts)
+
     # label tensor loadings
     TF.label(tensor, taxonomy=feature_metadata)
 
@@ -181,7 +377,7 @@ def ctf_helper(table: biom.Table,
                                  proportion_explained=TF.proportion_explained)
         state_ordn[condition] = cond
         # add the sample metadata before returning output
-        # addtionally only keep metadata with trajectory
+        # additionally only keep metadata with trajectory
         # output available.
         pre_merge_cols = list(straj.columns)
         straj = concat([straj.reindex(all_sample_metadata.index),

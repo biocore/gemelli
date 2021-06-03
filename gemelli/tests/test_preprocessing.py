@@ -1,14 +1,31 @@
 import unittest
 import numpy as np
 import pandas as pd
+from biom import Table
+from skbio import TreeNode
 import numpy.testing as npt
 from skbio.stats.composition import clr
-from gemelli.preprocessing import (build, tensor_rclr, matrix_rclr)
+from skbio.util import get_data_path
+from gemelli.preprocessing import (build, tensor_rclr,
+                                   matrix_closure,
+                                   matrix_rclr,
+                                   bp_read_phylogeny,
+                                   fast_unifrac,
+                                   tree_topology_filter)
 
 
 class Testpreprocessing(unittest.TestCase):
 
     def setUp(self):
+        # test closeure
+        self.close_table_zero = np.array([[2, 2, 6],
+                                          [0, 0, 0]])
+        self.close_true_zero = np.array([[0.2,  0.2,  0.6],
+                                         [np.nan] * 3])
+        self.close_table = np.array([[2, 2, 6],
+                                     [2, 2, 6]])
+        self.close_true = np.array([[0.2,  0.2,  0.6],
+                                    [0.2,  0.2,  0.6]])
         # matrix_rclr base tests
         self.cdata1 = np.array([[2, 2, 6],
                                 [4, 4, 2]])
@@ -32,7 +49,46 @@ class Testpreprocessing(unittest.TestCase):
                                       [10, 11, 12]],
                                      [[13, 14, 15],
                                       [16, 17, 18]]])
+        # make a test tree
+        newick = ('((((A:1,B:1)n9:3,C:1)n8:3,(D:1,E:1)n7:2)n4:3'
+                  ',((F:1,G:1)n6:4,(H:1)n5:4)n3:3)n1;')
+        self.tree = TreeNode.read([newick])
+        # make a test tree to raise error
+        newick_bad = ('((((A,B)n9,C)n8,(D,E)n7)n4'
+                      ',((F,G)n6,(H)n5)n3)n1;')
+        self.tree_bad = TreeNode.read([newick_bad])
+        # make a test table
+        counts = np.array([[2, 0, 3, 3, 1, 2, 3, 4],
+                           [2, 1, 4, 1, 0, 1, 4, 0]]).T
+        feature_ids = [tip_.name for tip_ in self.tree.tips()]
+        subject_ids = ['s1', 's2']
+        self.phylo_table = Table(counts, feature_ids, subject_ids)
+        # fully labeled tree
+        self.ids_true = ['A', 'B', 'n2', 'C',
+                         'D', 'E', 'n6', 'n7',
+                         'F', 'G', 'H', 'n11', 'n12',
+                         'n13', 'n14', 'n15']
+        # true lengths
+        self.branch_length_true = np.array([1., 1., 3., 1., 1., 1., 3., 2.,
+                                           1., 1., 1., 4., 4., 3., 3., 0.])
+        # true vector count table
+        self.vector_counts_true = np.array([[2,  0,  2,  3,  3,  1,  5,  4,
+                                            2,  3,  4,  5,  4,  9,  9, 18],
+                                            [2,  1,  3,  4,  1,  0,  7,  1,
+                                            1, 4,  0,  5,  0,  8,  5, 13]])
         pass
+
+    def test_closure_missing(self):
+        """Test closure with zeros (due to tensor)."""
+        # test a case with zeros
+        cmat_res = matrix_closure(self.close_table_zero)
+        npt.assert_allclose(cmat_res, self.close_true_zero)
+
+    def test_closure(self):
+        """Test closure without zeros."""
+        # test a case with zeros
+        cmat_res = matrix_closure(self.close_table)
+        npt.assert_allclose(cmat_res, self.close_true)
 
     def test_rclr_sparse(self):
         """Test matrix_rclr on sparse data."""
@@ -57,6 +113,93 @@ class Testpreprocessing(unittest.TestCase):
         # test nan throw value error
         with self.assertRaises(ValueError):
             matrix_rclr(self.bad3)
+
+    def test_fast_unifrac_branch_raises(self):
+        """Test fast_unifrac ValueError on tree with no branch lengths."""
+        # test nan throw value error
+        with self.assertRaises(ValueError):
+            _ = fast_unifrac(self.phylo_table, self.tree_bad)
+
+    def test_bp_read_phylogeny_mindepth_raises(self):
+        """Test bp_read_phylogeny ValueError min_depth too large."""
+        # test nan throw value error
+        with self.assertRaises(ValueError):
+            _ = bp_read_phylogeny(self.phylo_table,
+                                  get_data_path('test_tree.nwk',
+                                                subfolder='data'),
+                                  min_depth=8)
+
+    def test_fast_unifrac(self):
+        """Test fast_unifrac table vectorized on tree."""
+        # run vectorized table
+        tmp_res = fast_unifrac(self.phylo_table, self.tree)
+        counts_res, _, branch_lengths_res, fids_res, _ = tmp_res
+        # test all expected
+        npt.assert_allclose(counts_res,
+                            self.vector_counts_true)
+        npt.assert_allclose(branch_lengths_res,
+                            self.branch_length_true)
+        self.assertListEqual(fids_res, self.ids_true)
+
+    def test_tree_topology_filter(self):
+        """
+        Test tree metric calculations.
+        Original function comes from
+        https://github.com/biocore/wol
+        kindly provided here by Qiyun Zhu.
+        Example from Fig. 9a of Puigbo, et al., 2009, J Biol.
+                                                /-A
+                                      /n9------|
+                            /n8------|          \\-B
+                           |         |
+                  /n4------|          \\-C
+                 |         |
+                 |         |          /-D
+                 |          \n7------|
+                 |                    \\-E
+                 |
+                 |                    /-F
+        -n1------|          /n6------|
+                 |         |          \\-G
+                 |-n3------|
+                 |         |          /-H
+                 |          \n5------|
+                 |                    \\-I
+                 |
+                 |          /-J
+                  \n2------|
+                            \\-K
+        """
+        tree = TreeNode.read([
+            '((((A,B)n9,C)n8,(D,E)n7)n4,((F,G)n6,(H,I)n5)n3,(J,K)n2)n1;'
+        ])
+        tree_topology_filter(tree)
+        obs = {x.name: [getattr(x, y) for y in
+                        ('n')]
+               for x in tree.traverse()}
+        exp = {
+            'n1': [11],
+            'n4': [5],
+            'n3': [4],
+            'n2': [2],
+            'n8': [3],
+            'n7': [2],
+            'n6': [2],
+            'n5': [2],
+            'J': [1],
+            'K': [1],
+            'n9': [2],
+            'C': [1],
+            'D': [1],
+            'E': [1],
+            'F': [1],
+            'G': [1],
+            'H': [1],
+            'I': [1],
+            'A': [1],
+            'B': [1]
+        }
+        self.assertDictEqual(obs, exp)
 
     def test_build(self):
         """Test building a tensor from metadata (multi-mode) & matrix_rclr."""
