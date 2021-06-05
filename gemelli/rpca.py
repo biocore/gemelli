@@ -15,7 +15,9 @@ from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import (matrix_rclr,
                                    fast_unifrac,
-                                   bp_read_phylogeny)
+                                   bp_read_phylogeny,
+                                   retrieve_phylogeny,
+                                   create_taxonomy_metadata)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
@@ -26,6 +28,7 @@ from q2_types.tree import NewickFormat
 
 def phylogenetic_rpca(table: biom.Table,
                       phylogeny: NewickFormat,
+                      taxonomy: pd.DataFrame = None,
                       n_components: Union[int, str] = DEFAULT_COMP,
                       min_sample_count: int = DEFAULT_MSC,
                       min_feature_count: int = DEFAULT_MFC,
@@ -33,23 +36,21 @@ def phylogenetic_rpca(table: biom.Table,
                       min_depth: int = DEFAULT_MTD,
                       max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
                           OrdinationResults, DistanceMatrix,
-                          TreeNode, biom.Table):
+                          TreeNode, biom.Table, pd.DataFrame):
     """Runs phylogenetic RPCA.
 
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
     """
-
+    
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
                                   min_feature_count,
                                   min_feature_frequency)
 
-    # import the tree based on filtered table
-    phylogeny = bp_read_phylogeny(table,
-                                  phylogeny,
-                                  min_depth)
+    # import the tree based on filtered table and taxonomy
+    phylogeny = bp_read_phylogeny(table, phylogeny, min_depth)
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
         = fast_unifrac(table, phylogeny)
@@ -58,10 +59,17 @@ def phylogenetic_rpca(table: biom.Table,
     # run OptSpace (RPCA)
     ord_res, dist_res = optspace_helper(rclr_table, fids, table.ids())
     # import expanded table
-    counts_by_node = biom.Table(counts_by_node.T,
-                                fids, table.ids())
+    counts_by_node = biom.Table(counts_by_node.T, fids, table.ids())
 
-    return ord_res, dist_res, phylogeny, counts_by_node
+    # validate the metadata using q2 as a wrapper
+    if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
+        taxonomy = taxonomy.to_dataframe()
+
+    # collect taxonomic information for all tree nodes
+    postorder_taxonomy = retrieve_phylogeny(phylogeny, taxonomy)
+    taxonomy = create_taxonomy_metadata(phylogeny, postorder_taxonomy)
+
+    return ord_res, dist_res, phylogeny, counts_by_node, taxonomy
 
 
 def rpca(table: biom.Table,

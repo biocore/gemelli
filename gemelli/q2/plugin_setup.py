@@ -23,6 +23,8 @@ from q2_types.sample_data import SampleData
 from q2_types.feature_data import FeatureData
 from q2_types.tree import Phylogeny, Rooted
 from q2_types.feature_table import FeatureTable, Frequency, Composition
+from q2_types.feature_data import Taxonomy
+from qiime2.plugin import Metadata
 from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_BIN, DESC_SMETA, DESC_TREE,
                                DESC_SUBJ, DESC_COND, DESC_INIT,
@@ -216,7 +218,9 @@ plugin.methods.register_function(
     function=phylogenetic_rpca,
     inputs={'table': FeatureTable[Frequency],
             'phylogeny': Phylogeny[Rooted]},
-    parameters={'n_components': Int,
+    parameters={
+                'taxonomy': Metadata,
+                'n_components': Int,
                 'min_sample_count': Int,
                 'min_feature_count': Int,
                 'min_feature_frequency': Float,
@@ -226,7 +230,8 @@ plugin.methods.register_function(
         ('biplot', PCoAResults % Properties("biplot")),
         ('distance_matrix', DistanceMatrix),
         ('counts_by_node_tree', Phylogeny[Rooted]),
-        ('counts_by_node', FeatureTable[Frequency])],
+        ('counts_by_node', FeatureTable[Frequency]),
+        ('counts_by_taxonomy', FeatureData[Taxonomy])],
     input_descriptions={'table': DESC_BIN, 'phylogeny': DESC_TREE},
     parameter_descriptions={'n_components': DESC_COMP,
                             'min_sample_count': DESC_MSC,
