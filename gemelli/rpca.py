@@ -70,7 +70,7 @@ def phylogenetic_rpca(table: biom.Table,
     # if taxonomy is None, result_taxonomy will be an empty DataFrame
     traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
     result_taxonomy = create_taxonomy_metadata(phylogeny,
-                                              traversed_taxonomy)
+                                               traversed_taxonomy)
 
     return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 

@@ -94,14 +94,14 @@ class Testpreprocessing(unittest.TestCase):
         t2t_taxonomy = {
             'Feature ID': ['n4', 'n2', 'n1', 'a', 'b', 'c', 'n3', 'd', 'e'],
             'Taxon': ['k__0; p__; s__',
-                'k__0; p__1; s__3',
-                'k__0; p__1; s__3',
-                'k__0; p__1; s__3',
-                'k__0; p__1; s__3',
-                'k__0; p__1; s__3',
-                'k__0; p__2; s__',
-                'k__0; p__2; s__',
-                'k__0; p__2; s__']
+                      'k__0; p__1; s__3',
+                      'k__0; p__1; s__3',
+                      'k__0; p__1; s__3',
+                      'k__0; p__1; s__3',
+                      'k__0; p__1; s__3',
+                      'k__0; p__2; s__',
+                      'k__0; p__2; s__',
+                      'k__0; p__2; s__']
 
         }
         self.t2t_taxonomy = pd.DataFrame(data=t2t_taxonomy)\
@@ -109,13 +109,13 @@ class Testpreprocessing(unittest.TestCase):
         # make a test taxonomy to raise error
         bad_taxonomy = {'Feature ID': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
                         'bad_column': ['k__k; p__a; s__a',
-                            'k__k; p__a; s__a',
-                            'k__k; p__a; s__a',
-                            'k__k; p__a; s__b',
-                            'k__k; p__a; s__b',
-                            'k__k; p__b; s__c',
-                            'k__k; p__b; s__c',
-                            'k__k; p__b; s__d']}
+                                       'k__k; p__a; s__a',
+                                       'k__k; p__a; s__a',
+                                       'k__k; p__a; s__b',
+                                       'k__k; p__a; s__b',
+                                       'k__k; p__b; s__c',
+                                       'k__k; p__b; s__c',
+                                       'k__k; p__b; s__d']}
         self.bad_taxonomy = pd.DataFrame(data=bad_taxonomy)
         # make a test table
         counts = np.array([[2, 0, 3, 3, 1, 2, 3, 4],

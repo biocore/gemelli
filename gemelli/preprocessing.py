@@ -22,7 +22,6 @@ from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
 
 
-
 VALID_TAXONOMY_COLUMN_NAMES = ('taxon', 'taxonomy')
 
 
@@ -36,7 +35,7 @@ def create_taxonomy_metadata(phylogeny, traversed_taxonomy=None):
 
         This method will traverse phylogeny using TreeNode.traverse() and
         use the node names found in phylogeny as the index 'Feature ID'.
-        Thus, traversed_taxonomy must be parallel List of phylogeny (i.e. a 
+        Thus, traversed_taxonomy must be parallel List of phylogeny (i.e. a
         List that layes out the taxonomy in a traverse() fashion).
 
         Parameters
@@ -55,7 +54,7 @@ def create_taxonomy_metadata(phylogeny, traversed_taxonomy=None):
     else:
         # create empty dataframe
         f_id = ['None']
-        tax = ['None']            
+        tax = ['None']
     returned_taxonomy = pd.DataFrame(data={'Feature ID': f_id, 'Taxon': tax})
     returned_taxonomy.set_index(keys='Feature ID', inplace=True)
     return returned_taxonomy
@@ -64,8 +63,8 @@ def create_taxonomy_metadata(phylogeny, traversed_taxonomy=None):
 def retrieve_t2t_taxonomy(phylogeny, taxonomy):
     """
     Returns a List containing the taxonomy of all nodes in the tree stored in
-    TreeNode.traverse() order. 
-    
+    TreeNode.traverse() order.
+
     based on :
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/scripts/t2t#L46
 
@@ -75,13 +74,13 @@ def retrieve_t2t_taxonomy(phylogeny, taxonomy):
     taxonomy : pd.DataFrame with Index 'Feature ID' and contains a column
         'taxon' or 'taxonomy' (case insensitive)
     """
-    # make copy of phylogeny 
+    # make copy of phylogeny
     if taxonomy is None:
         # return empty taxonomy
         return None
 
     consensus_tree = phylogeny.copy()
-    # validate and convert taxonomy into a StringIO stream 
+    # validate and convert taxonomy into a StringIO stream
     consensus_map = _get_taxonomy_io_stream(taxonomy)
 
     tipname_map = nl.load_consensus_map(consensus_map, False)
@@ -111,17 +110,18 @@ def _pull_consensus_strings(consensus_tree):
     """
     Pulls consensus strings off of consensus_tree. Assumes .name is set
     This is a helper function retrieve_t2t_taxonomy
-    
+
     based on:
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/t2t/nlevel.py#L831
-    
+
     Parameters
     ----------
-    phylogeny: TreeNode    
+    phylogeny: TreeNode
     """
     constrings = []
     rank_order = {r: i for i, r in enumerate(nl.RANK_ORDER)}
     # helper function
+
     def _add_name_to_consensus_string(node_name, cons_string):
         # only add if node has a name
         if node_name:
@@ -199,16 +199,17 @@ def _get_taxonomy_io_stream(taxonomy):
     stream = io.StringIO()
 
     # Split the single column of taxonomy strings into n columns, where n
-    # is the highest number of taxonomic levels in any string. This is to ensure
-    # that all feateures have the same amount of levels for t2t
+    # is the highest number of taxonomic levels in any string. This is to
+    # ensure that all feateures have the same amount of levels for t2t
     taxonomy = taxonomy[tax_col_name]\
         .str.strip().str.split(r'\s*;\s*', expand=True)
 
     #  set t2t rank order
     highest_rank_indx = taxonomy.dropna(axis=0, how='any').first_valid_index()
-    rank_order = [l[0] for l in taxonomy.loc[highest_rank_indx].values.tolist()]
+    rank_order = [rank[0]
+                  for rank in taxonomy.loc[highest_rank_indx].values.tolist()]
     nl.set_rank_order(rank_order)
-    
+
     # collapse taxonomy back into a single string
     taxonomy.fillna('', inplace=True)
     taxonomy = taxonomy.apply(
@@ -217,11 +218,12 @@ def _get_taxonomy_io_stream(taxonomy):
 
     # convert taxonomy dataframe to a StringIO for use in t2t
     taxonomy.to_csv(stream, sep='\t', index=True, header=False)
-    
+
     # set stream to point to first line
     stream.seek(0)
 
     return stream
+
 
 def bp_read_phylogeny(table: Table,
                       phylogeny: NewickFormat,
@@ -247,7 +249,7 @@ def bp_read_phylogeny(table: Table,
     TODO
 
     """
-    
+
     # import file path
     with open(str(phylogeny)) as treefile:
         # read balanced parentheses tree
