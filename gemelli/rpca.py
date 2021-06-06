@@ -10,7 +10,7 @@ import biom
 import skbio
 import numpy as np
 import pandas as pd
-from typing import Union, Optional
+from typing import Union
 from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import (matrix_rclr,
@@ -23,7 +23,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
-from q2_types.tree import NewickFormat 
+from q2_types.tree import NewickFormat
 
 
 def phylogenetic_rpca(table: biom.Table,
@@ -42,7 +42,7 @@ def phylogenetic_rpca(table: biom.Table,
        This code will be run by both the standalone and QIIME 2 versions of
        gemelli.
     """
-    
+
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
@@ -50,7 +50,9 @@ def phylogenetic_rpca(table: biom.Table,
                                   min_feature_frequency)
 
     # import the tree based on filtered table and taxonomy
-    phylogeny = bp_read_phylogeny(table, phylogeny, min_depth)
+    phylogeny = bp_read_phylogeny(table,
+                                  phylogeny,
+                                  min_depth)
     # build the vectorized table
     counts_by_node, tree_index, branch_lengths, fids, otu_ids\
         = fast_unifrac(table, phylogeny)
@@ -59,17 +61,18 @@ def phylogenetic_rpca(table: biom.Table,
     # run OptSpace (RPCA)
     ord_res, dist_res = optspace_helper(rclr_table, fids, table.ids())
     # import expanded table
-    counts_by_node = biom.Table(counts_by_node.T, fids, table.ids())
+    counts_by_node = biom.Table(counts_by_node.T,
+                                fids, table.ids())
 
-    # validate metadata using q2 as a wrapper
-    if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
-        taxonomy = taxonomy.to_dataframe()
-    # collect taxonomic information for all tree nodes.
-    # if taxonomy is None, result_taxonomy will be an empty DataFrame
-    traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
-    result_taxonomy = create_taxonomy_metadata(phylogeny,
-                                              traversed_taxonomy,
-                                              taxonomy)
+    # # validate metadata using q2 as a wrapper
+    # if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
+    #     taxonomy = taxonomy.to_dataframe()
+    # # collect taxonomic information for all tree nodes.
+    # # if taxonomy is None, result_taxonomy will be an empty DataFrame
+    # traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
+    # result_taxonomy = create_taxonomy_metadata(phylogeny,
+    #                                           traversed_taxonomy,
+    #                                           taxonomy)
 
     return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 

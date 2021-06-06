@@ -111,7 +111,6 @@ def standalone_phylogenetic_rpca(in_biom: str,
     # write the vectorized count table for Qurro / log-ratios
     with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:
         counts_by_node.to_hdf5(f, "phylo-rpca-count-table")
-    
 
 
 @cli.command(name='rpca')

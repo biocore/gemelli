@@ -247,6 +247,7 @@ def bp_read_phylogeny(table: Table,
     TODO
 
     """
+    
     # import file path
     with open(str(phylogeny)) as treefile:
         # read balanced parentheses tree
