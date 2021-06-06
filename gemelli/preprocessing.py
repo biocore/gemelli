@@ -7,6 +7,10 @@
 # ----------------------------------------------------------------------------
 
 import warnings
+import io
+import sys
+import os
+import t2t.nlevel as nl
 import numpy as np
 import pandas as pd
 from biom import Table
@@ -16,115 +20,153 @@ from q2_types.tree import NewickFormat
 from gemelli._defaults import DEFAULT_MTD
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
-import t2t.nlevel as nl
-import io
 
 
-VALID_TAXONOMY_COLUMN_NAMES = ("taxon", "taxonomy")
+
+VALID_TAXONOMY_COLUMN_NAMES = ('taxon', 'taxonomy')
+
 
 class TaxonomyError(Exception):
     pass
 
 
-def create_taxonomy_metadata(phylogeny, postorder_taxonomy):
-    metadata = []
-
-    for i, node in enumerate(phylogeny.traverse(include_self=False)):
-        metadata.append([node.name, postorder_taxonomy[i]])
-    metadata = np.array(metadata)
-    metadata = pd.DataFrame(
-        data={'Feature ID': metadata[:, 0],
-            'Taxon': metadata[:, 1]},
-        index='Feature ID')
-    return metadata
-
-
-def retrieve_phylogeny(phylogeny, taxonomy):
+def create_taxonomy_metadata(phylogeny, traversed_taxonomy=None):
     """
-    Decorate a taxonomy onto a tree.
-    This method is based on 
+        Create a pd.DataFrame with index 'Feature ID' and column 'Taxon'.
+
+        This method will traverse phylogeny using TreeNode.traverse() and
+        use the node names found in phylogeny as the index 'Feature ID'.
+        Thus, traversed_taxonomy must be parallel List of phylogeny (i.e. a 
+        List that layes out the taxonomy in a traverse() fashion).
+
+        Parameters
+        ----------
+        phylogeny: TreeNode
+        traversed_taxonomy: List
+    """
+    f_id = []
+    tax = []
+    if traversed_taxonomy is not None:
+        # add taxonomy for all nodes in tree
+        for i, node in enumerate(phylogeny.traverse(include_self=True)):
+            # metadata.append([node.name, traversed_taxonomy[i]])
+            f_id.append(node.name)
+            tax.append(traversed_taxonomy[i])
+    else:
+        # create empty dataframe
+        f_id = ['None']
+        tax = ['None']            
+    returned_taxonomy = pd.DataFrame(data={'Feature ID': f_id, 'Taxon': tax})
+    returned_taxonomy.set_index(keys='Feature ID', inplace=True)
+    return returned_taxonomy
+
+
+def retrieve_t2t_taxonomy(phylogeny, taxonomy):
+    """
+    Returns a List containing the taxonomy of all nodes in the tree stored in
+    TreeNode.traverse() order. 
+    
+    based on :
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/scripts/t2t#L46
 
     Parameters
     ----------
-        phylogeny: TreeNode
-        taxonomy : pd.DataFrame
-
-    Raises
-    ------
-    TaxonomyError
-        taxonomy does not contain a valid taxonomy column (see
-        VALID_TAXONOMY_COLUMN_NAMES )
+    phylogeny: TreeNode
+    taxonomy : pd.DataFrame with Index 'Feature ID' and contains a column
+        'taxon' or 'taxonomy' (case insensitive)
     """
-    # need to convert taxonomy into a file stream 
-    phylogeny = phylogeny.copy()
-    consensus_map = get_taxonomy_file_stream(taxonomy)
+    # make copy of phylogeny 
+    if taxonomy is None:
+        # return empty taxonomy
+        return None
+
+    consensus_tree = phylogeny.copy()
+    # validate and convert taxonomy into a StringIO stream 
+    consensus_map = _get_taxonomy_io_stream(taxonomy)
 
     tipname_map = nl.load_consensus_map(consensus_map, False)
-    tree_ = nl.load_tree(phylogeny, tipname_map)
+    tree_ = nl.load_tree(consensus_tree, tipname_map)
     counts = nl.collect_names_at_ranks_counts(tree_)
 
     nl.decorate_ntips(tree_)
     nl.decorate_name_relative_freqs(tree_, counts, 2)
     nl.set_ranksafe(tree_)
     nl.pick_names(tree_)
-    scores = nl.name_node_score_fold(tree_)
 
     nl.set_preliminary_name_and_rank(tree_)
 
     contree, contree_lookup = nl.make_consensus_tree(tipname_map.values())
+    # Disable print statements
+    sys.stdout = open(os.devnull, 'w')
     nl.backfill_names_gap(tree_, contree_lookup)
+    # Restore print statements
+    sys.stdout = sys.__stdout__
     nl.commonname_promotion(tree_)
 
-    constrings = pull_consensus_strings(tree_)
+    constrings = _pull_consensus_strings(tree_)
     return constrings
 
 
-def pull_consensus_strings(tree):
-    """Pulls consensus strings off of tree
-
-    assumes .name is set
-    based on
+def _pull_consensus_strings(consensus_tree):
+    """
+    Pulls consensus strings off of consensus_tree. Assumes .name is set
+    This is a helper function retrieve_t2t_taxonomy
+    
+    based on:
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/t2t/nlevel.py#L831
+    
+    Parameters
+    ----------
+    phylogeny: TreeNode    
     """
     constrings = []
-    rank_order_rev = {r: i for i, r in enumerate(nl.RANK_ORDER)}
+    rank_order = {r: i for i, r in enumerate(nl.RANK_ORDER)}
+    # helper function
+    def _add_name_to_consensus_string(node_name, cons_string):
+        # only add if node has a name
+        if node_name:
+            if ';' in node_name:
+                names = [r.strip() for r in node_name.split(';')]
+                for node_name in names:
+                    rank_idx = rank_order[node_name[0]]
+                    cons_string[rank_idx] = node_name
+            else:
+                rank_idx = rank_order[node_name[0]]
+                cons_string[rank_idx] = node_name
+
     # start at the tip and travel up
-    for node in tree.traverse(include_self=False):
+    for node in consensus_tree.traverse(include_self=True):
         consensus_string = ['%s__' % r for r in nl.RANK_ORDER]
-
+        # internal nodes will have taxonomy for name
+        if not node.is_tip():
+            _add_name_to_consensus_string(node.name, consensus_string)
+        if node.is_root():
+            constrings.append('; '.join(consensus_string))
+            continue
         p = node.parent
-
-        # walk up the tree filling in the consensus string
+        # walk up the consensus_tree filling in the consensus string
         while p.parent:
-            if p.name:
-                if ';' in p.name:
-                    names = [r.strip() for r in p.name.split(';')]
-                    for name in names:
-                        rank_idx = rank_order_rev[name[0]]
-                        consensus_string[rank_idx] = name
-                else:
-                    rank_idx = rank_order_rev[p.name[0]]
-                    consensus_string[rank_idx] = p.name
+            _add_name_to_consensus_string(p.name, consensus_string)
             p = p.parent
 
         # if there is a name at the root we need to make sure we grab it
         if p.name:
-            if ';' in p.name:
-                names = [r.strip() for r in p.name.split(';')]
-                for name in names:
-                    rank_idx = rank_order_rev[name[0]]
-                    consensus_string[rank_idx] = name
-            else:
-                rank_idx = rank_order_rev[p.name[0]]
-                consensus_string[rank_idx] = p.name
+            _add_name_to_consensus_string(p.name, consensus_string)
 
         # join strings with tip id
         constrings.append('; '.join(consensus_string))
     return constrings
 
 
-def get_taxonomy_file_stream(taxonomy):
+def _get_taxonomy_io_stream(taxonomy):
+    """
+    Returns a StringIO of taxonomy.
+    Raises
+    ------
+    TaxonomyError
+        taxonomy does not contain a valid taxonomy column (see
+        VALID_TAXONOMY_COLUMN_NAMES )
+    """
     lowercase_col_names = [str(c).lower() for c in taxonomy.columns]
 
     # See if there is a "taxonomy column", and do some related validation on
@@ -147,7 +189,7 @@ def get_taxonomy_file_stream(taxonomy):
                         "that list."
                     ).format(VALID_TAXONOMY_COLUMN_NAMES)
                 )
-    if tax_col_name == None:
+    if tax_col_name is None:
         raise TaxonomyError(
             (
                 "The taxonomy file does not contain a column with one the "
@@ -209,13 +251,11 @@ def bp_read_phylogeny(table: Table,
     with open(str(phylogeny)) as treefile:
         # read balanced parentheses tree
         phylogeny = parse_newick(treefile.readline())
-
         # first filter out
         names_to_keep = set((table.ids('observation')).flatten())
         phylogeny = phylogeny.shear(names_to_keep).collapse()
         # convert the tree to skbio TreeNode for processing
         phylogeny = to_skbio_treenode(phylogeny)
-
         # filter internal nodes based on topology
         tree_topology_filter(phylogeny, min_depth=min_depth)
 

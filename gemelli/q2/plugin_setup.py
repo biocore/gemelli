@@ -32,7 +32,8 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                QLOAD, QDIST, QORD, QSOAD, QRCLR,
                                DESC_MSC, DESC_MFC, QBIPLOT,
                                QTREE, QTREECOUNT, QADIST,
-                               DESC_ITERATIONS, DESC_MFF)
+                               DESC_ITERATIONS, DESC_MFF, DESC_TAX_Q2,
+                               DESC_T2T_TAX)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -231,9 +232,10 @@ plugin.methods.register_function(
         ('distance_matrix', DistanceMatrix),
         ('counts_by_node_tree', Phylogeny[Rooted]),
         ('counts_by_node', FeatureTable[Frequency]),
-        ('counts_by_taxonomy', FeatureData[Taxonomy])],
+        ('t2t_taxonomy', FeatureData[Taxonomy])],
     input_descriptions={'table': DESC_BIN, 'phylogeny': DESC_TREE},
-    parameter_descriptions={'n_components': DESC_COMP,
+    parameter_descriptions={'taxonomy': DESC_TAX,
+                            'n_components': DESC_COMP,
                             'min_sample_count': DESC_MSC,
                             'min_feature_count': DESC_MFC,
                             'min_feature_frequency': DESC_MFF,
@@ -243,7 +245,8 @@ plugin.methods.register_function(
         'biplot': QBIPLOT,
         'distance_matrix': QADIST,
         'counts_by_node_tree': QTREE,
-        'counts_by_node': QTREECOUNT},
+        'counts_by_node': QTREECOUNT,
+        't2t_taxonomy': DESC_T2T_TAX},
     name='Phylogenetic (Robust Aitchison) RPCA.',
     description=("Performs phylogenetic robust center log-ratio transform "
                  "robust PCA and ranks the features by the "

@@ -10,20 +10,20 @@ import biom
 import skbio
 import numpy as np
 import pandas as pd
-from typing import Union
+from typing import Union, Optional
 from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
 from gemelli.preprocessing import (matrix_rclr,
                                    fast_unifrac,
                                    bp_read_phylogeny,
-                                   retrieve_phylogeny,
+                                   retrieve_t2t_taxonomy,
                                    create_taxonomy_metadata)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
-from q2_types.tree import NewickFormat
+from q2_types.tree import NewickFormat 
 
 
 def phylogenetic_rpca(table: biom.Table,
@@ -61,15 +61,17 @@ def phylogenetic_rpca(table: biom.Table,
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T, fids, table.ids())
 
-    # validate the metadata using q2 as a wrapper
+    # validate metadata using q2 as a wrapper
     if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
         taxonomy = taxonomy.to_dataframe()
+    # collect taxonomic information for all tree nodes.
+    # if taxonomy is None, result_taxonomy will be an empty DataFrame
+    traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
+    result_taxonomy = create_taxonomy_metadata(phylogeny,
+                                              traversed_taxonomy,
+                                              taxonomy)
 
-    # collect taxonomic information for all tree nodes
-    postorder_taxonomy = retrieve_phylogeny(phylogeny, taxonomy)
-    taxonomy = create_taxonomy_metadata(phylogeny, postorder_taxonomy)
-
-    return ord_res, dist_res, phylogeny, counts_by_node, taxonomy
+    return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 
 
 def rpca(table: biom.Table,

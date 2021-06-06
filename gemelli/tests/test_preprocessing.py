@@ -1,17 +1,24 @@
 import unittest
 import numpy as np
 import pandas as pd
+import t2t.nlevel as nl
 from biom import Table
 from skbio import TreeNode
 import numpy.testing as npt
 from skbio.stats.composition import clr
 from skbio.util import get_data_path
+from pandas.testing import assert_frame_equal
 from gemelli.preprocessing import (build, tensor_rclr,
                                    matrix_closure,
                                    matrix_rclr,
                                    bp_read_phylogeny,
                                    fast_unifrac,
-                                   tree_topology_filter)
+                                   tree_topology_filter,
+                                   TaxonomyError,
+                                   create_taxonomy_metadata,
+                                   retrieve_t2t_taxonomy,
+                                   _pull_consensus_strings,
+                                   _get_taxonomy_io_stream)
 
 
 class Testpreprocessing(unittest.TestCase):
@@ -57,6 +64,59 @@ class Testpreprocessing(unittest.TestCase):
         newick_bad = ('((((A,B)n9,C)n8,(D,E)n7)n4'
                       ',((F,G)n6,(H)n5)n3)n1;')
         self.tree_bad = TreeNode.read([newick_bad])
+        # make a test for reading off consensus
+        tax_tree = "(((a,b,c)n1)n2,(d,e)n3)n4;"
+        self.tax_tree = TreeNode.read([tax_tree])
+        consensus_tree = "(((a,b,c)'s__3')'p__1; s__3',(d,e)'p__2')'k__0';"
+        self.consensus_tree = TreeNode.read([consensus_tree])
+        self.consensus_string = ['k__0; p__; s__',
+                                 'k__0; p__1; s__3',
+                                 'k__0; p__1; s__3',
+                                 'k__0; p__1; s__3',
+                                 'k__0; p__1; s__3',
+                                 'k__0; p__1; s__3',
+                                 'k__0; p__2; s__',
+                                 'k__0; p__2; s__',
+                                 'k__0; p__2; s__']
+        # make a test taxonomy
+        taxonomy = {'Feature ID': ['a', 'b', 'c', 'd', 'e'],
+                    'Taxon': ['k__0; p__1; s__',
+                              'k__0; p__1; s__3',
+                              'k__0; p__1; s__3',
+                              'k__0; p__2; s__',
+                              'k__0; p__2; s__']}
+        self.taxonomy = pd.DataFrame(data=taxonomy).set_index('Feature ID')
+        self.taxonomy_io_stream_contents = ['a\tk__0; p__1; s__\n',
+                                            'b\tk__0; p__1; s__3\n',
+                                            'c\tk__0; p__1; s__3\n',
+                                            'd\tk__0; p__2; s__\n',
+                                            'e\tk__0; p__2; s__\n']
+        t2t_taxonomy = {
+            'Feature ID': ['n4', 'n2', 'n1', 'a', 'b', 'c', 'n3', 'd', 'e'],
+            'Taxon': ['k__0; p__; s__',
+                'k__0; p__1; s__3',
+                'k__0; p__1; s__3',
+                'k__0; p__1; s__3',
+                'k__0; p__1; s__3',
+                'k__0; p__1; s__3',
+                'k__0; p__2; s__',
+                'k__0; p__2; s__',
+                'k__0; p__2; s__']
+
+        }
+        self.t2t_taxonomy = pd.DataFrame(data=t2t_taxonomy)\
+            .set_index('Feature ID')
+        # make a test taxonomy to raise error
+        bad_taxonomy = {'Feature ID': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+                        'bad_column': ['k__k; p__a; s__a',
+                            'k__k; p__a; s__a',
+                            'k__k; p__a; s__a',
+                            'k__k; p__a; s__b',
+                            'k__k; p__a; s__b',
+                            'k__k; p__b; s__c',
+                            'k__k; p__b; s__c',
+                            'k__k; p__b; s__d']}
+        self.bad_taxonomy = pd.DataFrame(data=bad_taxonomy)
         # make a test table
         counts = np.array([[2, 0, 3, 3, 1, 2, 3, 4],
                            [2, 1, 4, 1, 0, 1, 4, 0]]).T
@@ -322,3 +382,33 @@ class Testpreprocessing(unittest.TestCase):
         # test clr works the same if there are no zeros
         cmat = matrix_rclr(self.cdata1)
         npt.assert_allclose(cmat, clr(self.cdata1.copy()))
+
+    def test_get_taxonomy_io_stream_invalid_column_raise(self):
+        """Test _get_taxonomy_io_stream TaxonomyError invalid index."""
+        with self.assertRaises(TaxonomyError):
+            _ = _get_taxonomy_io_stream(self.bad_taxonomy)
+
+    def test_get_taxonomy_io_stream(self):
+        io_stream = _get_taxonomy_io_stream(self.taxonomy)
+        stream_contents = io_stream.readlines()
+        self.assertListEqual(stream_contents, self.taxonomy_io_stream_contents)
+
+    def test_pull_consensus_strings(self):
+        nl.set_rank_order(['k', 'p', 's'])
+        self.assertListEqual(_pull_consensus_strings(self.consensus_tree),
+                             self.consensus_string)
+
+    def test_retrieve_t2t_taxonomy(self):
+        self.assertListEqual(
+            retrieve_t2t_taxonomy(self.tax_tree, self.taxonomy),
+            self.consensus_string)
+
+    def test_create_taxonomy_metadata(self):
+        trav_tax = retrieve_t2t_taxonomy(self.tax_tree, self.taxonomy)
+        assert_frame_equal(
+            create_taxonomy_metadata(self.tax_tree, trav_tax),
+            self.t2t_taxonomy)
+
+
+if __name__ == "__main__":
+    unittest.main()
