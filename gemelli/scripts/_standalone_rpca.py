@@ -72,7 +72,6 @@ def standalone_phylogenetic_rpca(in_biom: str,
                                  min_depth: int,
                                  max_iterations: int) -> None:
     """Runs phylogenetically informed RPCA with an rclr preprocessing step."""
-
     # import table
     table = load_table(in_biom)
     # import taxonomy

@@ -63,16 +63,14 @@ def phylogenetic_rpca(table: biom.Table,
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T,
                                 fids, table.ids())
-
-    # # validate metadata using q2 as a wrapper
-    # if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
-    #     taxonomy = taxonomy.to_dataframe()
-    # # collect taxonomic information for all tree nodes.
-    # # if taxonomy is None, result_taxonomy will be an empty DataFrame
-    # traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
-    # result_taxonomy = create_taxonomy_metadata(phylogeny,
-    #                                           traversed_taxonomy,
-    #                                           taxonomy)
+    # validate metadata using q2 as a wrapper
+    if taxonomy is not None and not isinstance(taxonomy, pd.DataFrame):
+        taxonomy = taxonomy.to_dataframe()
+    # collect taxonomic information for all tree nodes.
+    # if taxonomy is None, result_taxonomy will be an empty DataFrame
+    traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
+    result_taxonomy = create_taxonomy_metadata(phylogeny,
+                                              traversed_taxonomy)
 
     return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 

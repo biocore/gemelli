@@ -234,7 +234,7 @@ plugin.methods.register_function(
         ('counts_by_node', FeatureTable[Frequency]),
         ('t2t_taxonomy', FeatureData[Taxonomy])],
     input_descriptions={'table': DESC_BIN, 'phylogeny': DESC_TREE},
-    parameter_descriptions={'taxonomy': DESC_TAX,
+    parameter_descriptions={'taxonomy': DESC_TAX_Q2,
                             'n_components': DESC_COMP,
                             'min_sample_count': DESC_MSC,
                             'min_feature_count': DESC_MFC,
