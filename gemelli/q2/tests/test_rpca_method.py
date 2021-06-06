@@ -222,7 +222,7 @@ class Test_qiime2_rpca(unittest.TestCase):
         res = q2gemelli.actions.phylogenetic_rpca(q2_table_test,
                                                   q2_tree_test)
         # biplot, distance, count-tree, count-table
-        q2ord, q2dist, q2ctree, q2ctbl = res
+        q2ord, q2dist, q2ctree, q2ctbl, _ = res
         # Get the underlying data from these artifacts
         q2ord = q2ord.view(OrdinationResults)
         q2dist = q2dist.view(DistanceMatrix)

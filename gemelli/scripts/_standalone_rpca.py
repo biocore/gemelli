@@ -4,6 +4,7 @@ import pandas as pd
 from .__init__ import cli
 from biom import load_table
 from biom.util import biom_open
+from gemelli.preprocessing import TaxonomyError
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
@@ -13,14 +14,6 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DESC_ITERATIONS, DESC_MINDEPTH,
                                DEFAULT_MFF, DESC_MFF,
                                DESC_COUNTS, DESC_TREE, DESC_TAX_SA)
-
-
-VALID_TAXONOMY_INDEX_NAMES = ('id',
-                              'featureid',
-                              'feature id',
-                              'feature-id',
-                              '#OTUID',
-                              '#OTU ID')
 
 
 @cli.command(name='phylogenetic-rpca')
@@ -78,6 +71,12 @@ def standalone_phylogenetic_rpca(in_biom: str,
     taxonomy_table = None
     if taxonomy is not None:
         taxonomy_table = pd.read_csv(taxonomy, sep='\t')
+        try:
+            taxonomy_table.set_index('Feature ID', inplace=True)
+        except KeyError:
+            raise TaxonomyError(
+                        "Taxonomy file must have a column labled 'Feature ID'."
+                        )
     # run the RPCA wrapper
     phylo_res_ = _phylo_rpca(table,
                              in_phylogeny,

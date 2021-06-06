@@ -60,10 +60,10 @@ def create_taxonomy_metadata(phylogeny, traversed_taxonomy=None):
     return returned_taxonomy
 
 
-def retrieve_t2t_taxonomy(phylogeny, taxonomy):
+def retrieve_t2t_taxonomy(phylogeny, taxonomy=None):
     """
     Returns a List containing the taxonomy of all nodes in the tree stored in
-    TreeNode.traverse() order.
+    TreeNode.traverse() order. If taxonomy is None, then None will be returned
 
     based on :
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/scripts/t2t#L46
@@ -74,11 +74,11 @@ def retrieve_t2t_taxonomy(phylogeny, taxonomy):
     taxonomy : pd.DataFrame with Index 'Feature ID' and contains a column
         'taxon' or 'taxonomy' (case insensitive)
     """
-    # make copy of phylogeny
     if taxonomy is None:
         # return empty taxonomy
         return None
 
+    # make copy of phylogeny
     consensus_tree = phylogeny.copy()
     # validate and convert taxonomy into a StringIO stream
     consensus_map = _get_taxonomy_io_stream(taxonomy)
@@ -109,19 +109,19 @@ def retrieve_t2t_taxonomy(phylogeny, taxonomy):
 def _pull_consensus_strings(consensus_tree):
     """
     Pulls consensus strings off of consensus_tree. Assumes .name is set
-    This is a helper function retrieve_t2t_taxonomy
+    This is a helper function for retrieve_t2t_taxonomy.
 
     based on:
     https://github.com/biocore/tax2tree/blob/9b3814fb19e935c06a31e61e848d0f91bcecb305/t2t/nlevel.py#L831
 
     Parameters
     ----------
-    phylogeny: TreeNode
+    consensus_tree: TreeNode
     """
     constrings = []
     rank_order = {r: i for i, r in enumerate(nl.RANK_ORDER)}
-    # helper function
 
+    # helper function
     def _add_name_to_consensus_string(node_name, cons_string):
         # only add if node has a name
         if node_name:
@@ -134,10 +134,11 @@ def _pull_consensus_strings(consensus_tree):
                 rank_idx = rank_order[node_name[0]]
                 cons_string[rank_idx] = node_name
 
-    # start at the tip and travel up
+    # start at each node and travel up
     for node in consensus_tree.traverse(include_self=True):
         consensus_string = ['%s__' % r for r in nl.RANK_ORDER]
-        # internal nodes will have taxonomy for name
+        # internal nodes will have taxonomy for name so we need to add it to
+        # the consensus_string
         if not node.is_tip():
             _add_name_to_consensus_string(node.name, consensus_string)
         if node.is_root():
@@ -161,6 +162,7 @@ def _pull_consensus_strings(consensus_tree):
 def _get_taxonomy_io_stream(taxonomy):
     """
     Returns a StringIO of taxonomy.
+    This is a hepler function for retrieve_t2t_taxonomy.
     Raises
     ------
     TaxonomyError

@@ -49,7 +49,7 @@ def phylogenetic_rpca(table: biom.Table,
                                   min_feature_count,
                                   min_feature_frequency)
 
-    # import the tree based on filtered table and taxonomy
+    # import the tree based on filtered table
     phylogeny = bp_read_phylogeny(table,
                                   phylogeny,
                                   min_depth)
