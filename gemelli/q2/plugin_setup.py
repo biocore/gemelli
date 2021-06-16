@@ -11,7 +11,8 @@ import qiime2.sdk
 import importlib
 from gemelli import __version__
 from gemelli.ctf import (ctf, phylogenetic_ctf)
-from gemelli.rpca import (rpca, auto_rpca, phylogenetic_rpca)
+from gemelli.rpca import (rpca, auto_rpca, phylogenetic_rpca_with_taxonomy,
+                          phylogenetic_rpca_without_taxonomy)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from ._type import SampleTrajectory, FeatureTrajectory
@@ -216,9 +217,10 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
-    function=phylogenetic_rpca,
+    function=phylogenetic_rpca_with_taxonomy,
     inputs={'table': FeatureTable[Frequency],
-            'phylogeny': Phylogeny[Rooted]},
+            'phylogeny': Phylogeny[Rooted],
+            },
     parameters={
         'taxonomy': Metadata,
         'n_components': Int,
@@ -248,6 +250,46 @@ plugin.methods.register_function(
         'counts_by_node': QTREECOUNT,
         't2t_taxonomy': DESC_T2T_TAX},
     name='Phylogenetic (Robust Aitchison) RPCA.',
+    description=("Performs phylogenetic robust center log-ratio transform "
+                 "robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD"),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=phylogenetic_rpca_without_taxonomy,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={
+        'n_components': Int,
+        'min_sample_count': Int,
+        'min_feature_count': Int,
+        'min_feature_frequency': Float,
+        'min_depth': Int,
+        'max_iterations': Int},
+    outputs=[
+        ('biplot', PCoAResults % Properties("biplot")),
+        ('distance_matrix', DistanceMatrix),
+        ('counts_by_node_tree', Phylogeny[Rooted]),
+        ('counts_by_node', FeatureTable[Frequency])],
+    input_descriptions={'table': DESC_BIN, 'phylogeny': DESC_TREE},
+    parameter_descriptions={'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'min_depth': DESC_MINDEPTH,
+                            'max_iterations': DESC_ITERATIONS},
+    output_descriptions={
+        'biplot': QBIPLOT,
+        'distance_matrix': QADIST,
+        'counts_by_node_tree': QTREE,
+        'counts_by_node': QTREECOUNT},
+    name=('Phylogenetic (Robust Aitchison) RPCA. '
+          'Note: This does not output a taxonomy. '
+          'The taxonomy for the input phylogeny will still valid for tip level '
+          'features however, '
+          'if taxonomy is required for internal features please use '
+          'phylogenetic-rpca-with-taxonomy.'),
     description=("Performs phylogenetic robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD"),

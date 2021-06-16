@@ -104,7 +104,8 @@ def standalone_phylogenetic_rpca(in_biom: str,
     ord_res.write(os.path.join(output_dir, 'ordination.txt'))
     dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
     phylogeny.write(os.path.join(output_dir, 'labeled-phylogeny.nwk'))
-    result_taxonomy.to_csv(os.path.join(output_dir, 't2t-taxonomy.tsv'),
+    if result_taxonomy is not None:
+        result_taxonomy.to_csv(os.path.join(output_dir, 't2t-taxonomy.tsv'),
                            sep='\t')
     # write the vectorized count table for Qurro / log-ratios
     with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:

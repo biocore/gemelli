@@ -69,8 +69,7 @@ DESC_TAX_Q2 = ("Taxonomy file in QIIME2 formatting. If taxonomy is not passed "
 DESC_TAX_SA = ("A tsv taxonomy file which contains a column labeled either "
                "'taxon' or 'taxonomy' (case insensitive) and the first column "
                "must be labeled "
-               "'Feature ID'. If taxonomy is not "
-               "used, the output taxonomy file will be empty.")
+               "'Feature ID'. A new taxonomy file will be created.")
 DESC_T2T_TAX = ("The resulting tax2Tree taxonomy and will include taxonomy "
                 "for both internal nodes and tips. "
                 "If a taxonomy file was not used, this "
