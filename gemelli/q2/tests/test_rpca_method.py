@@ -192,7 +192,9 @@ class Test_qiime2_rpca(unittest.TestCase):
         #                                      exdistmatrix_values)
 
     def test_qiime2_phylogenetic_rpca(self):
-        """Tests that the Q2 & standalone phylogenetic RPCA match."""
+        """Tests that the Q2 (withtout taxonomy) & standalone phylogenetic RPCA
+           match.
+        """
 
         in_table = get_data_path('test.biom')
         in_tree = get_data_path('tree.nwk')
@@ -219,10 +221,11 @@ class Test_qiime2_rpca(unittest.TestCase):
                                   format='newick')
         q2_tree_test = Artifact.import_data("Phylogeny[Rooted]",
                                             tree_test)
-        res = q2gemelli.actions.phylogenetic_rpca(q2_table_test,
-                                                  q2_tree_test)
+        res = q2gemelli.actions.phylogenetic_rpca_without_taxonomy(
+            q2_table_test,
+            q2_tree_test)
         # biplot, distance, count-tree, count-table
-        q2ord, q2dist, q2ctree, q2ctbl, _ = res
+        q2ord, q2dist, q2ctree, q2ctbl = res
         # Get the underlying data from these artifacts
         q2ord = q2ord.view(OrdinationResults)
         q2dist = q2dist.view(DistanceMatrix)

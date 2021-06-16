@@ -286,7 +286,7 @@ plugin.methods.register_function(
         'counts_by_node': QTREECOUNT},
     name=('Phylogenetic (Robust Aitchison) RPCA. '
           'Note: This does not output a taxonomy. '
-          'The taxonomy for the input phylogeny will still valid for tip level '
+          'A taxonomy for the input phylogeny will still valid for tip level '
           'features however, '
           'if taxonomy is required for internal features please use '
           'phylogenetic-rpca-with-taxonomy.'),

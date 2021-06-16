@@ -41,17 +41,17 @@ def phylogenetic_rpca_without_taxonomy(table: biom.Table,
        This code will be run QIIME 2 versions of gemelli.
     """
 
-    output = phylogenetic_rpca(table,
-                              phylogeny,
-                              n_components,
-                              min_sample_count,
-                              min_feature_count,
-                              min_feature_frequency,
-                              min_depth,
-                              max_iterations)
+    output = phylogenetic_rpca(table=table,
+                              phylogeny=phylogeny,
+                              n_components=n_components,
+                              min_sample_count=min_sample_count,
+                              min_feature_count=min_feature_count,
+                              min_feature_frequency=min_feature_frequency,
+                              min_depth=min_depth,
+                              max_iterations=max_iterations)
     ord_res, dist_res, phylogeny, counts_by_node, _ = output
 
-    return output
+    return ord_res, dist_res, phylogeny, counts_by_node
 
 
 def phylogenetic_rpca_with_taxonomy(table: biom.Table,
@@ -70,22 +70,24 @@ def phylogenetic_rpca_with_taxonomy(table: biom.Table,
        This code will be run QIIME 2 versions of gemelli.
     """
     taxonomy = taxonomy.to_dataframe()
-    output = phylogenetic_rpca(table,
-                              phylogeny,
-                              taxonomy,
-                              n_components,
-                              min_sample_count,
-                              min_feature_count,
-                              min_feature_frequency,
-                              min_depth,
-                              max_iterations)
+    output = phylogenetic_rpca(table=table,
+                              phylogeny=phylogeny,
+                              taxonomy=taxonomy,
+                              n_components=n_components,
+                              min_sample_count=min_sample_count,
+                              min_feature_count=min_feature_count,
+                              min_feature_frequency=min_feature_frequency,
+                              min_depth=min_depth,
+                              max_iterations=max_iterations)
+    ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy = output
 
-    return ord_res, dist_res, phylogeny, counts_by_node
+
+    return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 
 
 def phylogenetic_rpca(table: biom.Table,
                       phylogeny: NewickFormat,
-                      taxonomy: Optional[pd.DataFrame],
+                      taxonomy: Optional[pd.DataFrame] = None,
                       n_components: Union[int, str] = DEFAULT_COMP,
                       min_sample_count: int = DEFAULT_MSC,
                       min_feature_count: int = DEFAULT_MFC,
@@ -123,7 +125,6 @@ def phylogenetic_rpca(table: biom.Table,
     result_taxonomy = None
     if taxonomy is not None:
         # collect taxonomic information for all tree nodes.
-        # if taxonomy is None, result_taxonomy will be an empty DataFrame
         traversed_taxonomy = retrieve_t2t_taxonomy(phylogeny, taxonomy)
         result_taxonomy = create_taxonomy_metadata(phylogeny,
                                                    traversed_taxonomy)
