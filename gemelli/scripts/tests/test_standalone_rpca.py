@@ -61,8 +61,9 @@ class Test_standalone_rpca(unittest.TestCase):
         """Checks the output gemelli's phylogenetic RPCA standalone script.
 
            This is more of an "integration test" than a unit test -- the
-           details of the algorithm used by the standalone RPCA script are
-           checked in more detail in gemelli/tests/test_optspace.py, etc.
+           details of the algorithm used by the standalone phylogenetic RPCA
+           script are checked in more detail in gemelli/tests/test_optspace.py,
+           etc.
         """
         in_ = get_data_path('test.biom', subfolder='rpca_data')
         in_tree_ = get_data_path('tree.nwk', subfolder='rpca_data')
