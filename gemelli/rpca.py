@@ -26,61 +26,62 @@ from scipy.linalg import svd
 from q2_types.tree import NewickFormat
 
 
-def phylogenetic_rpca_without_taxonomy(table: biom.Table,
-                      phylogeny: NewickFormat,
-                      n_components: Union[int, str] = DEFAULT_COMP,
-                      min_sample_count: int = DEFAULT_MSC,
-                      min_feature_count: int = DEFAULT_MFC,
-                      min_feature_frequency: float = DEFAULT_MFF,
-                      min_depth: int = DEFAULT_MTD,
-                      max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-                          OrdinationResults, DistanceMatrix,
-                          TreeNode, biom.Table):
+def phylogenetic_rpca_without_taxonomy(
+        table: biom.Table,
+        phylogeny: NewickFormat,
+        n_components: Union[int, str] = DEFAULT_COMP,
+        min_sample_count: int = DEFAULT_MSC,
+        min_feature_count: int = DEFAULT_MFC,
+        min_feature_frequency: float = DEFAULT_MFF,
+        min_depth: int = DEFAULT_MTD,
+        max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+    OrdinationResults, DistanceMatrix,
+        TreeNode, biom.Table):
     """Runs phylogenetic RPCA.
 
        This code will be run QIIME 2 versions of gemelli.
     """
 
     output = phylogenetic_rpca(table=table,
-                              phylogeny=phylogeny,
-                              n_components=n_components,
-                              min_sample_count=min_sample_count,
-                              min_feature_count=min_feature_count,
-                              min_feature_frequency=min_feature_frequency,
-                              min_depth=min_depth,
-                              max_iterations=max_iterations)
+                               phylogeny=phylogeny,
+                               n_components=n_components,
+                               min_sample_count=min_sample_count,
+                               min_feature_count=min_feature_count,
+                               min_feature_frequency=min_feature_frequency,
+                               min_depth=min_depth,
+                               max_iterations=max_iterations)
     ord_res, dist_res, phylogeny, counts_by_node, _ = output
 
     return ord_res, dist_res, phylogeny, counts_by_node
 
 
-def phylogenetic_rpca_with_taxonomy(table: biom.Table,
-                      phylogeny: NewickFormat,
-                      taxonomy: pd.DataFrame,
-                      n_components: Union[int, str] = DEFAULT_COMP,
-                      min_sample_count: int = DEFAULT_MSC,
-                      min_feature_count: int = DEFAULT_MFC,
-                      min_feature_frequency: float = DEFAULT_MFF,
-                      min_depth: int = DEFAULT_MTD,
-                      max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-                          OrdinationResults, DistanceMatrix,
-                          TreeNode, biom.Table, pd.DataFrame):
+def phylogenetic_rpca_with_taxonomy(
+            table: biom.Table,
+            phylogeny: NewickFormat,
+            taxonomy: pd.DataFrame,
+            n_components: Union[int, str] = DEFAULT_COMP,
+            min_sample_count: int = DEFAULT_MSC,
+            min_feature_count: int = DEFAULT_MFC,
+            min_feature_frequency: float = DEFAULT_MFF,
+            min_depth: int = DEFAULT_MTD,
+            max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+        OrdinationResults, DistanceMatrix,
+        TreeNode, biom.Table, pd.DataFrame):
     """Runs phylogenetic RPCA.
 
        This code will be run QIIME 2 versions of gemelli.
     """
     taxonomy = taxonomy.to_dataframe()
     output = phylogenetic_rpca(table=table,
-                              phylogeny=phylogeny,
-                              taxonomy=taxonomy,
-                              n_components=n_components,
-                              min_sample_count=min_sample_count,
-                              min_feature_count=min_feature_count,
-                              min_feature_frequency=min_feature_frequency,
-                              min_depth=min_depth,
-                              max_iterations=max_iterations)
+                               phylogeny=phylogeny,
+                               taxonomy=taxonomy,
+                               n_components=n_components,
+                               min_sample_count=min_sample_count,
+                               min_feature_count=min_feature_count,
+                               min_feature_frequency=min_feature_frequency,
+                               min_depth=min_depth,
+                               max_iterations=max_iterations)
     ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy = output
-
 
     return ord_res, dist_res, phylogeny, counts_by_node, result_taxonomy
 
