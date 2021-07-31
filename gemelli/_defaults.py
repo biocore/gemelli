@@ -64,6 +64,13 @@ DESC_MFF = ("Minimum percentage of samples a feature must appear"
 DESC_OUT = "Location of output files."
 DESC_FMETA = "Feature metadata file in QIIME2 formatting."
 DESC_SMETA = "Sample metadata file in QIIME2 formatting."
+DESC_TAX_Q2 = ("Taxonomy file in QIIME2 formatting.")
+DESC_TAX_SA = ("A tsv taxonomy file which contains a column labeled either "
+               "'taxon' or 'taxonomy' (case insensitive) and the first column "
+               "must be labeled "
+               "'Feature ID'. A new taxonomy file will be created.")
+DESC_T2T_TAX = ("The resulting tax2Tree taxonomy and will include taxonomy "
+                "for both internal nodes and tips.")
 DESC_SUBJ = ("Metadata column containing subject IDs to"
              " use for pairing samples. WARNING: if"
              " replicates exist for an individual ID at"
