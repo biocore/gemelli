@@ -56,7 +56,8 @@ def phylogenetic_rpca(table: biom.Table,
     # Robust-clt (matrix_rclr) preprocessing
     rclr_table = matrix_rclr(counts_by_node, branch_lengths=branch_lengths)
     # run OptSpace (RPCA)
-    ord_res, dist_res = optspace_helper(rclr_table, fids, table.ids())
+    ord_res, dist_res = optspace_helper(rclr_table, fids, table.ids(),
+                                        n_components=n_components)
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T,
                                 fids, table.ids())
@@ -88,7 +89,7 @@ def rpca(table: biom.Table,
     # run OptSpace (RPCA)
     ord_res, dist_res = optspace_helper(rclr_table,
                                         table.ids('observation'),
-                                        table.ids())
+                                        table.ids(), n_components=n_components)
 
     return ord_res, dist_res
 
