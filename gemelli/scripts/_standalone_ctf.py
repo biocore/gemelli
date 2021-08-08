@@ -5,6 +5,7 @@ import pandas as pd
 from biom.util import biom_open
 from biom import load_table
 from gemelli.ctf import (ctf_helper, phylogenetic_ctf_helper)
+from gemelli.preprocessing import TaxonomyError
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_MFC, DEFAULT_MTD,
                                DESC_MSC, DESC_MFC,
@@ -99,7 +100,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
                                 max_iterations_als: int,
                                 max_iterations_rptm: int,
                                 n_initializations: int,
-                                feature_metadata_file: str,
+                                feature_metadata_file: None,
                                 state_column_2: str,
                                 state_column_3: str,
                                 state_column_4: str) -> None:
@@ -116,12 +117,17 @@ def standalone_phylogenetic_ctf(in_biom: str,
                                   sep='\t', index_col=0,
                                   low_memory=False)
     # import feature metadata if available
+    feature_metadata = None
     if feature_metadata_file is not None:
         feature_metadata = pd.read_csv(feature_metadata_file,
                                        sep='\t', index_col=0,
                                        low_memory=False)
-    else:
-        feature_metadata = None
+        try:
+            taxonomy_table.set_index('Feature ID', inplace=True)
+        except KeyError:
+            raise TaxonomyError(
+                        "Taxonomy file must have a column labled 'Feature ID'."
+                        )
     # run CTF
     res_ = phylogenetic_ctf_helper(table,
                                    in_phylogeny,
@@ -137,7 +143,8 @@ def standalone_phylogenetic_ctf(in_biom: str,
                                    max_iterations_rptm,
                                    n_initializations,
                                    feature_metadata)
-    state_ordn, ord_res, dists, straj, ftraj, phylogeny, counts_by_node = res_
+    (state_ordn, ord_res, dists, straj, ftraj,
+     phylogeny, counts_by_node, result_taxonomy) = res_
     # If it doesn't already exist, create the output directory.
     # Note that there is technically a race condition here: it's ostensibly
     # possible that some process could delete the output directory after we
@@ -150,6 +157,9 @@ def standalone_phylogenetic_ctf(in_biom: str,
     # these filenames (analogous to QIIME 2's behavior if you specify the
     # --o-biplot and --o-distance-matrix options, but differing from QIIME 2's
     # behavior if you specify --output-dir instead).
+    if result_taxonomy is not None:
+        result_taxonomy.to_csv(os.path.join(output_dir, 't2t-taxonomy.tsv'),
+                           sep='\t')
     ord_res.write(os.path.join(output_dir, 'ordination.txt'))
     # write each distance matrix
     for condition, dist in dists.items():

@@ -161,7 +161,7 @@ class Test_qiime2_ctf(unittest.TestCase):
         """
 
         # Run gemelli through QIIME 2 (specifically, the Artifact API)
-        res = q2gemelli.actions.phylogenetic_ctf(self.q2table,
+        res = q2gemelli.actions.phylogenetic_ctf_without_taxonomy(self.q2table,
                                                  self.q2phylogeny,
                                                  self.q2meta,
                                                  self.subj,

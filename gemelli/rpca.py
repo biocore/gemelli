@@ -35,7 +35,7 @@ def phylogenetic_rpca_without_taxonomy(
         min_feature_frequency: float = DEFAULT_MFF,
         min_depth: int = DEFAULT_MTD,
         max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-    OrdinationResults, DistanceMatrix,
+        OrdinationResults, DistanceMatrix,
         TreeNode, biom.Table):
     """Runs phylogenetic RPCA.
 

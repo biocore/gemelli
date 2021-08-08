@@ -10,8 +10,11 @@ import qiime2.plugin
 import qiime2.sdk
 import importlib
 from gemelli import __version__
-from gemelli.ctf import (ctf, phylogenetic_ctf)
-from gemelli.rpca import (rpca, auto_rpca, phylogenetic_rpca_with_taxonomy,
+from gemelli.ctf import (ctf, phylogenetic_ctf,
+                         phylogenetic_ctf_without_taxonomy,
+                         phylogenetic_ctf_with_taxonomy)
+from gemelli.rpca import (rpca, auto_rpca,
+                          phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
@@ -144,6 +147,7 @@ plugin.methods.register_function(
     parameters={'sample_metadata': Metadata,
                 'individual_id_column': Str,
                 'state_column': Str,
+                'taxonomy': Metadata,
                 'n_components': Int,
                 'min_sample_count': Int,
                 'min_feature_count': Int,
@@ -151,8 +155,120 @@ plugin.methods.register_function(
                 'min_depth': Int,
                 'max_iterations_als': Int,
                 'max_iterations_rptm': Int,
-                'n_initializations': Int,
-                'feature_metadata': Metadata},
+                'n_initializations': Int},
+    outputs=[('subject_biplot', PCoAResults % Properties("biplot")),
+             ('state_biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix),
+             ('state_subject_ordination', SampleData[SampleTrajectory]),
+             ('state_feature_ordination', FeatureData[FeatureTrajectory]),
+             ('counts_by_node_tree', Phylogeny[Rooted]),
+             ('counts_by_node', FeatureTable[Frequency]),
+             ('t2t_taxonomy', FeatureData[Taxonomy])],
+    input_descriptions={'table': DESC_BIN,
+                        'phylogeny': DESC_TREE},
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_COND,
+                            'taxonomy': DESC_TAX_Q2,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations_als': DESC_ITERATIONSALS,
+                            'max_iterations_rptm': DESC_ITERATIONSRTPM,
+                            'n_initializations': DESC_INIT},
+    output_descriptions={'subject_biplot': QLOAD,
+                         'state_biplot': QSOAD,
+                         'distance_matrix': QDIST,
+                         'state_subject_ordination': QORD,
+                         'state_feature_ordination': QORD,
+                         'counts_by_node_tree': QTREE,
+                         'counts_by_node': QTREECOUNT,
+                         't2t_taxonomy': DESC_T2T_TAX},
+    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
+         'means subjects have repeated measures across only one '
+         'axis (e.g. time or space).',
+    description=("Gemelli resolves spatiotemporal subject variation and the"
+                 " biological features that separate them. In this case, a "
+                 "subject may have several paired samples, where each sample"
+                 " may be a time point. The output is akin to conventional "
+                 "beta-diversity analyses but with the paired component "
+                 "integrated in the dimensionality reduction."),
+    citations=[citations['Martino2020']]
+)
+
+plugin.methods.register_function(
+    function=phylogenetic_ctf_with_taxonomy,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'sample_metadata': Metadata,
+                'taxonomy': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'min_depth': Int,
+                'max_iterations_als': Int,
+                'max_iterations_rptm': Int,
+                'n_initializations': Int},
+    outputs=[('subject_biplot', PCoAResults % Properties("biplot")),
+             ('state_biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix),
+             ('state_subject_ordination', SampleData[SampleTrajectory]),
+             ('state_feature_ordination', FeatureData[FeatureTrajectory]),
+             ('counts_by_node_tree', Phylogeny[Rooted]),
+             ('counts_by_node', FeatureTable[Frequency]),
+             ('t2t_taxonomy', FeatureData[Taxonomy])],
+    input_descriptions={'table': DESC_BIN,
+                        'phylogeny': DESC_TREE},
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'taxonomy': DESC_TAX_Q2,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_COND,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations_als': DESC_ITERATIONSALS,
+                            'max_iterations_rptm': DESC_ITERATIONSRTPM,
+                            'n_initializations': DESC_INIT},
+    output_descriptions={'subject_biplot': QLOAD,
+                         'state_biplot': QSOAD,
+                         'distance_matrix': QDIST,
+                         'state_subject_ordination': QORD,
+                         'state_feature_ordination': QORD,
+                         'counts_by_node_tree': QTREE,
+                         'counts_by_node': QTREECOUNT,
+                         't2t_taxonomy': DESC_T2T_TAX},
+    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
+         'means subjects have repeated measures across only one '
+         'axis (e.g. time or space).',
+    description=("Gemelli resolves spatiotemporal subject variation and the"
+                 " biological features that separate them. In this case, a "
+                 "subject may have several paired samples, where each sample"
+                 " may be a time point. The output is akin to conventional "
+                 "beta-diversity analyses but with the paired component "
+                 "integrated in the dimensionality reduction."),
+    citations=[citations['Martino2020']]
+)
+
+plugin.methods.register_function(
+    function=phylogenetic_ctf_without_taxonomy,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'sample_metadata': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'min_depth': Int,
+                'max_iterations_als': Int,
+                'max_iterations_rptm': Int,
+                'n_initializations': Int},
     outputs=[('subject_biplot', PCoAResults % Properties("biplot")),
              ('state_biplot', PCoAResults % Properties("biplot")),
              ('distance_matrix', DistanceMatrix),
