@@ -9,7 +9,7 @@ from q2_types.tree import NewickFormat
 from skbio import OrdinationResults, DistanceMatrix, TreeNode
 from gemelli.factorization import TensorFactorization
 from gemelli.rpca import rpca_table_processing
-from gemelli.preprocessing import (build, tensor_rclr,
+from gemelli.preprocessing import (build,
                                    fast_unifrac,
                                    bp_read_phylogeny,
                                    retrieve_t2t_taxonomy,
@@ -384,18 +384,15 @@ def tensals_helper(table: biom.Table,
     tensor = build()
     tensor.construct(table, sample_metadata,
                      individual_id_column,
-                     state_columns)
-
-    # rclr of slices
-    transformed_counts = tensor_rclr(tensor.counts,
-                                     branch_lengths=branch_lengths)
+                     state_columns,
+                     branch_lengths=branch_lengths)
 
     # factorize
     TF = TensorFactorization(
         n_components=n_components,
         max_als_iterations=max_iterations_als,
         max_rtpm_iterations=max_iterations_rptm,
-        n_initializations=n_initializations).fit(transformed_counts)
+        n_initializations=n_initializations).fit(tensor.rclr_transformed)
 
     # label tensor loadings
     TF.label(tensor, taxonomy=feature_metadata)

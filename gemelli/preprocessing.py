@@ -764,7 +764,7 @@ class build(_BaseConstruct):
 
         """
 
-    def construct(self, table, mf, subjects, conditions):
+    def construct(self, table, mf, subjects, conditions, branch_lengths=None):
         """
         This function transforms a 2D table
         into a N-Order tensor.
@@ -840,6 +840,7 @@ class build(_BaseConstruct):
         self.mf = mf.copy()
         self.subjects = subjects
         self.conditions = conditions
+        self.branch_lengths = branch_lengths
         self._construct()
 
         return self
@@ -883,17 +884,26 @@ class build(_BaseConstruct):
             mf.drop(dup[1:], axis=0)
         # save direct data
         table_counts = table.values
+        rlcr_table = matrix_rclr(table_counts.T,
+                                 branch_lengths=self.branch_lengths).T
 
         # Step 2: fill the tensor (missing are all zero)
 
-        # generate all sorted mode ids
-        def sortset(ids): return sorted(set(ids))
+        # sort by data within groups to avoid
+        # different results with permuted labels
+        mf['seq_depth'] = table.sum(0).reindex(mf.index).fillna(0)
+
+        def sortset(grp_col, mf_tmp):
+            order_tmp = mf_tmp.groupby(grp_col).sum()
+            order_tmp = order_tmp.sort_values('seq_depth').index
+            return list(order_tmp)
+
         # get the ordered subjects
-        subject_order = sortset(mf[self.subjects])
+        subject_order = sortset(self.subjects, mf)
         # get un-ordered features (order does not matter)
-        feature_order = list(table.index)
+        feature_order = list(table.sum(1).sort_values().index)
         # get the ordered for each conditional
-        conditional_orders = [sortset(mf[cond])
+        conditional_orders = [sortset(cond, mf)
                               for cond in self.conditions]
         # generate the dims.
         all_dim = [subject_order]\
@@ -904,6 +914,7 @@ class build(_BaseConstruct):
                                           feature_order]
                        + all_dim[1:]])
         tensor_counts = np.zeros(tuple(shape))
+        tensor_rclr = tensor_counts.copy()
 
         # generate map from ordered subject and conditions
         # to the original orders in the table
@@ -922,6 +933,8 @@ class build(_BaseConstruct):
             ind_ = [T_ind[:1], list(range(len(table.index)))] + list(T_ind[1:])
             # fill count tensor from table
             tensor_counts[tuple(ind_)] = table_counts[:, M_ind]
+            tensor_rclr[tuple(ind_)] = rlcr_table[:, M_ind]
+        tensor_rclr[~np.isfinite(tensor_rclr)] = 0.0
 
         # save metadat and save subject-conditional index
         condition_metadata_map = [{(sid, con): i
@@ -932,6 +945,7 @@ class build(_BaseConstruct):
         self.condition_metadata_map = condition_metadata_map
         # save tensor label order
         self.counts = tensor_counts
+        self.rclr_transformed = tensor_rclr
         self.subject_order = subject_order
         self.feature_order = feature_order
         self.condition_orders = conditional_orders
