@@ -319,9 +319,9 @@ def per_subject_table(table: biom.Table,
                               table.ids('observation'),
                               table.ids('sample')).T
     # get subject ID information
-    subject_sample_metadata = sample_metadata.copy()[individual_id_column]
-    subject_sample_metadata = subject_sample_metadata.reindex(subject_table.index)
-    subject_table[individual_id_column] = subject_sample_metadata
+    subject_sample_mf = sample_metadata.copy()[individual_id_column]
+    subject_sample_mf = subject_sample_mf.reindex(subject_table.index)
+    subject_table[individual_id_column] = subject_sample_mf
     # sum by subject across all samples
     subject_table = subject_table.groupby(individual_id_column).sum().T
     # back to biom.Table
