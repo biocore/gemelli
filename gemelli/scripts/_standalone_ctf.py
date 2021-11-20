@@ -144,7 +144,8 @@ def standalone_phylogenetic_ctf(in_biom: str,
                                    n_initializations,
                                    feature_metadata)
     (state_ordn, ord_res, dists, straj, ftraj,
-     phylogeny, counts_by_node, result_taxonomy) = res_
+     phylogeny, counts_by_node,
+     result_taxonomy, subject_table) = res_
     # If it doesn't already exist, create the output directory.
     # Note that there is technically a race condition here: it's ostensibly
     # possible that some process could delete the output directory after we
@@ -190,7 +191,11 @@ def standalone_phylogenetic_ctf(in_biom: str,
     table_out_path = os.path.join(output_dir,
                                   'phylogenetic-table.biom')
     with biom_open(table_out_path, 'w') as f:
-        counts_by_node.to_hdf5(f, "phylogenetic-rpca-count-table")
+        counts_by_node.to_hdf5(f, "phylogenetic-ctf-count-table")
+    table_out_path = os.path.join(output_dir,
+                                  'subject-phylogenetic-table.biom')
+    with biom_open(table_out_path, 'w') as f:
+        subject_table.to_hdf5(f, "subject-ctf-count-table")
 
 
 @cli.command(name='ctf')

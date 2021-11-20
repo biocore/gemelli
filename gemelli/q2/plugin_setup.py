@@ -37,7 +37,7 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_MSC, DESC_MFC, QBIPLOT,
                                QTREE, QTREECOUNT, QADIST,
                                DESC_ITERATIONS, DESC_MFF, DESC_TAX_Q2,
-                               DESC_T2T_TAX)
+                               DESC_T2T_TAX, DESC_STBL)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -163,7 +163,8 @@ plugin.methods.register_function(
              ('state_feature_ordination', FeatureData[FeatureTrajectory]),
              ('counts_by_node_tree', Phylogeny[Rooted]),
              ('counts_by_node', FeatureTable[Frequency]),
-             ('t2t_taxonomy', FeatureData[Taxonomy])],
+             ('t2t_taxonomy', FeatureData[Taxonomy]),
+             ('subject_table', FeatureTable[Frequency])],
     input_descriptions={'table': DESC_BIN,
                         'phylogeny': DESC_TREE},
     parameter_descriptions={'sample_metadata': DESC_SMETA,
@@ -184,7 +185,8 @@ plugin.methods.register_function(
                          'state_feature_ordination': QORD,
                          'counts_by_node_tree': QTREE,
                          'counts_by_node': QTREECOUNT,
-                         't2t_taxonomy': DESC_T2T_TAX},
+                         't2t_taxonomy': DESC_T2T_TAX,
+                         'subject_table': DESC_STBL},
     name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
          'means subjects have repeated measures across only one '
          'axis (e.g. time or space).',
@@ -220,7 +222,8 @@ plugin.methods.register_function(
              ('state_feature_ordination', FeatureData[FeatureTrajectory]),
              ('counts_by_node_tree', Phylogeny[Rooted]),
              ('counts_by_node', FeatureTable[Frequency]),
-             ('t2t_taxonomy', FeatureData[Taxonomy])],
+             ('t2t_taxonomy', FeatureData[Taxonomy]),
+             ('subject_table', FeatureTable[Frequency])],
     input_descriptions={'table': DESC_BIN,
                         'phylogeny': DESC_TREE},
     parameter_descriptions={'sample_metadata': DESC_SMETA,
@@ -241,7 +244,8 @@ plugin.methods.register_function(
                          'state_feature_ordination': QORD,
                          'counts_by_node_tree': QTREE,
                          'counts_by_node': QTREECOUNT,
-                         't2t_taxonomy': DESC_T2T_TAX},
+                         't2t_taxonomy': DESC_T2T_TAX,
+                         'subject_table': DESC_STBL},
     name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
          'means subjects have repeated measures across only one '
          'axis (e.g. time or space).',
@@ -275,7 +279,8 @@ plugin.methods.register_function(
              ('state_subject_ordination', SampleData[SampleTrajectory]),
              ('state_feature_ordination', FeatureData[FeatureTrajectory]),
              ('counts_by_node_tree', Phylogeny[Rooted]),
-             ('counts_by_node', FeatureTable[Frequency])],
+             ('counts_by_node', FeatureTable[Frequency]),
+             ('subject_table', FeatureTable[Frequency])],
     input_descriptions={'table': DESC_BIN,
                         'phylogeny': DESC_TREE},
     parameter_descriptions={'sample_metadata': DESC_SMETA,
@@ -294,7 +299,8 @@ plugin.methods.register_function(
                          'state_subject_ordination': QORD,
                          'state_feature_ordination': QORD,
                          'counts_by_node_tree': QTREE,
-                         'counts_by_node': QTREECOUNT},
+                         'counts_by_node': QTREECOUNT,
+                         'subject_table' : DESC_STBL},
     name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
          'means subjects have repeated measures across only one '
          'axis (e.g. time or space).',

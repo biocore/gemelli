@@ -37,7 +37,7 @@ def phylogenetic_ctf_without_taxonomy(
                      n_initializations: int = DEFAULT_TENSALS_MAXITER) -> (
                          OrdinationResults, OrdinationResults,
                          DistanceMatrix, DataFrame, DataFrame,
-                         TreeNode, biom.Table):
+                         TreeNode, biom.Table, biom.Table):
 
     # run CTF helper and parse output for QIIME
     output = phylogenetic_ctf(table=table,
@@ -54,9 +54,11 @@ def phylogenetic_ctf_without_taxonomy(
                               max_iterations_rptm=max_iterations_rptm,
                               n_initializations=n_initializations)
     (ord_res, state_ordn, dists, straj, ftraj,
-     phylogeny, counts_by_node, _) = output
+     phylogeny, counts_by_node,
+     _, subject_table) = output
 
-    return ord_res, state_ordn, dists, straj, ftraj, phylogeny, counts_by_node
+    return (ord_res, state_ordn, dists, straj, ftraj,
+            phylogeny, counts_by_node, subject_table)
 
 
 def phylogenetic_ctf_with_taxonomy(
@@ -76,7 +78,8 @@ def phylogenetic_ctf_with_taxonomy(
                      n_initializations: int = DEFAULT_TENSALS_MAXITER) -> (
                          OrdinationResults, OrdinationResults,
                          DistanceMatrix, DataFrame, DataFrame,
-                         TreeNode, biom.Table, pd.DataFrame):
+                         TreeNode, biom.Table,
+                         pd.DataFrame, biom.Table):
 
     # feature_metadata
     taxonomy = taxonomy.to_dataframe()
@@ -96,10 +99,13 @@ def phylogenetic_ctf_with_taxonomy(
                               max_iterations_rptm=max_iterations_rptm,
                               n_initializations=n_initializations)
     (ord_res, state_ordn, dists, straj, ftraj,
-     phylogeny, counts_by_node, result_taxonomy) = output
+     phylogeny, counts_by_node,
+     result_taxonomy, subject_table) = output
 
-    return (ord_res, state_ordn, dists, straj, ftraj,
-            phylogeny, counts_by_node, result_taxonomy)
+    return (ord_res, state_ordn,
+            dists, straj, ftraj,
+            phylogeny, counts_by_node,
+            result_taxonomy, subject_table)
 
 
 def phylogenetic_ctf(table: biom.Table,
@@ -118,7 +124,8 @@ def phylogenetic_ctf(table: biom.Table,
                      n_initializations: int = DEFAULT_TENSALS_MAXITER) -> (
                          OrdinationResults, OrdinationResults,
                          DistanceMatrix, DataFrame, DataFrame,
-                         TreeNode, biom.Table, Optional[pd.DataFrame]):
+                         TreeNode, biom.Table,
+                         Optional[pd.DataFrame], biom.Table):
 
     # run CTF helper and parse output for QIIME
     helper_results = phylogenetic_ctf_helper(table,
@@ -136,7 +143,8 @@ def phylogenetic_ctf(table: biom.Table,
                                              n_initializations,
                                              taxonomy)
     (state_ordn, ord_res, dists, straj,
-     ftraj, phylogeny, counts_by_node, result_taxonomy) = helper_results
+     ftraj, phylogeny, counts_by_node,
+     result_taxonomy, subject_table) = helper_results
 
     # save only first state (QIIME can't handle a list yet)
     dists = list(dists.values())[0]
@@ -144,8 +152,10 @@ def phylogenetic_ctf(table: biom.Table,
     ftraj = list(ftraj.values())[0]
     state_ordn = list(state_ordn.values())[0]
 
-    return (ord_res, state_ordn, dists, straj, ftraj,
-            phylogeny, counts_by_node, result_taxonomy)
+    return (ord_res, state_ordn,
+            dists, straj, ftraj,
+            phylogeny, counts_by_node,
+            result_taxonomy, subject_table)
 
 
 def phylogenetic_ctf_helper(table: biom.Table,
@@ -164,7 +174,7 @@ def phylogenetic_ctf_helper(table: biom.Table,
                             taxonomy: Optional[pd.DataFrame] = None) -> (
                                 OrdinationResults, OrdinationResults,
                                 DistanceMatrix, DataFrame, DataFrame,
-                                TreeNode, biom.Table):
+                                TreeNode, biom.Table, biom.Table):
 
     # check the table for validity and then filter
     process_results = ctf_table_processing(table,
@@ -185,6 +195,10 @@ def phylogenetic_ctf_helper(table: biom.Table,
     # import expanded table
     counts_by_node = biom.Table(counts_by_node.T,
                                 fids, table.ids())
+    # make a table for Empress
+    subject_table = per_subject_table(table,
+                                      sample_metadata.copy(),
+                                      individual_id_column)
     # use taxonomy if provided
     result_taxonomy = None
     if taxonomy is not None:
@@ -206,8 +220,10 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                     result_taxonomy)
     state_ordn, ord_res, dists, straj, ftraj = tensal_results
 
-    return (state_ordn, ord_res, dists, straj, ftraj,
-            phylogeny, counts_by_node, result_taxonomy)
+    return (state_ordn, ord_res,
+            dists, straj, ftraj,
+            phylogeny, counts_by_node,
+            result_taxonomy, subject_table)
 
 
 def ctf(table: biom.Table,
@@ -290,6 +306,30 @@ def ctf_helper(table: biom.Table,
     state_ordn, ord_res, dists, straj, ftraj = tensal_results
 
     return state_ordn, ord_res, dists, straj, ftraj
+
+
+def per_subject_table(table: biom.Table,
+                      sample_metadata: DataFrame,
+                      individual_id_column: str):
+    """ builds a per-subject summed table for Empress
+    """
+
+    # convert biom.Table into dataframe
+    subject_table = DataFrame(table.matrix_data.toarray(),
+                              table.ids('observation'),
+                              table.ids('sample')).T
+    # get subject ID information
+    subject_sample_metadata = sample_metadata.copy()[individual_id_column]
+    subject_sample_metadata = subject_sample_metadata.reindex(subject_table.index)
+    subject_table[individual_id_column] = subject_sample_metadata
+    # sum by subject across all samples
+    subject_table = subject_table.groupby(individual_id_column).sum().T
+    # back to biom.Table
+    subject_table = biom.Table(subject_table.values,
+                               subject_table.index,
+                               subject_table.columns)
+
+    return subject_table
 
 
 def ctf_table_processing(table: biom.Table,

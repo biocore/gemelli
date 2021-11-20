@@ -166,7 +166,7 @@ class Test_qiime2_ctf(unittest.TestCase):
                                                  self.q2meta,
                                                  self.subj,
                                                  self.state)
-        oqza, osqza, dqza, sqza, fqza, tree, ctable = res
+        oqza, osqza, dqza, sqza, fqza, tree, ctable, _ = res
         # Get the underlying data from these artifacts
         q2straj = sqza.view(pd.DataFrame)
         q2ftraj = fqza.view(pd.DataFrame)

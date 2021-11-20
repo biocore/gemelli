@@ -864,6 +864,7 @@ class build(_BaseConstruct):
         table, mf = self.table, self.mf
 
         # Step 1: mean samples with multiple conditional overlaps
+        table = table.loc[table.sum(1).sort_values().index, :]
         col_tmp = [self.subjects] + self.conditions
         duplicated = {k: list(df.index)
                       for k, df in mf.groupby(col_tmp)
@@ -901,7 +902,7 @@ class build(_BaseConstruct):
         # get the ordered subjects
         subject_order = sortset(self.subjects, mf)
         # get un-ordered features (order does not matter)
-        feature_order = list(table.sum(1).sort_values().index)
+        feature_order = list(table.index)
         # get the ordered for each conditional
         conditional_orders = [sortset(cond, mf)
                               for cond in self.conditions]

@@ -71,6 +71,8 @@ DESC_TAX_SA = ("A tsv taxonomy file which contains a column labeled either "
                "'Feature ID'. A new taxonomy file will be created.")
 DESC_T2T_TAX = ("The resulting tax2Tree taxonomy and will include taxonomy "
                 "for both internal nodes and tips.")
+DESC_STBL = ("A table with samples aggergated by subject. "
+             "This can be used and input into Empress.")
 DESC_SUBJ = ("Metadata column containing subject IDs to"
              " use for pairing samples. WARNING: if"
              " replicates exist for an individual ID at"
