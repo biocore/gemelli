@@ -95,8 +95,8 @@ plugin.methods.register_function(
     output_descriptions={'subject_biplot': QLOAD,
                          'state_biplot': QSOAD,
                          'distance_matrix': QDIST,
-                         'state_subject_ordination': QORD,
-                         'state_feature_ordination': QORD},
+                         'state_subject_ordination': QORD % 'subject',
+                         'state_feature_ordination': QORD % 'feature'},
     name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
          'means subjects have repeated measures across only one '
          'axis (e.g. time or space).',

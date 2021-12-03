@@ -26,7 +26,7 @@ DESC_COMP = ("The underlying low-rank structure."
 DESC_ITERATIONS = ("The number of iterations to optimize the solution"
                    " (suggested to be below 100; beware of overfitting)"
                    " [minimum 1]")
-DESC_INIT = ("The number of initialization vectors. Larger values will"
+DESC_INIT = ("The number of initialization vectors. Larger values will "
              "give more accurate factorization but will be more "
              "computationally expensive [minimum 1]")
 DESC_ITERATIONSALS = ("Max number of Alternating Least Square (ALS)"
@@ -58,11 +58,12 @@ DESC_COND = ("Metadata column containing state (e.g.,Time, BodySite)"
              " across which samples are paired."
              " At least one is required but up to four are allowed"
              " by other state inputs.")
-QORD = ("A trajectory is an ordination that can be visualized"
+QORD = ("A '%s trajectory ordination' that can be visualized "
         "over time or another context.")
 QDIST = ("A sample-sample distance matrix generated from "
-         " the euclidean distance of the subject-state "
-         "ordinations and itself.")
+         " the Euclidean distance of the subject-state "
+         "ordinations and itself. Similar to the distance matrix produced by"
+         " RPCA except it also accounts for the subject and state context.")
 QLOAD = ("Compositional biplot of subjects as points and features as arrows."
          " Where the variation between subject groupings is explained by the"
          " log-ratio between opposing arrows. "
