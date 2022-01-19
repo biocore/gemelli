@@ -118,11 +118,11 @@ class Test_standalone_ctf(unittest.TestCase):
         samp_exp = pd.read_csv(
             get_data_path('expected-phylo-context-subject-ordination.tsv'),
             sep='\t',
-            index_col=0)
+            index_col=0).sort_values(by='PC1')
         feat_exp = pd.read_csv(
             get_data_path('expected-phylo-context-features-ordination.tsv'),
             sep='\t',
-            index_col=0)
+            index_col=0).sort_values(by='PC1')
         bt_exp = load_table(get_data_path('expected-phylo-table.biom'))
         tree_exp = get_data_path('expected-labeled-phylogeny.nwk')
         tree_exp = TreeNode.read(tree_exp,
