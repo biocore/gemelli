@@ -6,7 +6,7 @@ Gemelli is a tool box for running both Robust Aitchison PCA (RPCA) and Compositi
 
 RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). Both methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them. 
 
-The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and a interactive introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transforms the observed (nonzero) values before centering. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) performed on dense data.
+The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and a interactive introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transforms the observed (nonzero) values before centering. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) performed on dense data. If the data also has an associated phylogeny it can be incorporated through the phylogenetic rclr, details can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-RPCA-moving-pictures.ipynb).
 
 # Installation
 
@@ -30,6 +30,7 @@ If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross
 #### Tutorials with QIIME2
 
 * [RPCA QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb)
+* [Phylogenetic RPCA QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-RPCA-moving-pictures.ipynb)
 
 #### Standalone tutorial outside of QIIME2
 
@@ -45,6 +46,8 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 
 * [CTF QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-CLI.md)
 * [CTF QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
+* [Phylogenetic CTF QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-CLI.ipynb)
+* [Phylogenetic CTF QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-API.ipynb)
 
 #### Standalone tutorial outside of QIIME2
 
