@@ -50,12 +50,12 @@ class Testpreprocessing(unittest.TestCase):
         self.count_data_two = np.array([[3, 3, 0],
                                         [0, 4, 2]])
         # test dense tensor
-        self.tensor_true = np.array([[[1, 2, 3],
-                                      [4, 5, 6]],
-                                     [[7, 8, 9],
-                                      [10, 11, 12]],
-                                     [[13, 14, 15],
-                                      [16, 17, 18]]])
+        self.tensor_true = np.array([[[ 4.,  5.,  6.],
+                                      [ 1.,  2.,  3.]],
+                                     [[10., 11., 12.],
+                                      [ 7.,  8.,  9.]],
+                                     [[16., 17., 18.],
+                                      [13., 14., 15.]]])
         # make a test tree
         newick = ('((((A:1,B:1)n9:3,C:1)n8:3,(D:1,E:1)n7:2)n4:3'
                   ',((F:1,G:1)n6:4,(H:1)n5:4)n3:3)n1;')

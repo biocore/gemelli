@@ -837,6 +837,8 @@ class build(_BaseConstruct):
 
         # store all to self
         self.table = table.copy()
+        self.feature_order = table.index[np.lexsort((table.sum(1).index, -table.sum(1).values))]
+        self.table = self.table.loc[self.feature_order, :]
         self.mf = mf.copy()
         self.subjects = subjects
         self.conditions = conditions
@@ -862,9 +864,7 @@ class build(_BaseConstruct):
         """
 
         table, mf = self.table, self.mf
-
         # Step 1: mean samples with multiple conditional overlaps
-        table = table.loc[table.sum(1).sort_values().index, :]
         col_tmp = [self.subjects] + self.conditions
         duplicated = {k: list(df.index)
                       for k, df in mf.groupby(col_tmp)
