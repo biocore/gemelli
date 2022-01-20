@@ -837,7 +837,9 @@ class build(_BaseConstruct):
 
         # store all to self
         self.table = table.copy()
-        self.feature_order = table.index[np.lexsort((table.sum(1).index, -table.sum(1).values))]
+        self.feature_order = np.lexsort((table.sum(1).index,
+                                         -table.sum(1).values))
+        self.feature_order = table.index[self.feature_order]
         self.table = self.table.loc[self.feature_order, :]
         self.mf = mf.copy()
         self.subjects = subjects

@@ -50,10 +50,10 @@ class Testpreprocessing(unittest.TestCase):
         self.count_data_two = np.array([[3, 3, 0],
                                         [0, 4, 2]])
         # test dense tensor
-        self.tensor_true = np.array([[[ 4.,  5.,  6.],
-                                      [ 1.,  2.,  3.]],
+        self.tensor_true = np.array([[[4., 5., 6.],
+                                      [1., 2., 3.]],
                                      [[10., 11., 12.],
-                                      [ 7.,  8.,  9.]],
+                                      [7., 8., 9.]],
                                      [[16., 17., 18.],
                                       [13., 14., 15.]]])
         # make a test tree
