@@ -210,7 +210,7 @@ Saved Visualization to: IBD-2538/ctf-results/subject_biplot.qzv
 
 From this visualization we can see that the Crohn's subjects clearly separate from the healthy controls.
 
-![image.png](etc/per_subject_biplot.png)
+![image.png](etc/per_subject_biplot_2.png)
 
 
 We can also see that the IBD grouping is separated entirely along the first PC (axis 1). We can now use [Qurro](https://github.com/biocore/qurro) to explore the feature loading partitions (arrows) in this biplot as a log-ratio of the original table counts. This allows us to relate these low-dimensional representations back to our original data. Additionally, log-ratios provide a nice set of data points for additional analysis such as LME models. 
