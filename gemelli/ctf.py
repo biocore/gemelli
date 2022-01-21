@@ -5,7 +5,6 @@ import pandas as pd
 from pandas import concat
 from pandas import DataFrame
 from typing import Optional
-from q2_types.tree import NewickFormat
 from skbio import OrdinationResults, DistanceMatrix, TreeNode
 from gemelli.factorization import TensorFactorization
 from gemelli.rpca import rpca_table_processing
@@ -19,6 +18,12 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_MTD, DEFAULT_MFF,
                                DEFAULT_TENSALS_MAXITER,
                                DEFAULT_FMETA as DEFFM)
+# import QIIME2 if in a Q2env otherwise set type to str
+try:
+    from q2_types.tree import NewickFormat
+except ImportError:
+    # python does not check but technically this is the type
+    NewickFormat = str
 
 
 def phylogenetic_ctf_without_taxonomy(
@@ -326,8 +331,8 @@ def per_subject_table(table: biom.Table,
     subject_table = subject_table.groupby(individual_id_column).sum().T
     # back to biom.Table
     subject_table = biom.Table(subject_table.values,
-                               subject_table.index,
-                               subject_table.columns)
+                               subject_table.index.astype(str),
+                               subject_table.columns.astype(str))
 
     return subject_table
 
