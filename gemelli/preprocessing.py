@@ -96,6 +96,8 @@ def retrieve_t2t_taxonomy(phylogeny, taxonomy=None):
 
     contree, contree_lookup = nl.make_consensus_tree(tipname_map.values())
     # Disable print statements
+    with open(os.devnull, 'w') as fpnull:
+        sys.stdout = fpnull
     sys.stdout = open(os.devnull, 'w')
     nl.backfill_names_gap(tree_, contree_lookup)
     # Restore print statements

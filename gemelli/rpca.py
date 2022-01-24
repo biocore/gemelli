@@ -71,7 +71,6 @@ def phylogenetic_rpca_with_taxonomy(
 
        This code will be run QIIME 2 versions of gemelli.
     """
-    taxonomy = taxonomy.to_dataframe()
     output = phylogenetic_rpca(table=table,
                                phylogeny=phylogeny,
                                taxonomy=taxonomy,
