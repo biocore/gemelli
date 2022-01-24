@@ -277,8 +277,8 @@ def rpca_table_processing(table: biom.Table,
 
     # check the table after filtering
     if len(table.ids()) != len(set(table.ids())):
-        raise ValueError('Data-table contains duplicate indices')
+        raise ValueError('Data-table contains duplicate sample IDs')
     if len(table.ids('observation')) != len(set(table.ids('observation'))):
-        raise ValueError('Data-table contains duplicate columns')
+        raise ValueError('Data-table contains duplicate feature IDs')
 
     return table

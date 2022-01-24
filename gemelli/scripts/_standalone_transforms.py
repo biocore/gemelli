@@ -24,7 +24,7 @@ def standalone_phylogenetic_rclr(in_biom: str,
     """
     Runs phylogenetic robust centered log-ratio transformation.
     Returns both a vectorized table and matched fully labeled phylogeny
-    iin addition to a rclr transformed version of the phylo-table.
+    in addition to a rclr transformed version of the phylogenetic table.
     Note: This is run automatically within phylo-CTF/RPCA
     so there no need to run rclr before those functions.
     """

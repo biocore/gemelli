@@ -179,8 +179,8 @@ class Test_standalone_rpca(unittest.TestCase):
         result = runner.invoke(sdc.commands['rpca'],
                                ['--in-biom', in_,
                                 '--output-dir', out_,
-                                '--n_components', 2,
-                                '--max_iterations', 5])
+                                '--n-components', 2,
+                                '--max-iterations', 5])
         CliTestCase().assertExitCode(0, result)
         ord_res = OrdinationResults.read(get_data_path('ordination.txt',
                                                        subfolder='rpca_data'))

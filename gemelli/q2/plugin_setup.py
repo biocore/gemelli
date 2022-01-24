@@ -187,9 +187,13 @@ plugin.methods.register_function(
                          'counts_by_node': QTREECOUNT,
                          't2t_taxonomy': DESC_T2T_TAX,
                          'subject_table': DESC_STBL},
-    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
-         'means subjects have repeated measures across only one '
-         'axis (e.g. time or space).',
+    name='Phylogenetic Compositional Tensor Factorization (CTF) '
+         'with mode 3 tensor. This means subjects have repeated '
+         'measures across only one axis (e.g. time or space). '
+         'The input taxonomy is used to produce a new taxonomy '
+         'label for each node in the tree based on the lowest '
+         'common anscestor. Note: equivelent to '
+         'phylogenetic-ctf-with-taxonomy',
     description=("Gemelli resolves spatiotemporal subject variation and the"
                  " biological features that separate them. In this case, a "
                  "subject may have several paired samples, where each sample"
@@ -246,9 +250,12 @@ plugin.methods.register_function(
                          'counts_by_node': QTREECOUNT,
                          't2t_taxonomy': DESC_T2T_TAX,
                          'subject_table': DESC_STBL},
-    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
-         'means subjects have repeated measures across only one '
-         'axis (e.g. time or space).',
+    name='Phylogenetic Compositional Tensor Factorization (CTF) '
+         'with mode 3 tensor. This means subjects have repeated '
+         'measures across only one axis (e.g. time or space). '
+         'The input taxonomy is used to produce a new taxonomy '
+         'label for each node in the tree based on the lowest '
+         'common anscestor.',
     description=("Gemelli resolves spatiotemporal subject variation and the"
                  " biological features that separate them. In this case, a "
                  "subject may have several paired samples, where each sample"
@@ -301,9 +308,14 @@ plugin.methods.register_function(
                          'counts_by_node_tree': QTREE,
                          'counts_by_node': QTREECOUNT,
                          'subject_table' : DESC_STBL},
-    name='Compositional Tensor Factorization (CTF) with mode 3 tensor. This '
-         'means subjects have repeated measures across only one '
-         'axis (e.g. time or space).',
+    name='Phylogenetic Compositional Tensor Factorization (CTF) '
+         'with mode 3 tensor. This means subjects have repeated '
+         'measures across only one axis (e.g. time or space). '
+         'Note: This does not require/output a taxonomy. '
+         'A taxonomy for the input phylogeny will still  be valid '
+         'for tip level features however, '
+         'if taxonomy is required for internal features please use '
+         'phylogenetic-ctf-with-taxonomy.',
     description=("Gemelli resolves spatiotemporal subject variation and the"
                  " biological features that separate them. In this case, a "
                  "subject may have several paired samples, where each sample"
@@ -407,9 +419,9 @@ plugin.methods.register_function(
         'counts_by_node_tree': QTREE,
         'counts_by_node': QTREECOUNT},
     name=('Phylogenetic (Robust Aitchison) RPCA. '
-          'Note: This does not output a taxonomy. '
-          'A taxonomy for the input phylogeny will still valid for tip level '
-          'features however, '
+          'Note: This does not require/output a taxonomy. '
+          'A taxonomy for the input phylogeny will still  be valid '
+          'for tip level features however, '
           'if taxonomy is required for internal features please use '
           'phylogenetic-rpca-with-taxonomy.'),
     description=("Performs phylogenetic robust center log-ratio transform "

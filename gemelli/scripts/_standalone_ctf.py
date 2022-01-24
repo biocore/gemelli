@@ -38,7 +38,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
 @click.option('--output-dir',
               required=True,
               help=DESC_OUT)
-@click.option('--n_components',
+@click.option('--n-components',
               default=DEFAULT_COMP,
               show_default=True,
               help=DESC_COMP)
@@ -54,19 +54,19 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
               default=DEFAULT_MFF,
               show_default=True,
               help=DESC_MFF)
-@click.option('--min_depth',
+@click.option('--min-depth',
               default=DEFAULT_MTD,
               show_default=True,
               help=DESC_MINDEPTH)
-@click.option('--max_iterations_als',
+@click.option('--max-iterations-als',
               default=DEFAULT_TENSALS_MAXITER,
               show_default=True,
               help=DESC_ITERATIONSALS)
-@click.option('--max_iterations_rptm',
+@click.option('--max-iterations-rptm',
               default=DEFAULT_TENSALS_MAXITER,
               show_default=True,
               help=DESC_ITERATIONSRTPM)
-@click.option('--n_initializations',
+@click.option('--n-initializations',
               default=DEFAULT_TENSALS_MAXITER,
               show_default=True,
               help=DESC_INIT)
@@ -220,7 +220,7 @@ def standalone_phylogenetic_ctf(in_biom: str,
     required=True,
     help=DESC_OUT)
 @click.option(
-    '--n_components',
+    '--n-components',
     default=DEFAULT_COMP,
     show_default=True,
     help=DESC_COMP)
@@ -240,17 +240,17 @@ def standalone_phylogenetic_ctf(in_biom: str,
     show_default=True,
     help=DESC_MFF)
 @click.option(
-    '--max_iterations_als',
+    '--max-iterations-als',
     default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_ITERATIONSALS)
 @click.option(
-    '--max_iterations_rptm',
+    '--max-iterations-rptm',
     default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_ITERATIONSRTPM)
 @click.option(
-    '--n_initializations',
+    '--n-initializations',
     default=DEFAULT_TENSALS_MAXITER,
     show_default=True,
     help=DESC_INIT)

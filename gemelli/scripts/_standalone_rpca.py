@@ -30,7 +30,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
 @click.option('--output-dir',
               help='Location of output files.',
               required=True)
-@click.option('--n_components',
+@click.option('--n-components',
               default=DEFAULT_COMP,
               show_default=True,
               help=DESC_COMP)
@@ -46,11 +46,11 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
               default=DEFAULT_MFF,
               show_default=True,
               help=DESC_MFF)
-@click.option('--min_depth',
+@click.option('--min-depth',
               default=DEFAULT_MTD,
               show_default=True,
               help=DESC_MINDEPTH)
-@click.option('--max_iterations',
+@click.option('--max-iterations',
               default=DEFAULT_OPTSPACE_ITERATIONS,
               show_default=True,
               help=DESC_ITERATIONS)
@@ -65,6 +65,7 @@ def standalone_phylogenetic_rpca(in_biom: str,
                                  min_depth: int,
                                  max_iterations: int) -> None:
     """Runs phylogenetically informed RPCA with an rclr preprocessing step."""
+
     # import table
     table = load_table(in_biom)
     # import taxonomy
@@ -119,7 +120,7 @@ def standalone_phylogenetic_rpca(in_biom: str,
 @click.option('--output-dir',
               help='Location of output files.',
               required=True)
-@click.option('--n_components',
+@click.option('--n-components',
               default=DEFAULT_COMP,
               show_default=True,
               help=DESC_COMP)
@@ -135,7 +136,7 @@ def standalone_phylogenetic_rpca(in_biom: str,
               default=DEFAULT_MFF,
               show_default=True,
               help=DESC_MFF)
-@click.option('--max_iterations',
+@click.option('--max-iterations',
               default=DEFAULT_OPTSPACE_ITERATIONS,
               show_default=True,
               help=DESC_ITERATIONS)
@@ -198,7 +199,7 @@ def standalone_rpca(in_biom: str,
     show_default=True,
     help=DESC_MFF)
 @click.option(
-    '--max_iterations',
+    '--max-iterations',
     default=DEFAULT_OPTSPACE_ITERATIONS,
     show_default=True,
     help=DESC_ITERATIONS)
