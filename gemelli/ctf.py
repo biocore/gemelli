@@ -43,7 +43,11 @@ def phylogenetic_ctf_without_taxonomy(
                          OrdinationResults, OrdinationResults,
                          DistanceMatrix, DataFrame, DataFrame,
                          TreeNode, biom.Table, biom.Table):
-
+    """
+    Runs phylogenetic CTF without taxonomy. This code will
+    be run QIIME2 versions of gemelli. Outside of QIIME2
+    please use phylogenetic_ctf.
+    """
     # run CTF helper and parse output for QIIME
     output = phylogenetic_ctf(table=table,
                               phylogeny=phylogeny,
@@ -85,7 +89,11 @@ def phylogenetic_ctf_with_taxonomy(
                          DistanceMatrix, DataFrame, DataFrame,
                          TreeNode, biom.Table,
                          pd.DataFrame, biom.Table):
-
+    """
+    Runs phylogenetic CTF with taxonomy. This code will
+    be run QIIME2 versions of gemelli. Outside of QIIME2
+    please use phylogenetic_ctf.
+    """
     # feature_metadata
     taxonomy = taxonomy.to_dataframe()
     # run CTF helper and parse output for QIIME
@@ -131,6 +139,206 @@ def phylogenetic_ctf(table: biom.Table,
                          DistanceMatrix, DataFrame, DataFrame,
                          TreeNode, biom.Table,
                          Optional[pd.DataFrame], biom.Table):
+    """
+    Phylogenetic Compositional Tensor Factorization (CTF) with
+    mode 3 tensor. This means subjects have repeated measures
+    across only one axis (e.g. time or space).
+    For more information see (1-4).
+
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    phylogeny: str, required
+    Path to the file containing the phylogenetic tree containing tip
+    identifiers that correspond to the feature identifiers in the table.
+    This tree can contain tip ids that are not present in the table,
+    but all feature ids in the table must be present in this tree.
+
+    sample_metadata: DataFrame, required
+    Sample metadata file in QIIME2 formatting. The file must
+    contain the columns for individual_id_column and
+    state_column and the rows matched to the table.
+
+    individual_id_column: str, required
+    Metadata column containing subject IDs to use for
+    pairing samples. WARNING: if replicates exist for an
+    individual ID at either state_1 to state_N, that
+    subject will be mean grouped by default.
+
+    state_column: str, required
+    Metadata column containing state (e.g.,Time,
+    BodySite) across which samples are paired. At least
+    one is required but up to four are allowed by other
+    state inputs.
+
+    taxonomy: pd.DataFrame, optional
+    Taxonomy file in QIIME2 formatting. See the feature metdata
+    section of https://docs.qiime2.org/2021.11/tutorials/metadata
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimentions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_als_iterations: int, optional
+    Max number of Alternating Least Square (ALS).
+
+    tol_als: float, optional
+    The minimization -- convergence break point for ALS.
+
+    max_rtpm_iterations: int, optional
+    Max number of Robust Tensor Power Method (RTPM) iterations.
+
+    n_initializations: int, optional
+    The number of initial vectors. Larger values will
+    give more accurate factorization but will be more
+    computationally expensive.
+
+    Returns
+    -------
+    OrdinationResults
+        Compositional biplot of subjects as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows. WARNING: The % variance
+        explained is only spread over n-components and
+        can be inflated.
+
+    OrdinationResults
+        Compositional biplot of states as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows. WARNING: The % variance
+        explained is only spread over n-components and can be
+        inflated.
+
+    DistanceMatrix
+        A sample-sample distance matrix generated from the
+        euclidean distance of the subject-state ordinations
+        and itself.
+
+    DataFrame
+        A trajectory is an ordination that can be
+        visualizedover time or another context.
+
+    DataFrame
+        A trajectory is an ordination that can be
+        visualizedover time or another context.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input tensor`.
+
+    References
+    ----------
+    .. [1] Martino C, Shenhav L, Marotz CA, Armstrong G, McDonald D,
+           Vázquez-Baeza Y, Morton JT, Jiang L, Dominguez-Bello MG,
+           Swafford AD, Halperin E, Knight R. 2020.
+           Context-aware dimensionality reduction deconvolutes
+           gut microbial community dynamics.
+           Nat Biotechnol https://doi.org/10.1038/s41587-020-0660-7.
+    .. [2] Jain, Prateek, and Sewoong Oh. 2014.
+            “Provable Tensor Factorization with Missing Data.”
+            In Advances in Neural Information Processing Systems
+            27, edited by Z. Ghahramani, M. Welling, C. Cortes,
+            N. D. Lawrence, and K. Q. Weinberger, 1431–39.
+            Curran Associates, Inc.
+    .. [3] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [4] A. Anandkumar, R. Ge, D. Hsu,
+            S. M. Kakade, M. Telgarsky,
+            Tensor Decompositions for Learning Latent Variable Models
+            (A Survey for ALT). Lecture Notes in Computer Science
+            (2015), pp. 19–38.
+
+    Examples
+    --------
+    import numpy as np
+    import pandas as pd
+    from biom import Table
+    from gemelli.ctf import phylogenetic_ctf
+
+    # make a table
+    X = np.array([[9, 3, 0, 0],
+                [9, 9, 0, 1],
+                [0, 1, 4, 5],
+                [0, 0, 3, 4],
+                [1, 0, 8, 9]])
+    sample_ids = ['s1','s2','s3','s4']
+    feature_ids = ['f1','f2','f3','f4','f5']
+    bt = Table(X, feature_ids, sample_ids)
+    # make mock metadata
+    mf = pd.DataFrame([[i//2, i%2] for i, s in enumerate(sample_ids)],
+                    sample_ids, ['subject_id', 'context'])
+    # write an example tree to read
+    f = open("demo-tree.nwk", "w")
+    newick = '(((f1:1,f2:1)n9:1,f3:1)n8:1,(f4:1,f5:1)n2:1)n1:1;'
+    f.write(newick)
+    f.close()
+    # make mock taxonomy
+    taxonomy = pd.DataFrame({fid:['k__kingdom; p__phylum;'
+                                'c__class; o__order; '
+                                'f__family; g__genus;'
+                                's__',
+                                0.99]
+                            for fid in feature_ids},
+                            ['Taxon', 'Confidence']).T
+
+    # run phylo-CTF with taxonomy
+    # subject 1 will seperate from subject 2
+    (subject_biplot, state_biplot,
+    distance_matrix,
+    state_subject_ordination,
+    state_feature_ordination,
+    counts_by_node_tree,
+    counts_by_node,
+    _,
+    subject_table) = phylogenetic_ctf(bt, 'demo-tree.nwk', mf,
+                                    'subject_id', 'context')
+
+
+    # run phylo-CTF without taxonomy
+    # subject 1 will seperate from subject 2
+    (subject_biplot, state_biplot,
+    distance_matrix,
+    state_subject_ordination,
+    state_feature_ordination,
+    counts_by_node_tree,
+    counts_by_node,
+    t2t_taxonomy,
+    subject_table) = phylogenetic_ctf(bt, 'demo-tree.nwk', mf,
+                                    'subject_id', 'context', taxonomy)
+
+    """
 
     # run CTF helper and parse output for QIIME
     helper_results = phylogenetic_ctf_helper(table,
@@ -180,7 +388,7 @@ def phylogenetic_ctf_helper(table: biom.Table,
                                 OrdinationResults, OrdinationResults,
                                 DistanceMatrix, DataFrame, DataFrame,
                                 TreeNode, biom.Table, biom.Table):
-
+    """Helper function. Please use phylogenetic_ctf directly."""
     # check the table for validity and then filter
     process_results = ctf_table_processing(table,
                                            sample_metadata,
@@ -247,7 +455,167 @@ def ctf(table: biom.Table,
                                                  DistanceMatrix,
                                                  DataFrame,
                                                  DataFrame):
+    """
+    Compositional Tensor Factorization (CTF) with mode 3 tensor. This
+    means subjects have repeated measures across only one axis
+    (e.g. time or space). For more information see (1-4).
 
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    sample_metadata: DataFrame, required
+    Sample metadata file in QIIME2 formatting. The file must
+    contain the columns for individual_id_column and
+    state_column and the rows matched to the table.
+
+    individual_id_column: str, required
+    Metadata column containing subject IDs to use for
+    pairing samples. WARNING: if replicates exist for an
+    individual ID at either state_1 to state_N, that
+    subject will be mean grouped by default.
+
+    state_column: str, required
+    Metadata column containing state (e.g.,Time,
+    BodySite) across which samples are paired. At least
+    one is required but up to four are allowed by other
+    state inputs.
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimentions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_als_iterations: int, optional
+    Max number of Alternating Least Square (ALS).
+
+    tol_als: float, optional
+    The minimization -- convergence break point for ALS.
+
+    max_rtpm_iterations: int, optional
+    Max number of Robust Tensor Power Method (RTPM) iterations.
+
+    n_initializations: int, optional
+    The number of initial vectors. Larger values will
+    give more accurate factorization but will be more
+    computationally expensive.
+
+    feature_metadata: pd.DataFrame, optional
+    Taxonomy file in QIIME2 formatting. See the feature metdata
+    section of https://docs.qiime2.org/2021.11/tutorials/metadata
+
+    Returns
+    -------
+    OrdinationResults
+        Compositional biplot of subjects as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows. WARNING: The % variance
+        explained is only spread over n-components and
+        can be inflated.
+
+    OrdinationResults
+        Compositional biplot of states as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows. WARNING: The % variance
+        explained is only spread over n-components and can be
+        inflated.
+
+    DistanceMatrix
+        A sample-sample distance matrix generated from the
+        euclidean distance of the subject-state ordinations
+        and itself.
+
+    DataFrame
+        A trajectory is an ordination that can be
+        visualizedover time or another context.
+
+    DataFrame
+        A trajectory is an ordination that can be
+        visualizedover time or another context.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input tensor`.
+
+    References
+    ----------
+    .. [1] Martino C, Shenhav L, Marotz CA, Armstrong G, McDonald D,
+           Vázquez-Baeza Y, Morton JT, Jiang L, Dominguez-Bello MG,
+           Swafford AD, Halperin E, Knight R. 2020.
+           Context-aware dimensionality reduction deconvolutes
+           gut microbial community dynamics.
+           Nat Biotechnol https://doi.org/10.1038/s41587-020-0660-7.
+    .. [2] Jain, Prateek, and Sewoong Oh. 2014.
+            “Provable Tensor Factorization with Missing Data.”
+            In Advances in Neural Information Processing Systems
+            27, edited by Z. Ghahramani, M. Welling, C. Cortes,
+            N. D. Lawrence, and K. Q. Weinberger, 1431–39.
+            Curran Associates, Inc.
+    .. [3] A. Anandkumar, R. Ge, M., Janzamin,
+            Guaranteed Non-Orthogonal Tensor
+            Decomposition via Alternating Rank-1
+            Updates. CoRR (2014),
+            pp. 1-36.
+    .. [4] A. Anandkumar, R. Ge, D. Hsu,
+            S. M. Kakade, M. Telgarsky,
+            Tensor Decompositions for Learning Latent Variable Models
+            (A Survey for ALT). Lecture Notes in Computer Science
+            (2015), pp. 19–38.
+
+    Examples
+    --------
+    import numpy as np
+    import pandas as pd
+    from biom import Table
+    from gemelli.ctf import ctf
+
+    # make a table
+    X = np.array([[9, 3, 0, 0],
+                [9, 9, 0, 1],
+                [0, 1, 4, 5],
+                [0, 0, 3, 4],
+                [1, 0, 8, 9]])
+    sample_ids = ['s1','s2','s3','s4']
+    feature_ids = ['f1','f2','f3','f4','f5']
+    bt = Table(X, feature_ids, sample_ids)
+    # make mock metadata
+    mf = pd.DataFrame([[i//2, i%2] for i, s in enumerate(sample_ids)],
+                    sample_ids, ['subject_id', 'context'])
+    # run CTF
+    # subject 1 will seperate from subject 2
+    (subject_biplot, state_biplot,
+    distance_matrix,
+    state_subject_ordination,
+    state_feature_ordination) = ctf(bt, mf, 'subject_id', 'context')
+
+    """
     # run CTF helper and parse output for QIIME
     helper_results = ctf_helper(table,
                                 sample_metadata,
@@ -285,6 +653,7 @@ def ctf_helper(table: biom.Table,
                feature_metadata: DataFrame = DEFFM) -> (
                    OrdinationResults, OrdinationResults,
                    DistanceMatrix, DataFrame, DataFrame):
+    """Helper function. Please use ctf directly."""
     # check the table for validity and then filter
     process_results = ctf_table_processing(table,
                                            sample_metadata,

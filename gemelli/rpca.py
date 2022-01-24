@@ -37,9 +37,10 @@ def phylogenetic_rpca_without_taxonomy(
         max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         OrdinationResults, DistanceMatrix,
         TreeNode, biom.Table):
-    """Runs phylogenetic RPCA.
-
-       This code will be run QIIME 2 versions of gemelli.
+    """
+    Runs phylogenetic RPCA without taxonomy. This code will
+    be run QIIME2 versions of gemelli. Outside of QIIME2
+    please use phylogenetic_rpca.
     """
 
     output = phylogenetic_rpca(table=table,
@@ -67,9 +68,10 @@ def phylogenetic_rpca_with_taxonomy(
             max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         OrdinationResults, DistanceMatrix,
         TreeNode, biom.Table, pd.DataFrame):
-    """Runs phylogenetic RPCA.
-
-       This code will be run QIIME 2 versions of gemelli.
+    """
+    Runs phylogenetic RPCA with taxonomy. This code will
+    be run QIIME2 versions of gemelli. Outside of QIIME2
+    please use phylogenetic_rpca.
     """
     output = phylogenetic_rpca(table=table,
                                phylogeny=phylogeny,
@@ -96,10 +98,138 @@ def phylogenetic_rpca(table: biom.Table,
                       max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
                           OrdinationResults, DistanceMatrix,
                           TreeNode, biom.Table, Optional[pd.DataFrame]):
-    """Runs phylogenetic RPCA.
+    """
+    Performs robust phylogenetic center log-ratio transform and
+    robust PCA. The robust PCA and enter log-ratio transform
+    operate on only observed values of the data.
+    For more information see (1 and 2).
 
-       This code will be run by both the standalone and QIIME 2 versions of
-       gemelli.
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    phylogeny: str, required
+    Path to the file containing the phylogenetic tree containing tip
+    identifiers that correspond to the feature identifiers in the table.
+    This tree can contain tip ids that are not present in the table,
+    but all feature ids in the table must be present in this tree.
+
+    taxonomy: pd.DataFrame, optional
+    Taxonomy file in QIIME2 formatting. See the feature metdata
+    section of https://docs.qiime2.org/2021.11/tutorials/metadata
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimentions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_iterations: int, optional : Default is 5
+    The number of convex iterations to optimize the solution
+    If iteration is not specified, then the default iteration is 5.
+    Which redcues to a satisfactory error threshold.
+
+    Returns
+    -------
+    OrdinationResults
+        A biplot of the (Robust Aitchison) RPCA feature loadings
+
+    DistanceMatrix
+        The Aitchison distance of the sample loadings from RPCA.
+
+    TreeNode
+        The input tree with all nodes matched in name to the
+        features in the counts-by-node table
+
+    biom.Table
+        A table with all tree internal nodes as features with the
+        sum of all children of that node (i.e. FastUniFrac).
+
+    Optional[pd.DataFrame]
+        The resulting tax2Tree taxonomy and will include taxonomy for both
+        internal nodes and tips. Note: this will only be output
+        if taxonomy was given as input.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: max_iterations must be at least 1`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input table`.
+
+    References
+    ----------
+    .. [1] Martino C, Morton JT, Marotz CA, Thompson LR, Tripathi A,
+           Knight R, Zengler K. 2019. A Novel Sparse Compositional
+           Technique Reveals Microbial Perturbations. mSystems 4.
+    .. [2] Keshavan RH, Oh S, Montanari A. 2009. Matrix completion
+            from a few entries (2009_ IEEE International
+            Symposium on Information Theory
+
+    Examples
+    --------
+    import numpy as np
+    import pandas as pd
+    from biom import Table
+    from gemelli.rpca import phylogenetic_rpca
+
+    # make a table
+    X = np.array([[9, 3, 0, 0],
+                [9, 9, 0, 1],
+                [0, 1, 4, 5],
+                [0, 0, 3, 4],
+                [1, 0, 8, 9]])
+    sample_ids = ['s1','s2','s3','s4']
+    feature_ids = ['f1','f2','f3','f4','f5']
+    bt = Table(X, feature_ids, sample_ids)
+    # write an example tree to read
+    f = open("demo-tree.nwk", "w")
+    newick = '(((f1:1,f2:1)n9:1,f3:1)n8:1,(f4:1,f5:1)n2:1)n1:1;'
+    f.write(newick)
+    f.close()
+    # run RPCA without taxonomy
+    # s1/s2 will seperate from s3/s4
+    (ordination, distance_matrix,
+    tree, phylo_table, _) = phylogenetic_rpca(bt, 'demo-tree.nwk')
+
+    # make mock taxonomy
+    taxonomy = pd.DataFrame({fid:['k__kingdom; p__phylum;'
+                                'c__class; o__order; '
+                                'f__family; g__genus;'
+                                's__',
+                                0.99]
+                            for fid in feature_ids},
+                            ['Taxon', 'Confidence']).T
+    # run RPCA with taxonomy
+    # s1/s2 will seperate from s3/s4
+    (ordination, distance_matrix,
+    tree, phylo_table,
+    lca_taxonomy) = phylogenetic_rpca(bt, 'demo-tree.nwk', taxonomy)
+
     """
 
     # use helper to process table
@@ -141,12 +271,94 @@ def rpca(table: biom.Table,
          max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
         OrdinationResults,
         DistanceMatrix):
-    """Runs RPCA with an matrix_rclr preprocessing step.
-
-       This code will be run by both the standalone and QIIME 2 versions of
-       gemelli.
     """
+    Performs robust center log-ratio transform and
+    robust PCA. The robust PCA and enter log-ratio transform
+    operate on only observed values of the data.
+    For more information see (1 and 2).
 
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimentions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_iterations: int, optional : Default is 5
+    The number of convex iterations to optimize the solution
+    If iteration is not specified, then the default iteration is 5.
+    Which redcues to a satisfactory error threshold.
+
+    Returns
+    -------
+    OrdinationResults
+        A biplot of the (Robust Aitchison) RPCA feature loadings
+
+    DistanceMatrix
+        The Aitchison distance of the sample loadings from RPCA.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: max_iterations must be at least 1`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input table`.
+
+    References
+    ----------
+    .. [1] Martino C, Morton JT, Marotz CA, Thompson LR, Tripathi A,
+           Knight R, Zengler K. 2019. A Novel Sparse Compositional
+           Technique Reveals Microbial Perturbations. mSystems 4.
+    .. [2] Keshavan RH, Oh S, Montanari A. 2009. Matrix completion
+            from a few entries (2009_ IEEE International
+            Symposium on Information Theory
+
+    Examples
+    --------
+    import numpy as np
+    from biom import Table
+    from gemelli.rpca import rpca
+
+    # make a table
+    X = np.array([[9, 3, 0, 0],
+                [9, 9, 0, 1],
+                [0, 1, 4, 5],
+                [0, 0, 3, 4],
+                [1, 0, 8, 9]])
+    sample_ids = ['s1','s2','s3','s4']
+    feature_ids = ['f1','f2','f3','f4','f5']
+    bt = Table(X, feature_ids, sample_ids)
+    # run RPCA (s1/s2 will seperate from s3/s4)
+    ordination, distance_matrix = rpca(bt)
+
+    """
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,
@@ -169,7 +381,9 @@ def optspace_helper(rclr_table: np.array,
                     max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
                         OrdinationResults,
                         DistanceMatrix):
-
+    """
+    Helper function. Please use rpca directly.
+    """
     # run OptSpace (RPCA)
     opt = MatrixCompletion(n_components=n_components,
                            max_iterations=max_iterations).fit(rclr_table)
