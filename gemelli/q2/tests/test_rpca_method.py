@@ -192,7 +192,7 @@ class Test_qiime2_rpca(unittest.TestCase):
         #                                      exdistmatrix_values)
 
     def test_qiime2_phylogenetic_rpca(self):
-        """Tests that the Q2 (withtout taxonomy) & standalone phylogenetic RPCA
+        """Tests that the Q2 (without taxonomy) & standalone phylogenetic RPCA
            match.
         """
 
