@@ -16,10 +16,15 @@ import pandas as pd
 from biom import Table
 from skbio import TreeNode
 from .base import _BaseConstruct
-from q2_types.tree import NewickFormat
 from gemelli._defaults import DEFAULT_MTD
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
+# import QIIME2 if in a Q2env otherwise set type to str
+try:
+    from q2_types.tree import NewickFormat
+except ImportError:
+    # python does not check but technically this is the type
+    NewickFormat = str
 
 
 VALID_TAXONOMY_COLUMN_NAMES = ('taxon', 'taxonomy')

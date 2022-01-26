@@ -23,7 +23,12 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF)
 from scipy.linalg import svd
-from q2_types.tree import NewickFormat
+# import QIIME2 if in a Q2env otherwise set type to str
+try:
+    from q2_types.tree import NewickFormat
+except ImportError:
+    # python does not check but technically this is the type
+    NewickFormat = str
 
 
 def phylogenetic_rpca_without_taxonomy(
