@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, deicode development team.
+# Copyright (c) 2019--, gemelli development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
