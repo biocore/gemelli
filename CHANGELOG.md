@@ -1,10 +1,28 @@
-v0.0.7 (2020-12-12)
+v0.0.7 (2022-01-19)
+
+### Features [stable]
+
+* Moved CI from Travis to GitHub actions. 
+* Updated existing tutorials based on comments. (see https://forum.qiime2.org/t/ctf-linear-mixed-model/20622).
+* Added commands output just the rclr transformed table. 
+
+### Features [experimental]
+
+* Phylogenetic RCLR and integration into RPCA/CTF
+    * added phylogenetic weighting in rclr in `preprocessing.py`
+    * added commands in `scripts` and `q2` to perform these features with and without taxonomy
+    * added tutorials in `ipynb/tutorials` to demonstrate the commands/workflows
 
 ### Bug fixes
 
 * Fixes in `optspace.py` function `rank_estimate` and  `factorization.py` function `tenals`
     * fixes two subject/state tensor
+        * see https://forum.qiime2.org/t/gemelli-argmin-error/21796 and issue #38
     * added test in `test_method.py` for two subject or state tensor 
+* Fixes in `preprocessing.py`
+    * fixes when the ordering/structure of the _tensor_ could impact the rlcr results by sorting to ensure reproducibility.
+        * see https://forum.qiime2.org/t/gemelli-argmin-error/21796 and thanks to Xinhe Qi for reporting. 
+    * added tests to ensure sorting of samples/features does not impact results.
 
 v0.0.6 (2020-09-27)
 
