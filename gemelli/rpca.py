@@ -78,6 +78,7 @@ def phylogenetic_rpca_with_taxonomy(
     be run QIIME2 versions of gemelli. Outside of QIIME2
     please use phylogenetic_rpca.
     """
+
     output = phylogenetic_rpca(table=table,
                                phylogeny=phylogeny,
                                taxonomy=taxonomy,
@@ -237,6 +238,10 @@ def phylogenetic_rpca(table: biom.Table,
 
     """
 
+    # validate the metadata using q2 as a wrapper
+    if taxonomy is not None and not isinstance(taxonomy,
+                                               pd.DataFrame):
+        taxonomy = taxonomy.to_dataframe()
     # use helper to process table
     table = rpca_table_processing(table,
                                   min_sample_count,

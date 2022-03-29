@@ -1,3 +1,11 @@
+v0.0.8 (2022-03-28)
+
+### Bug fixes
+
+* Fixes in `rpca.py` function
+    * fixes bug that passes QIIME2 Metadata instead of the expected pandas dataframe
+        * see issue #57
+
 v0.0.7 (2022-01-19)
 
 ### Features [stable]
