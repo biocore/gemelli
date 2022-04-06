@@ -505,3 +505,88 @@ def rpca_table_processing(table: biom.Table,
         raise ValueError('Data-table contains duplicate feature IDs')
 
     return table
+
+def joint_rpca(tables,
+               n_components: Union[int, str] = DEFAULT_COMP,
+               min_sample_count: int = DEFAULT_MSC,
+               min_feature_count: int = DEFAULT_MFC,
+               min_feature_frequency: float = DEFAULT_MFF,
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+        OrdinationResults,
+        biom.Table,
+        DistanceMatrix,
+        np.array):
+
+    # filter each table
+    for n, table_n in enumerate(tables):
+        tables[n] = rpca_table_processing(table_n,
+                                          min_sample_count,
+                                          min_feature_count,
+                                          min_feature_frequency)
+    # get set of shared samples
+    shared_all_samples = set.union(*[set(table_n.ids()) for table_n in tables])
+    # check sample overlaps
+    if len(shared_all_samples) == 0:
+        raise ValueError('No samples overlap between all tables.')
+    unshared_samples = set([s_n for table_n in tables for s_n in table_n.ids()]) - shared_all_samples
+    if len(unshared_samples) != 0:
+        warnings.warn('%i sample do not overlap betwen tables and will be removed' % (len(unshared_samples)),
+                      RuntimeWarning)
+    # filter each table again to subset samples and ensure feat. filter still matches
+    for n, table_n in enumerate(tables):
+        tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
+                                          min_sample_count,
+                                          min_feature_count,
+                                          min_feature_frequency)
+    # rclr each table
+    rclr_tables = []
+    for table_n in tables:
+        rclr_tables.append(pd.DataFrame(matrix_rclr(table_n.matrix_data.toarray().T).T,
+                                        table_n.ids('observation'), table_n.ids()))
+
+    ord_res, joint_features, U_dist_res, dists = joint_optspace_helper(rclr_tables,
+                                                                       n_components,
+                                                                       max_iterations)  
+    return ord_res, joint_features, U_dist_res, dists
+
+def joint_optspace_helper(tables, n_components, max_iterations):
+
+    opt_model = OptSpace(n_components = n_components,
+                         max_iterations = max_iterations,
+                         tol=None)
+    U, s, Vs, Udist, dists = opt_model.joint_solve([t_n.values.T for t_n in tables])
+    rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
+
+    vjoint = pd.concat([pd.DataFrame(Vs_n, index=t_n.index, columns=rename_cols)
+                        for t_n, Vs_n in zip(tables, Vs)])
+    ujoint = pd.DataFrame(U, index=tables[0].columns, columns=rename_cols)
+
+    X = ujoint.values @ s @ vjoint.values.T
+    # center again around zero after completion
+    X = X - X.mean(axis=0)
+    X = X - X.mean(axis=1).reshape(-1, 1)
+    u, s_new, v = svd(X, full_matrices=False)
+    rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
+    vjoint = pd.DataFrame(v.T[:, :n_components], index=vjoint.index, columns=vjoint.columns)
+    ujoint = pd.DataFrame(u[:, :n_components], index=ujoint.index, columns=ujoint.columns)
+
+    s_eig = s_new[:n_components]
+    p = s_eig**2 / np.sum(s_eig**2)
+    eigvals = pd.Series(s_eig, index=rename_cols)
+    proportion_explained = pd.Series(p, index=rename_cols)
+
+    ord_res = OrdinationResults(
+            'rpca',
+            'rpca',
+            eigvals.copy(),
+            samples=ujoint.copy(),
+            features=vjoint.copy(),
+            proportion_explained=proportion_explained.copy())
+
+    Vs_joint = vjoint.values @ s[:, :] @ vjoint.values.T
+    joint_features = pd.DataFrame(Vs_joint,
+                                  vjoint.index,
+                                  vjoint.index)
+    U_dist_res = DistanceMatrix(Udist, ids=tables[0].columns)
+
+    return ord_res, joint_features, U_dist_res, dists 
