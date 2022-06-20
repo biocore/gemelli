@@ -212,17 +212,24 @@ class OptSpace(object):
         U, S, V = svd_sort(U, S, V)
         return U, S, V
 
-    def joint_solve(self, multiple_obs):
+    def joint_solve(self, multiple_obs, average_weights):
+
         # adjust iteration indexing by one
         self.max_iterations += 1
+        test_obs = []
         masks = []
         dims = []
-        for i_obs, obs in enumerate(multiple_obs):
+        for i_obs, (t_obs, obs) in enumerate(multiple_obs):
             # Convert any nan input to zeros
             # optspace considers zero  and only zero
             # as missing.
             obs[np.isnan(obs)] = 0
             multiple_obs[i_obs] = obs
+            # masked test set
+            test_obs_m = np.ma.array(t_obs, mask=np.isnan(t_obs))
+            test_obs_m = test_obs_m - test_obs_m.mean(axis=1).reshape(-1, 1)
+            test_obs_m = test_obs_m - test_obs_m.mean(axis=0)
+            test_obs.append(test_obs_m)
             # generate a mask that tracks where missing
             # values exist in the obs dataset
             mask = (np.abs(obs) > 0).astype(np.int)
@@ -239,8 +246,9 @@ class OptSpace(object):
         else:
             raise ValueError("n-components must be "
                              "an interger")
+
         # new stacked init
-        dists = np.zeros((2, self.max_iterations ))
+        dists = np.zeros((2, self.max_iterations - 1))
         dist_sum_iter = []
         # stack data
         obs_stacked = np.hstack(multiple_obs)
@@ -273,8 +281,8 @@ class OptSpace(object):
         # from this point on we call this "distortion"
         obs_error = obs_stacked - U.dot(S).dot(V.T)
         # starting initialization of the distortion between obs and imputed
-        dist_sum_iter.append(norm(np.multiply(obs_error, mask_stacked), 'fro') / \
-                             np.sqrt(total_nonzeros))
+        #dist_sum_iter.append(norm(np.multiply(obs_error, mask_stacked), 'fro') / \
+        #                     np.sqrt(total_nonzeros))
         # seperate feature loadings
         feature_loadings = []
         feat_index_start = 0
@@ -285,9 +293,6 @@ class OptSpace(object):
         # store shared init
         U_shared = U
         S_shared = S
-        # save dist
-        dists[0][0] = np.mean(dist_sum_iter)
-        dists[1][0] = np.std(dist_sum_iter)
         # we will perform gradient decent for at most self.max_iterations
         for i in range(1, self.max_iterations):
             # re-init
@@ -323,28 +328,47 @@ class OptSpace(object):
                 # Compute the distortion
                 obs_error = obs - U.dot(S).dot(V.T)
                 # update the new distortion
-                dist_sum_iter.append(norm(np.multiply(obs_error, mask),
-                                           'fro') / np.sqrt(total_nonzeros))
                 # add samples and singular values
                 sample_loadings.append(U)
                 feature_loadings[i_obs] = V    
                 all_singular.append(S)
-            # mean of U and S
-            dists[0][i] = np.mean(dist_sum_iter)
-            dists[1][i] = np.std(dist_sum_iter)
-            U_shared = np.mean(sample_loadings, axis=0)
-            S_shared = np.mean(all_singular, axis=0)
+                # CV dist
+                U_test = np.ma.dot(test_obs[i_obs], V).data
+                U_test /= np.diag(S)
+                reconstruct_test = U_test.dot(S).dot(V.T)
+                reconstruct_test = np.ma.array(reconstruct_test,
+                                               mask=np.isnan(reconstruct_test))
+                obs_error = test_obs[i_obs] - reconstruct_test
+                # update the new distortion
+                obs_error_data = obs_error.data
+                obs_error_data[np.isnan(obs_error_data)] = 0
+                obs_error_mask = obs_error.mask
+                error_ = norm(obs_error,'fro') / np.sqrt(np.sum(~test_obs[i_obs].mask))
+                dist_sum_iter.append(error_)                  
+            # CV error
+            dists[0][i - 1] = np.mean(dist_sum_iter)
+            dists[1][i - 1] = np.std(dist_sum_iter)
+            # mean of U and S, ensure same rotation
+            X_U = np.mean([u_i.dot(u_i.T)
+                           for u_i in sample_loadings], axis=0)
+            _, S_shared, _ = svds(X_U, k=self.n_components, which='LM')
+            S_shared = np.diag(S_shared)
+            S_shared = S_shared / np.linalg.norm(S_shared)
+            U_shared = np.average(sample_loadings, axis=0, weights=average_weights)
+            U_shared -= U_shared.mean(0)
+            feature_loadings = [(S_shared).dot(v_i.T).T
+                                for v_i in feature_loadings]
+
         # compensates the smaller average size of
         # observed values vs. missing
         S_shared = S_shared / rescal_param
         # ensure the loadings are sorted properly
         idx = np.argsort(np.diag(S_shared))[::-1]
         S_shared = S_shared[idx, :][:, idx]
-        U_shared = U_shared[:, idx]
+        U_shared = U_shared[:, idx]   
         feature_loadings = [V[:, idx] for V in feature_loadings]
-        Udist = distance.cdist(U_shared, U_shared)
-
-        return U, S, feature_loadings, Udist, dists
+    
+        return U_shared, S_shared, feature_loadings, dists
 
 
 def svd_sort(U, S, V):
