@@ -780,7 +780,7 @@ def feature_correlation_table(ordination):
 
     vjoint = ordination.features
     s = ordination.eigvals.values
-    Vs_joint = vjoint.values @ np.diag(s) @ vjoint.values.T
+    Vs_joint = vjoint.values @ np.diag(s)**2 @ vjoint.values.T
     joint_features = pd.DataFrame(Vs_joint,
                                   vjoint.index,
                                   vjoint.index)
