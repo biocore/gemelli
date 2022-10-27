@@ -241,7 +241,7 @@ class OptSpace(object):
             if self.n_components > min([min(n, m) - 1 for n, m in dims]):
                 raise ValueError("n-components must be at most"
                                  " 1 minus the min. shape of the"
-                                 " smallest input matrix.")             
+                                 " smallest input matrix.")
         # otherwise rase an error.
         else:
             raise ValueError("n-components must be "
@@ -281,9 +281,7 @@ class OptSpace(object):
         # from this point on we call this "distortion"
         obs_error = obs_stacked - U.dot(S).dot(V.T)
         # starting initialization of the distortion between obs and imputed
-        #dist_sum_iter.append(norm(np.multiply(obs_error, mask_stacked), 'fro') / \
-        #                     np.sqrt(total_nonzeros))
-        # seperate feature loadings
+        # separate feature loadings
         feature_loadings = []
         feat_index_start = 0
         for _, feat_index in dims:
@@ -324,13 +322,13 @@ class OptSpace(object):
                 V = V - self.sign * line * V_update
                 # generate new singular values from the new
                 # loadings
-                S = singular_values(U_shared, V, obs, mask) 
+                S = singular_values(U_shared, V, obs, mask)
                 # Compute the distortion
                 obs_error = obs - U.dot(S).dot(V.T)
                 # update the new distortion
                 # add samples and singular values
                 sample_loadings.append(U)
-                feature_loadings[i_obs] = V    
+                feature_loadings[i_obs] = V
                 all_singular.append(S)
                 # CV dist
                 U_test = np.ma.dot(test_obs[i_obs], V).data
@@ -342,9 +340,9 @@ class OptSpace(object):
                 # update the new distortion
                 obs_error_data = obs_error.data
                 obs_error_data[np.isnan(obs_error_data)] = 0
-                obs_error_mask = obs_error.mask
-                error_ = norm(obs_error,'fro') / np.sqrt(np.sum(~test_obs[i_obs].mask))
-                dist_sum_iter.append(error_)                  
+                error_ = norm(obs_error, 'fro')
+                error_ = error_ / np.sqrt(np.sum(~test_obs[i_obs].mask))
+                dist_sum_iter.append(error_)
             # CV error
             dists[0][i - 1] = np.mean(dist_sum_iter)
             dists[1][i - 1] = np.std(dist_sum_iter)
@@ -354,7 +352,8 @@ class OptSpace(object):
             _, S_shared, _ = svds(X_U, k=self.n_components, which='LM')
             S_shared = np.diag(S_shared)
             S_shared = S_shared / np.linalg.norm(S_shared)
-            U_shared = np.average(sample_loadings, axis=0, weights=average_weights)
+            U_shared = np.average(sample_loadings, axis=0,
+                                  weights=average_weights)
             U_shared -= U_shared.mean(0)
             feature_loadings = [(S_shared).dot(v_i.T).T
                                 for v_i in feature_loadings]
@@ -365,9 +364,9 @@ class OptSpace(object):
         # ensure the loadings are sorted properly
         idx = np.argsort(np.diag(S_shared))[::-1]
         S_shared = S_shared[idx, :][:, idx]
-        U_shared = U_shared[:, idx]   
+        U_shared = U_shared[:, idx]
         feature_loadings = [V[:, idx] for V in feature_loadings]
-    
+
         return U_shared, S_shared, feature_loadings, dists
 
 
