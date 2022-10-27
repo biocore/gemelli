@@ -212,7 +212,7 @@ class OptSpace(object):
         U, S, V = svd_sort(U, S, V)
         return U, S, V
 
-    def joint_solve(self, multiple_obs, average_weights):
+    def joint_solve(self, multiple_obs):
 
         # adjust iteration indexing by one
         self.max_iterations += 1
@@ -352,8 +352,7 @@ class OptSpace(object):
             _, S_shared, _ = svds(X_U, k=self.n_components, which='LM')
             S_shared = np.diag(S_shared)
             S_shared = S_shared / np.linalg.norm(S_shared)
-            U_shared = np.average(sample_loadings, axis=0,
-                                  weights=average_weights)
+            U_shared = np.average(sample_loadings, axis=0)
             U_shared -= U_shared.mean(0)
             feature_loadings = [(S_shared).dot(v_i.T).T
                                 for v_i in feature_loadings]

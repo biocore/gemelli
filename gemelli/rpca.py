@@ -131,7 +131,7 @@ def phylogenetic_rpca(table: biom.Table,
 
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
-    output dimentions.
+    output dimensions.
 
     min_sample_count: int, optional : Default is 0
     Minimum sum cutoff of sample across all features.
@@ -152,7 +152,7 @@ def phylogenetic_rpca(table: biom.Table,
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
     If iteration is not specified, then the default iteration is 5.
-    Which redcues to a satisfactory error threshold.
+    Which reduces to a satisfactory error threshold.
 
     Returns
     -------
@@ -298,7 +298,7 @@ def rpca(table: biom.Table,
 
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
-    output dimentions.
+    output dimensions.
 
     min_sample_count: int, optional : Default is 0
     Minimum sum cutoff of sample across all features.
@@ -319,7 +319,7 @@ def rpca(table: biom.Table,
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
     If iteration is not specified, then the default iteration is 5.
-    Which redcues to a satisfactory error threshold.
+    Which reduces to a satisfactory error threshold.
 
     Returns
     -------
@@ -385,6 +385,103 @@ def rpca(table: biom.Table,
                                         table.ids(), n_components=n_components)
 
     return ord_res, dist_res
+
+
+def rpca_with_cv(table: biom.Table,
+                 n_test_samples: int = 10,
+                 metadata: pd.DataFrame = None,
+                 train_test_column: str = None,
+                 n_components: Union[int, str] = DEFAULT_COMP,
+                 max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
+                 min_sample_count: int = DEFAULT_MSC,
+                 min_feature_count: int = DEFAULT_MFC,
+                 min_feature_frequency: float = DEFAULT_MFF) -> (
+                 OrdinationResults,
+                 DistanceMatrix):
+    """
+    RPCA but with CV used in Joint-RPCA.
+
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    n_test_samples: int, optional : Default is 10
+    Number of random samples to choose for test split samples.
+
+    metadata: DataFrame, optional : Default is None
+    Sample metadata file in QIIME2 formatting. The file must
+    contain a train-test column with labels `train` and `test`
+    and the row ids matched to the table(s).
+
+    train_test_column: str, optional : Default is None
+    Sample metadata column containing `train` and `test`
+    labels to use for the cross-validation evaluation.
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimensions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_iterations: int, optional : Default is 5
+    The number of convex iterations to optimize the solution
+    If iteration is not specified, then the default iteration is 5.
+    Which reduces to a satisfactory error threshold.
+
+    Returns
+    -------
+    OrdinationResults
+        A biplot of the (Robust Aitchison) RPCA feature loadings
+
+    DistanceMatrix
+        The Aitchison distance of the sample loadings from RPCA.
+
+    DataFrame
+        The cross-validation reconstruction error.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: max_iterations must be at least 1`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input table`.
+
+    """
+    res_tmp = joint_rpca([table],
+                         n_test_samples=n_test_samples,
+                         metadata=metadata,
+                         train_test_column=train_test_column,
+                         n_components=n_components,
+                         max_iterations=max_iterations,
+                         min_sample_count=min_sample_count,
+                         min_feature_count=min_feature_count,
+                         min_feature_frequency=min_feature_frequency)
+    ord_res, dist_res, cv_dist = res_tmp
+    return ord_res, dist_res, cv_dist
 
 
 def optspace_helper(rclr_table: np.array,
@@ -509,59 +606,16 @@ def rpca_table_processing(table: biom.Table,
 
     return table
 
-def joint_rpca(tables,
+
+def joint_rpca(tables: list,
+               n_test_samples: int = 10,
+               metadata: pd.DataFrame = None,
+               train_test_column: str = None,
                n_components: Union[int, str] = DEFAULT_COMP,
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
-               min_feature_frequency: float = DEFAULT_MFF,
-               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        OrdinationResults,
-        biom.Table,
-        DistanceMatrix,
-        np.array):
-
-    # filter each table
-    for n, table_n in enumerate(tables):
-        tables[n] = rpca_table_processing(table_n,
-                                          min_sample_count,
-                                          min_feature_count,
-                                          min_feature_frequency)
-    # get set of shared samples
-    shared_all_samples = set.union(*[set(table_n.ids()) for table_n in tables])
-    # check sample overlaps
-    if len(shared_all_samples) == 0:
-        raise ValueError('No samples overlap between all tables.')
-    unshared_samples = set([s_n for table_n in tables for s_n in table_n.ids()]) - shared_all_samples
-    if len(unshared_samples) != 0:
-        warnings.warn('%i sample do not overlap betwen tables and will be removed' % (len(unshared_samples)),
-                      RuntimeWarning)
-    # filter each table again to subset samples and ensure feat. filter still matches
-    for n, table_n in enumerate(tables):
-        tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
-                                          min_sample_count,
-                                          min_feature_count,
-                                          min_feature_frequency)
-    # rclr each table
-    rclr_tables = []
-    for table_n in tables:
-        rclr_tables.append(pd.DataFrame(matrix_rclr(table_n.matrix_data.toarray().T).T,
-                                        table_n.ids('observation'), table_n.ids()))
-
-    ord_res, joint_features, U_dist_res, dists = joint_optspace_helper(rclr_tables,
-                                                                       n_components,
-                                                                       max_iterations)  
-    return ord_res, joint_features, U_dist_res, dists
-
-def joint_rpca(tables,
-               n_test_samples = 10,
-               metadata = None,
-               train_test_column = None,
-               average_weights = None,
-               n_components = 3,
-               max_iterations = 15,
-               min_sample_count = 0,
-               min_feature_count = 0,
-               min_feature_frequency = 0):
+               min_feature_frequency: float = DEFAULT_MFF):
     """
     Performs joint-RPCA across data tables
     with shared samples.
@@ -584,18 +638,14 @@ def joint_rpca(tables,
     Sample metadata column containing `train` and `test`
     labels to use for the cross-validation evaluation.
 
-    average_weights: list of floats : Default is None
-    Weights of importance in the order corresponding to
-    the list of input tables. 
-
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
-    output dimentions.
+    output dimensions.
 
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
     If iteration is not specified, then the default iteration is 5.
-    Which redcues to a satisfactory error threshold.
+    Which reduces to a satisfactory error threshold.
 
     min_sample_count: int, optional : Default is 0
     Minimum sum cutoff of sample across all features.
@@ -622,7 +672,7 @@ def joint_rpca(tables,
         The Aitchison distance of the sample loadings from RPCA.
 
     DataFrame
-        The cross-validation reconstruction error. 
+        The cross-validation reconstruction error.
 
     Raises
     ------
@@ -648,30 +698,32 @@ def joint_rpca(tables,
                                           min_feature_count,
                                           min_feature_frequency)
     # get set of shared samples
-    shared_all_samples = set.intersection(*[set(table_n.ids()) for table_n in tables])
+    shared_all_samples = set.intersection(*[set(table_n.ids())
+                                            for table_n in tables])
     # check sample overlaps
     if len(shared_all_samples) == 0:
         raise ValueError('No samples overlap between all tables.')
-    unshared_samples = set([s_n for table_n in tables for s_n in table_n.ids()]) - shared_all_samples
+    unshared_samples = set([s_n
+                            for table_n in tables
+                            for s_n in table_n.ids()]) - shared_all_samples
     if len(unshared_samples) != 0:
-        warnings.warn('%i sample do not overlap betwen tables and will be removed' % (len(unshared_samples)),
-                      RuntimeWarning)
-    # filter each table again to subset samples and ensure feat. filter still matches
+        warnings.warn('Removing %i sample(s) that do not overlap in tables.'
+                      % (len(unshared_samples)), RuntimeWarning)
+    # filter each table again to subset samples.
     for n, table_n in enumerate(tables):
         tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
                                           min_sample_count,
                                           min_feature_count,
                                           min_feature_frequency)
-    shared_all_samples = set.intersection(*[set(table_n.ids()) for table_n in tables])
-
+    shared_all_samples = set.intersection(*[set(table_n.ids())
+                                            for table_n in tables])
     # rclr each table
     rclr_tables = []
     for table_n in tables:
-        rclr_tables.append(pd.DataFrame(matrix_rclr(table_n.matrix_data.toarray().T).T,
-                                        table_n.ids('observation'), table_n.ids()))
-    # check weight is none
-    if average_weights is None:
-        average_weights = [1 for i in range(len(tables))]  
+        rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+        rclr_tables.append(pd.DataFrame(rclr_tmp,
+                                        table_n.ids('observation'),
+                                        table_n.ids()))
     # get training and test sample IDs
     if metadata is None or train_test_column is None:
         test_samples = sorted(list(shared_all_samples))[:n_test_samples]
@@ -680,21 +732,19 @@ def joint_rpca(tables,
         metadata = metadata.loc[shared_all_samples, :]
         train_samples = metadata[metadata[train_test_column] == 'train'].index
         test_samples = metadata[metadata[train_test_column] == 'test'].index
-        
     ord_res, U_dist_res, cv_dist = joint_optspace_helper(rclr_tables,
                                                          n_components,
                                                          max_iterations,
                                                          test_samples,
-                                                         train_samples,
-                                                         average_weights)
+                                                         train_samples)
     return ord_res, U_dist_res, cv_dist
+
 
 def joint_optspace_helper(tables,
                           n_components,
                           max_iterations,
                           test_samples,
-                          train_samples,
-                          average_weights):
+                          train_samples):
     """
     Helper function for joint-RPCA
     """
@@ -702,19 +752,21 @@ def joint_optspace_helper(tables,
     # split the tables by training and test samples
     tables_split = [[table_i.loc[:, test_samples].T,
                      table_i.loc[:, train_samples].T]
-                     for table_i in tables]
-    
+                    for table_i in tables]
     # run OptSpace
-    opt_model = OptSpace(n_components = n_components,
-                         max_iterations = max_iterations,
+    opt_model = OptSpace(n_components=n_components,
+                         max_iterations=max_iterations,
                          tol=None)
     U, s, Vs, dists = opt_model.joint_solve([[t_s.values for t_s in t]
-                                             for t in tables_split],
-                                            average_weights)
+                                             for t in tables_split])
     rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
-    vjoint = pd.concat([pd.DataFrame(Vs_n, index=t_n.index, columns=rename_cols)
+    vjoint = pd.concat([pd.DataFrame(Vs_n,
+                                     index=t_n.index,
+                                     columns=rename_cols)
                         for t_n, Vs_n in zip(tables, Vs)])
-    ujoint = pd.DataFrame(U, index=list(train_samples), columns=rename_cols)
+    ujoint = pd.DataFrame(U,
+                          index=list(train_samples),
+                          columns=rename_cols)
     # center again around zero after completion
     X = ujoint.values @ s @ vjoint.values.T
     X = X - X.mean(axis=0)
@@ -724,7 +776,6 @@ def joint_optspace_helper(tables,
     rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
     v = v.T[:, :n_components]
     u = u[:, :n_components]
-
     # project test data into training data
     if len(test_samples) > 0:
         test_M = pd.concat([t[0] for t in tables_split], axis=1).T
@@ -735,7 +786,6 @@ def joint_optspace_helper(tables,
         u_test = np.ma.dot(test_M, v).data
         u_test /= np.linalg.norm(s_eig)
         u = np.vstack([u, u_test])
-
     # save results
     vjoint = pd.DataFrame(v,
                           index=vjoint.index,
@@ -755,30 +805,89 @@ def joint_optspace_helper(tables,
             proportion_explained=proportion_explained.copy())
     Udist = distance.cdist(ujoint, ujoint)
     U_dist_res = DistanceMatrix(Udist, ids=ujoint.index)
-    cv_dist = pd.DataFrame(dists, ['mean_CV','std_CV']).T
+    cv_dist = pd.DataFrame(dists, ['mean_CV', 'std_CV']).T
     cv_dist.index.name = 'iteration'
 
     return ord_res, U_dist_res, cv_dist
 
-def feature_correlation_table(ordination):
+
+def transform(ordination, tables, subset_tables=True):
+    # extract current U & V matrix
+    Udf = ordination.samples.copy()
+    Vdf = ordination.features.copy()
+    s_eig = ordination.eigvals.copy().values
+    # rclr each table
+    rclr_table_df = []
+    for table_n in tables:
+        rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+        rclr_table_df.append(pd.DataFrame(rclr_tmp,
+                                          table_n.ids('observation'),
+                                          table_n.ids()))
+    rclr_table_df = pd.concat(rclr_table_df, axis=1)
+    # ensure feature IDs match
+    shared_features = set(rclr_table_df.index) & set(Vdf.index)
+    if len(shared_features) < len(set(Vdf.index)):
+        raise ValueError('The input tables do not contain all'
+                         ' the features in the ordination.')
+    elif subset_tables:
+        unshared_N = len(set(rclr_table_df.index)) - len(shared_features)
+        warnings.warn('Removing %i features(s) in table(s)'
+                      ' but not the ordination.'
+                      % (len(unshared_N)), RuntimeWarning)
+    else:
+        raise ValueError('Features in the input table(s) not in'
+                         ' the features in the ordination.'
+                         ' Either set subset_tables to True or'
+                         ' match the tables to the ordination.')
+    ordination.samples = transform_helper(Udf,
+                                          Vdf,
+                                          s_eig,
+                                          rclr_table_df)
+    return ordination
+
+
+def transform_helper(Udf, Vdf, s_eig, table_rclr_project):
+    # project new data into ordination
+    table_rclr_project = table_rclr_project.reindex(Vdf.index)
+    M_project = np.ma.array(table_rclr_project,
+                            mask=np.isnan(table_rclr_project)).T
+    M_project = M_project - M_project.mean(axis=1).reshape(-1, 1)
+    M_project = M_project - M_project.mean(axis=0)
+    U_projected = np.ma.dot(M_project, Vdf.values).data
+    U_projected /= np.linalg.norm(s_eig)
+    U_projected = pd.DataFrame(U_projected,
+                               table_rclr_project.columns,
+                               Udf.columns)
+    return pd.concat([Udf, U_projected])
+
+
+def feature_covariance_table(ordination, features_use=None):
     """
     Function to produce a feature by feature
-    correlation table from RPCA ordination
+    covariance table from RPCA ordination
     results.
 
     Parameters
     ----------
-    OrdinationResults
+    ordination: OrdinationResults
         A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+    features_use: list, optional : default is None
+        A subset of features to use in the covariance generation.
 
     Returns
     -------
     DataFrame
-        A feature by feature correlation table.
+        A feature by feature covariance table.
 
     """
-
-    vjoint = ordination.features
+    if features_use is not None:
+        vjoint = ordination.features.copy()
+        if len(set(features_use) - set(vjoint.index)) != 0:
+            raise ValueError('Feature subset given contains labels'
+                             ' not in the loadings.')
+        vjoint = vjoint.loc[features_use, :]
+    else:
+        vjoint = ordination.features
     s = ordination.eigvals.values
     Vs_joint = vjoint.values @ np.diag(s)**2 @ vjoint.values.T
     joint_features = pd.DataFrame(Vs_joint,
