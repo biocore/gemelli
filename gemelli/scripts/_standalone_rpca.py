@@ -8,13 +8,16 @@ from gemelli.preprocessing import TaxonomyError
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
+from gemelli.rpca import joint_rpca as _joint_rpca
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DEFAULT_MFC, DEFAULT_OPTSPACE_ITERATIONS,
                                DESC_COMP, DESC_MSC, DESC_MFC,
                                DESC_ITERATIONS, DESC_MINDEPTH,
                                DEFAULT_MFF, DESC_MFF,
-                               DESC_COUNTS, DESC_TREE, DESC_TAX_SA)
-
+                               DESC_COUNTS, DESC_TREE, DESC_TAX_SA,
+                               DESC_METACV, DESC_COLCV, DESC_TESTS,
+                               DEFAULT_METACV, DEFAULT_COLCV,
+                               DEFAULT_TESTS)
 
 @cli.command(name='phylogenetic-rpca')
 @click.option('--in-biom',
@@ -111,6 +114,107 @@ def standalone_phylogenetic_rpca(in_biom: str,
     # write the vectorized count table for Qurro / log-ratios
     with biom_open(os.path.join(output_dir, 'phylo-table.biom'), 'w') as f:
         counts_by_node.to_hdf5(f, "phylo-rpca-count-table")
+
+
+               n_test_samples: int = 10,
+               metadata: pd.DataFrame = None,
+               train_test_column: str = None,
+               n_components: Union[int, str] = DEFAULT_COMP,
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
+               min_sample_count: int = DEFAULT_MSC,
+               min_feature_count: int = DEFAULT_MFC,
+               min_feature_frequency: float = DEFAULT_MFF)
+               
+@cli.command(name='joint-rpca')
+@click.option('--in-biom',
+              help=DESC_COUNTS,
+              required=True, multiple=True)
+@click.option('--output-dir',
+              help='Location of output files.',
+              required=True)
+@click.option('--n-test-samples',
+              default=DEFAULT_TESTS,
+              show_default=True,
+              help=DESC_TESTS)
+@click.option('--sample-metadata-file',
+              default=DEFAULT_METACV,
+              show_default=True,
+              help=DESC_METACV)
+@click.option('--train-test-column',
+              default=DEFAULT_COLCV,
+              show_default=True,
+              help=DESC_COLCV)
+@click.option('--n-components',
+              default=DEFAULT_COMP,
+              show_default=True,
+              help=DESC_COMP)
+@click.option('--min-sample-count',
+              default=DEFAULT_MSC,
+              show_default=True,
+              help=DESC_MSC)
+@click.option('--min-feature-count',
+              default=DEFAULT_MFC,
+              show_default=True,
+              help=DESC_MFC)
+@click.option('--min-feature-frequency',
+              default=DEFAULT_MFF,
+              show_default=True,
+              help=DESC_MFF)
+@click.option('--max-iterations',
+              default=DEFAULT_OPTSPACE_ITERATIONS,
+              show_default=True,
+              help=DESC_ITERATIONS)
+def standalone_joint_rpca(in_biom: list,
+                          output_dir: str,
+                          n_test_samples: int,
+                          sample_metadata_file: str,
+                          train_test_column: str,
+                          n_components: int,
+                          min_sample_count: int,
+                          min_feature_count: int,
+                          min_feature_frequency: float,
+                          max_iterations: int) -> None:
+    """Runs Joint-RPCA."""
+
+    # import tables
+    if isinstance(in_biom, list):
+        tables = [load_table(in_biom) for table in in_biom]
+    else:
+        tables = [load_table(in_biom)]
+    if sample_metadata_file is not None:
+        # import sample metadata (if needed)
+        sample_metadata = pd.read_csv(sample_metadata_file,
+                                      sep='\t', index_col=0,
+                                      low_memory=False)
+    else:
+        sample_metadata = None
+    # run the RPCA wrapper
+    res_tmp = _joint_rpca(tables,
+                          n_test_samples=n_test_samples,
+                          metadata=sample_metadata,
+                          train_test_column=train_test_column,
+                          n_components=n_components,
+                          min_sample_count=min_sample_count,
+                          min_feature_count=min_feature_count,
+                          min_feature_frequency=min_feature_frequency,
+                          max_iterations=max_iterations)
+    ord_res, dist_res, cv_res = res_tmp
+    # If it doesn't already exist, create the output directory.
+    # Note that there is technically a race condition here: it's ostensibly
+    # possible that some process could delete the output directory after we
+    # check that it exists here but before we write the output files to it.
+    # However, in this case, we'd just get an error from skbio.io.util.open()
+    # (which is called by skbio.OrdinationResults.write()), which makes sense.
+    os.makedirs(output_dir, exist_ok=True)
+
+    # write files to output directory
+    # Note that this will overwrite files in the output directory that share
+    # these filenames (analogous to QIIME 2's behavior if you specify the
+    # --o-biplot and --o-distance-matrix options, but differing from QIIME 2's
+    # behavior if you specify --output-dir instead).
+    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
+    dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
+    cv_res.to_csv(os.path.join(output_dir, 'cross-validation-error.tsv'), sep='\t')
 
 
 @cli.command(name='rpca')

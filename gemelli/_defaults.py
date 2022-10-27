@@ -21,6 +21,9 @@ DEFAULT_OPTSPACE_ITERATIONS = 5
 DEFAULT_TENSALS_MAXITER = 25
 DEFAULT_FMETA = None
 DEFAULT_COND = None
+DEFAULT_METACV = None
+DEFAULT_COLCV = None
+DEFAULT_TESTS = 10
 DESC_BIN = ("The feature table containing the "
             "samples over which metric should be computed.")
 DESC_COUNTS = ("The feature table in biom format containing the "
@@ -104,3 +107,9 @@ QTREECOUNT = ("A table with all tree internal nodes as features with the "
 QBIPLOT = "A biplot of the (Robust Aitchison) RPCA feature loadings"
 QADIST = "The Aitchison distance of the sample loadings from RPCA."
 QRCLR = "A rclr transformed table. Note: zero/missing values have NaNs"
+DESC_METACV = ("Sample metadata file in QIIME2 formatting. "
+               "Containing the columns with training and test labels.")
+DESC_COLCV = ("Sample metadata column containing `train` and `test`"
+              " labels to use for the cross-validation evaluation.")
+DESC_TESTS = ("Number of random samples to choose for test split samples "
+              "if sample metadata and a train-test column are not provided.")

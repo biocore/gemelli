@@ -24,7 +24,8 @@ from gemelli.preprocessing import (matrix_rclr,
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
-                               DEFAULT_MFF)
+                               DEFAULT_MFF, DEFAULT_METACV,
+                               DEFAULT_COLCV, DEFAULT_TESTS)
 from scipy.linalg import svd
 # import QIIME2 if in a Q2env otherwise set type to str
 try:
@@ -388,9 +389,9 @@ def rpca(table: biom.Table,
 
 
 def rpca_with_cv(table: biom.Table,
-                 n_test_samples: int = 10,
-                 metadata: pd.DataFrame = None,
-                 train_test_column: str = None,
+                 n_test_samples: int = DEFAULT_TESTS,
+                 metadata: pd.DataFrame = DEFAULT_METACV,
+                 train_test_column: str = DEFAULT_COLCV,
                  n_components: Union[int, str] = DEFAULT_COMP,
                  max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
                  min_sample_count: int = DEFAULT_MSC,
@@ -608,9 +609,9 @@ def rpca_table_processing(table: biom.Table,
 
 
 def joint_rpca(tables: list,
-               n_test_samples: int = 10,
-               metadata: pd.DataFrame = None,
-               train_test_column: str = None,
+               n_test_samples: int = DEFAULT_TESTS,
+               metadata: pd.DataFrame = DEFAULT_METACV,
+               train_test_column: str = DEFAULT_COLCV,
                n_components: Union[int, str] = DEFAULT_COMP,
                max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
                min_sample_count: int = DEFAULT_MSC,
