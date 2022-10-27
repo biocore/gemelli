@@ -176,6 +176,28 @@ class TestOptspace(unittest.TestCase):
         exp = 0.179
         assert_array_almost_equal(res, exp, decimal=1)
 
+    def test_optspace_joint(self):
+        """Test Joint-OptSpace converges on test dataset."""
+        M0 = np.vstack([loadmat(get_data_path('large_test.mat'))['M0'],
+                        loadmat(get_data_path('large_test.mat'))['M0']]).T
+        M_E = [loadmat(get_data_path('large_test.mat'))['M_E'],
+               loadmat(get_data_path('large_test.mat'))['M_E']]
+
+        M0 = M0.astype(np.float)
+        M_E = [[np.array(M_.todense()).astype(np.float),
+                np.array(M_.todense()).astype(np.float)]
+               for M_ in M_E]
+        X, S, Y, _ = OptSpace(n_components=3,
+                              max_iterations=11,
+                              tol=1e-8).joint_solve(M_E)
+        Y = np.vstack(Y)
+        err = X[:, ::-1].dot(S).dot(Y[:, ::-1].T) - M0
+        n, m = M0.shape
+
+        res = norm(err, 'fro') / np.sqrt(m * n)
+        exp = 1.8
+        assert_array_almost_equal(res, exp, decimal=1)
+
     def test_optspace_ordering(self):
         """Test OptSpace produces reproducible loadings."""
         # the expected sorting
