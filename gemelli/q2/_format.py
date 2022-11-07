@@ -1,6 +1,21 @@
 import qiime2.plugin.model as model
 from qiime2.plugin import ValidationError
 
+class CVFormat(model.TextFileFormat):
+    def _validate(self, n_records=None):
+        with self.open() as fh:
+            # check the header column names
+            header = fh.readline()
+            comp_columns = [i for i, head in enumerate(header.split('\t'))
+                            if 'CV' in head]
+                        # ensure there at least two components
+            if len(comp_columns) < 1:
+                raise ValidationError('Not in CV format.')
+
+    def _validate_(self, level):
+        record_count_map = {'min': None, 'max': None}
+        self._validate(record_count_map[level])
+
 
 class TrajectoryFormat(model.TextFileFormat):
     def _validate(self, n_records=None):
@@ -39,3 +54,7 @@ def is_float(str):
 TrajectoryDirectoryFormat = model.SingleFileDirectoryFormat(
     'TrajectoryDirectoryFormat', 'trajectory.tsv',
     TrajectoryFormat)
+
+CVDirectoryFormat = model.SingleFileDirectoryFormat(
+    'CVDirectoryFormat', 'cv.tsv',
+    CVFormat)

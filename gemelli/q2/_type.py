@@ -6,3 +6,5 @@ SampleTrajectory = SemanticType(
     'SampleTrajectory', variant_of=SampleData.field['type'])
 FeatureTrajectory = SemanticType(
     'FeatureTrajectory', variant_of=FeatureData.field['type'])
+CrossValidationResults = SemanticType(
+    'CrossValidationResults', variant_of=SampleData.field['type'])

@@ -13,14 +13,14 @@ from gemelli import __version__
 from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
-from gemelli.rpca import (rpca, auto_rpca,
+from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
-from ._type import SampleTrajectory, FeatureTrajectory
-from ._format import TrajectoryDirectoryFormat
-from qiime2.plugin import (Properties, Int, Float, Metadata, Str)
+from ._type import (SampleTrajectory, FeatureTrajectory, CrossValidationResults)
+from ._format import (TrajectoryDirectoryFormat, CVDirectoryFormat)
+from qiime2.plugin import (Properties, Int, Float, Metadata, Str, List)
 from q2_types.ordination import PCoAResults
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
@@ -35,9 +35,11 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_ITERATIONSRTPM, DESC_MINDEPTH,
                                QLOAD, QDIST, QORD, QSOAD, QRCLR,
                                DESC_MSC, DESC_MFC, QBIPLOT,
-                               QTREE, QTREECOUNT, QADIST,
+                               QTREE, QTREECOUNT, QADIST, QACV,
                                DESC_ITERATIONS, DESC_MFF, DESC_TAX_Q2,
-                               DESC_T2T_TAX, DESC_STBL)
+                               DESC_T2T_TAX, DESC_STBL, DESC_METACV,
+                               DESC_TABLES, DESC_COLCV, DESC_TESTS,
+                               DESC_TABLES)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -351,6 +353,39 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
+    function=joint_rpca,
+    inputs={'tables': List[FeatureTable[Frequency]]},
+    parameters={'n_test_samples': Int,
+                'sample_metadata': Metadata,
+                'train_test_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'max_iterations': Int},
+    outputs=[('biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix),
+             ('cross_validation_error', SampleData[CrossValidationResults])],
+    input_descriptions={'tables': DESC_TABLES},
+    parameter_descriptions={'n_test_samples':DESC_TESTS,
+                            'sample_metadata':DESC_METACV,
+                            'train_test_column':DESC_COLCV,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations': DESC_ITERATIONS},
+    output_descriptions={'biplot': QBIPLOT,
+                         'distance_matrix': QADIST,
+                         'cross_validation_error': QACV},
+    name='Joint (Robust Aitchison) RPCA with manually chosen n_components.',
+    description=("Performs robust center log-ratio transform "
+                 "joint robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
     function=phylogenetic_rpca_with_taxonomy,
     inputs={'table': FeatureTable[Frequency],
             'phylogeny': Phylogeny[Rooted],
@@ -462,4 +497,11 @@ plugin.register_semantic_type_to_format(
     FeatureData[FeatureTrajectory],
     artifact_format=TrajectoryDirectoryFormat)
 plugin.register_formats(TrajectoryDirectoryFormat)
+
+plugin.register_semantic_types(CrossValidationResults)
+plugin.register_semantic_type_to_format(
+    SampleData[CrossValidationResults],
+    artifact_format=CVDirectoryFormat)
+plugin.register_formats(CVDirectoryFormat)
+
 importlib.import_module('gemelli.q2._transformer')

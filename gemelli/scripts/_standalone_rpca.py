@@ -17,7 +17,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DESC_COUNTS, DESC_TREE, DESC_TAX_SA,
                                DESC_METACV, DESC_COLCV, DESC_TESTS,
                                DEFAULT_METACV, DEFAULT_COLCV,
-                               DEFAULT_TESTS)
+                               DEFAULT_TESTS, DESC_TABLES)
 
 @cli.command(name='phylogenetic-rpca')
 @click.option('--in-biom',
@@ -116,19 +116,11 @@ def standalone_phylogenetic_rpca(in_biom: str,
         counts_by_node.to_hdf5(f, "phylo-rpca-count-table")
 
 
-               n_test_samples: int = 10,
-               metadata: pd.DataFrame = None,
-               train_test_column: str = None,
-               n_components: Union[int, str] = DEFAULT_COMP,
-               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
-               min_sample_count: int = DEFAULT_MSC,
-               min_feature_count: int = DEFAULT_MFC,
-               min_feature_frequency: float = DEFAULT_MFF)
-               
 @cli.command(name='joint-rpca')
 @click.option('--in-biom',
-              help=DESC_COUNTS,
-              required=True, multiple=True)
+              help=DESC_TABLES,
+              required=True,
+              multiple=True)
 @click.option('--output-dir',
               help='Location of output files.',
               required=True)
@@ -177,8 +169,8 @@ def standalone_joint_rpca(in_biom: list,
     """Runs Joint-RPCA."""
 
     # import tables
-    if isinstance(in_biom, list):
-        tables = [load_table(in_biom) for table in in_biom]
+    if isinstance(in_biom, list) or isinstance(in_biom, tuple):
+        tables = [load_table(table) for table in in_biom]
     else:
         tables = [load_table(in_biom)]
     if sample_metadata_file is not None:
@@ -191,7 +183,7 @@ def standalone_joint_rpca(in_biom: list,
     # run the RPCA wrapper
     res_tmp = _joint_rpca(tables,
                           n_test_samples=n_test_samples,
-                          metadata=sample_metadata,
+                          sample_metadata=sample_metadata,
                           train_test_column=train_test_column,
                           n_components=n_components,
                           min_sample_count=min_sample_count,
@@ -212,8 +204,8 @@ def standalone_joint_rpca(in_biom: list,
     # these filenames (analogous to QIIME 2's behavior if you specify the
     # --o-biplot and --o-distance-matrix options, but differing from QIIME 2's
     # behavior if you specify --output-dir instead).
-    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
-    dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
+    ord_res.write(os.path.join(output_dir, 'joint-ordination.txt'))
+    dist_res.write(os.path.join(output_dir, 'joint-distance-matrix.tsv'))
     cv_res.to_csv(os.path.join(output_dir, 'cross-validation-error.tsv'), sep='\t')
 
 

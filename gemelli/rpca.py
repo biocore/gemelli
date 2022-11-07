@@ -390,7 +390,7 @@ def rpca(table: biom.Table,
 
 def rpca_with_cv(table: biom.Table,
                  n_test_samples: int = DEFAULT_TESTS,
-                 metadata: pd.DataFrame = DEFAULT_METACV,
+                 sample_metadata: pd.DataFrame = DEFAULT_METACV,
                  train_test_column: str = DEFAULT_COLCV,
                  n_components: Union[int, str] = DEFAULT_COMP,
                  max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
@@ -474,7 +474,7 @@ def rpca_with_cv(table: biom.Table,
     """
     res_tmp = joint_rpca([table],
                          n_test_samples=n_test_samples,
-                         metadata=metadata,
+                         sample_metadata=sample_metadata,
                          train_test_column=train_test_column,
                          n_components=n_components,
                          max_iterations=max_iterations,
@@ -608,15 +608,18 @@ def rpca_table_processing(table: biom.Table,
     return table
 
 
-def joint_rpca(tables: list,
+def joint_rpca(tables: biom.Table,
                n_test_samples: int = DEFAULT_TESTS,
-               metadata: pd.DataFrame = DEFAULT_METACV,
+               sample_metadata: pd.DataFrame = DEFAULT_METACV,
                train_test_column: str = DEFAULT_COLCV,
                n_components: Union[int, str] = DEFAULT_COMP,
-               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
-               min_feature_frequency: float = DEFAULT_MFF):
+               min_feature_frequency: float = DEFAULT_MFF,
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+        OrdinationResults,
+        DistanceMatrix,
+        pd.DataFrame):
     """
     Performs joint-RPCA across data tables
     with shared samples.
@@ -726,13 +729,18 @@ def joint_rpca(tables: list,
                                         table_n.ids('observation'),
                                         table_n.ids()))
     # get training and test sample IDs
-    if metadata is None or train_test_column is None:
+    if sample_metadata is not None and not isinstance(sample_metadata,
+                                                      pd.DataFrame):
+        sample_metadata = sample_metadata.to_dataframe()
+    if sample_metadata is None or train_test_column is None:
         test_samples = sorted(list(shared_all_samples))[:n_test_samples]
         train_samples = list(set(shared_all_samples) - set(test_samples))
     else:
-        metadata = metadata.loc[shared_all_samples, :]
-        train_samples = metadata[metadata[train_test_column] == 'train'].index
-        test_samples = metadata[metadata[train_test_column] == 'test'].index
+        sample_metadata = sample_metadata.loc[shared_all_samples, :]
+        train_samples = sample_metadata[train_test_column] == 'train'
+        test_samples = sample_metadata[train_test_column] == 'test'
+        train_samples = sample_metadata[train_samples].index
+        test_samples = sample_metadata[test_samples].index
     ord_res, U_dist_res, cv_dist = joint_optspace_helper(rclr_tables,
                                                          n_components,
                                                          max_iterations,

@@ -106,6 +106,7 @@ QTREECOUNT = ("A table with all tree internal nodes as features with the "
               "sum of all children of that node (i.e. Fast UniFrac).")
 QBIPLOT = "A biplot of the (Robust Aitchison) RPCA feature loadings"
 QADIST = "The Aitchison distance of the sample loadings from RPCA."
+QACV = "The cross-validation reconstruction error."
 QRCLR = "A rclr transformed table. Note: zero/missing values have NaNs"
 DESC_METACV = ("Sample metadata file in QIIME2 formatting. "
                "Containing the columns with training and test labels.")
@@ -113,3 +114,5 @@ DESC_COLCV = ("Sample metadata column containing `train` and `test`"
               " labels to use for the cross-validation evaluation.")
 DESC_TESTS = ("Number of random samples to choose for test split samples "
               "if sample metadata and a train-test column are not provided.")
+DESC_TABLES = ("The collection of feature tables containing shared "
+               "samples over which metric should be computed.")
