@@ -203,7 +203,7 @@ class OptSpace(object):
                                'fro') / np.sqrt(total_nonzeros)
             # if the gradient decent has coverged then break the loop
             # and return the results
-            if(dist[i + 1] < self.tol):
+            if (dist[i + 1] < self.tol):
                 break
         # compensates the smaller average size of
         # observed values vs. missing
@@ -490,7 +490,7 @@ def line_search(
                                 U_update, V +
                                 line *
                                 V_update, S, obs, mask, step_size, rho)
-        if((cost[i + 1] - cost[0]) <= .5 * line * norm_update):
+        if ((cost[i + 1] - cost[0]) <= .5 * line * norm_update):
             return line
         line = line / 2
     return line
