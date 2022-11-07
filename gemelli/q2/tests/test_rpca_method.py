@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from pandas import read_csv
-from qiime2 import Artifact
+from qiime2 import Artifact, Metadata
 from click.testing import CliRunner
 from nose.tools import nottest
 from biom import Table, load_table
@@ -19,7 +19,7 @@ from gemelli.testing import assert_ordinationresults_equal
 
 
 @nottest
-def create_test_table():
+def create_test_table(feature_prefix=''):
     _, test_table = build_block_model(rank=2,
                                       hoced=20,
                                       hsced=20,
@@ -29,7 +29,8 @@ def create_test_table():
                                       num_features=500,
                                       mapping_on=False)
 
-    feat_ids = ['F%d' % i for i in range(test_table.shape[0])]
+    feat_ids = [ '%sF%d' % (feature_prefix, i)
+                for i in range(test_table.shape[0])]
     samp_ids = ['L%d' % i for i in range(test_table.shape[1])]
 
     return Table(test_table, feat_ids, samp_ids)
@@ -70,6 +71,16 @@ class Test_qiime2_rpca(unittest.TestCase):
     def setUp(self):
         self.q2table = Artifact.import_data("FeatureTable[Frequency]",
                                             create_test_table())
+        self.q2table_two = Artifact.import_data("FeatureTable[Frequency]",
+                                            create_test_table(feature_prefix='two'))
+        # make mock sample metadata
+        ids_samples = self.q2table.view(Table).ids()
+        mf_test = pd.DataFrame(ids_samples).set_index(0)
+        train_ = list(ids_samples)[:int(len(ids_samples) * 0.1)]
+        mf_test['train_test'] = 'train'
+        mf_test.loc[train_, 'train_test'] = 'test'
+        mf_test.index.name = '#SampleID'
+        self.sample_metadata = Metadata(mf_test)
 
     def test_qiime2_auto_rpca(self):
         """ Test Q2 rank estimate matches standalone."""
@@ -160,6 +171,89 @@ class Test_qiime2_rpca(unittest.TestCase):
         # with the other _values numpy arrays we've created from the other
         # distance matrices)
         q2distmatrix_values = q2distmatrix.to_data_frame().values
+
+        # Finaly: actually check the consistency of Q2 and standalone results!
+        np.testing.assert_array_almost_equal(q2distmatrix_values,
+                                             stdistmatrix_values)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+
+        # NOTE: This functionality is currently not used due to the inherent
+        # randomness in how the test table data is generated (and also because
+        # we're already checking the correctness of the standalone gemelli
+        # RPCA script), but if desired you can add ground truth data to a data/
+        # folder in this directory (i.e. a distance-matrix.tsv and
+        # ordination.txt file), and the code below will compare the Q2 results
+        # to those files.
+        #
+        # Read in expected output from data/, similarly to above
+        # exordination = OrdinationResults.read(get_data_path(
+        #                                       'ordination.txt'))
+        # exdistmatrix_values = read_csv(get_data_path('distance-matrix.tsv'),
+        #                                sep='\t', index_col=0).values
+        #
+        # ... And check consistency of Q2 results with the expected results
+        # assert_gemelli_ordinationresults_equal(q2ordination, exordination)
+        # np.testing.assert_array_almost_equal(q2distmatrix_values,
+        #                                      exdistmatrix_values)
+
+    def test_qiime2_jointrpca(self):
+        """Tests that the Q2 and standalone Joint-RPCA results match."""
+
+        tstdir = "test_output"
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        res_tmp = q2gemelli.actions.joint_rpca([self.q2table, self.q2table_two],
+                                               sample_metadata=self.sample_metadata,
+                                               train_test_column='train_test')
+        # Get the underlying data from these artifacts
+        # q2ordination = ordination_qza.view(OrdinationResults)
+        ordination_qza, distmatrix_qza, cv_qza = res_tmp
+        q2distmatrix = distmatrix_qza.view(DistanceMatrix)
+
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        self.q2table.export_data(get_data_path("", tstdir))
+        self.q2table_two.export_data(get_data_path("two", tstdir))
+        self.sample_metadata.save(get_data_path("", tstdir) + 'sample_metadata.tsv')
+        q2table_loc = get_data_path('feature-table.biom', tstdir)
+        q2table_loc_two = get_data_path('two/feature-table.biom', tstdir)
+        q2sm_loc = get_data_path('sample_metadata.tsv', tstdir)
+        # Derived from a line in test_standalone_rpca()
+        tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
+
+        # Run gemelli outside of QIIME 2...
+        result = CliRunner().invoke(sdc.commands['joint-rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--in-biom', q2table_loc_two,
+                                     '--sample-metadata-file', q2sm_loc,
+                                     '--train-test-column', 'train_test',
+                                     '--output-dir', tstdir_absolute])
+        # ...and read in the resulting output files. This code was derived from
+        # test_standalone_rpca() elsewhere in gemelli's codebase.
+        # stordination = OrdinationResults.read(get_data_path('ordination.txt',
+        #                                                    tstdir))
+        stdistmatrix_values = read_csv(
+            get_data_path(
+                'joint-distance-matrix.tsv',
+                tstdir),
+            sep='\t',
+            index_col=0)
+
+        # Convert the DistanceMatrix object a numpy array (which we can compare
+        # with the other _values numpy arrays we've created from the other
+        # distance matrices)
+        q2distmatrix_values = q2distmatrix.to_data_frame()
+        q2distmatrix_values = q2distmatrix_values.loc[stdistmatrix_values.index,
+                                                      stdistmatrix_values.columns]
+        stdistmatrix_values = stdistmatrix_values.values
+        q2distmatrix_values = q2distmatrix_values.values
 
         # Finaly: actually check the consistency of Q2 and standalone results!
         np.testing.assert_array_almost_equal(q2distmatrix_values,

@@ -169,6 +169,58 @@ class Test_standalone_rpca(unittest.TestCase):
             error = Exception('Command failed with non-zero exit code')
             raise error.with_traceback(ex.__traceback__)
 
+    def test_standalone_joint_rpca(self):
+        """Checks the output produced by gemelli's Joint-RPCA standalone script.
+
+           This is more of an "integration test" than a unit test -- the
+           details of the algorithm used by the standalone RPCA script are
+           checked in more detail in gemelli/tests/test_optspace.py, etc.
+        """
+        in_table = get_data_path('test.biom', subfolder='rpca_data')
+        in_table_two = get_data_path('test-two.biom', subfolder='rpca_data')
+        in_sample_meta = get_data_path('test_metadata.tsv', subfolder='rpca_data')
+        out_ = os_path_sep.join(in_table.split(os_path_sep)[:-1])
+        runner = CliRunner()
+        result = runner.invoke(sdc.commands['joint-rpca'],
+                               ['--in-biom', in_table,
+                                '--in-biom', in_table_two,
+                                '--sample-metadata-file', in_sample_meta,
+                                '--train-test-column', 'train_test',
+                                '--output-dir', out_])
+        # Read the results
+        dist_res = pd.read_csv(get_data_path('joint-distance-matrix.tsv',
+                                             subfolder='rpca_data'),
+                               sep='\t',
+                               index_col=0)
+        ord_res = OrdinationResults.read(get_data_path('joint-ordination.txt',
+                                                       subfolder='rpca_data'))
+
+        # Read the expected results
+        dist_exp = pd.read_csv(get_data_path('expected-joint-distance-matrix.tsv',
+                                             subfolder='rpca_data'),
+                               sep='\t', index_col=0)
+        dist_exp = dist_exp.loc[dist_res.index, dist_res.index]
+        ord_exp = OrdinationResults.read(get_data_path(
+                                         'expected-joint-ordination.txt',
+                                         subfolder='rpca_data'))
+        ord_exp.samples = ord_exp.samples.loc[ord_res.samples.index, :]
+        ord_exp.features = ord_exp.features.loc[ord_res.features.index, :]
+
+        # Check that the distance matrix matches our expectations
+        assert_array_almost_equal(dist_res.values, dist_exp.values)
+
+        # Check that the ordination results match our expectations -- checking
+        # each value for both features and samples
+        assert_ordinationresults_equal(ord_res, ord_exp)
+
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+
     def test_standalone_rpca_n_components(self):
         """Tests the standalone RPCA script when n_components is 2
         """
