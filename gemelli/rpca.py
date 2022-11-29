@@ -626,7 +626,7 @@ def joint_rpca(tables: biom.Table,
 
     Parameters
     ----------
-    tables: list of numpy.ndarray, required
+    tables: list of biom.Table, required
     A list of feature table in biom format containing shared
     samples over which metric should be computed.
 
@@ -785,22 +785,12 @@ def joint_optspace_helper(tables,
     rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
     v = v.T[:, :n_components]
     u = u[:, :n_components]
-    # project test data into training data
-    if len(test_samples) > 0:
-        test_M = pd.concat([t[0] for t in tables_split], axis=1).T
-        test_M = test_M.reindex(vjoint.index)
-        test_M = np.ma.array(test_M, mask=np.isnan(test_M)).T
-        test_M = test_M - test_M.mean(axis=1).reshape(-1, 1)
-        test_M = test_M - test_M.mean(axis=0)
-        u_test = np.ma.dot(test_M, v).data
-        u_test /= np.linalg.norm(s_eig)
-        u = np.vstack([u, u_test])
-    # save results
+    # create ordination
     vjoint = pd.DataFrame(v,
                           index=vjoint.index,
                           columns=vjoint.columns)
     ujoint = pd.DataFrame(u,
-                          index=list(train_samples) + list(test_samples),
+                          index=list(train_samples),
                           columns=ujoint.columns)
     p = s_eig**2 / np.sum(s_eig**2)
     eigvals = pd.Series(s_eig, index=rename_cols)
@@ -812,15 +802,69 @@ def joint_optspace_helper(tables,
             samples=ujoint.copy(),
             features=vjoint.copy(),
             proportion_explained=proportion_explained.copy())
-    Udist = distance.cdist(ujoint, ujoint)
-    U_dist_res = DistanceMatrix(Udist, ids=ujoint.index)
+    # project test data into training data
+    if len(test_samples) > 0:
+        ord_res = transform(ord_res,
+                            [t[0] for t in tables_split],
+                            rclr_transform=False)
+    # save results
+    Udist = distance.cdist(ord_res.samples.copy(),
+                           ord_res.samples.copy())
+    U_dist_res = DistanceMatrix(Udist, ids=ord_res.samples.index)
     cv_dist = pd.DataFrame(dists, ['mean_CV', 'std_CV']).T
     cv_dist.index.name = 'iteration'
 
     return ord_res, U_dist_res, cv_dist
 
 
-def transform(ordination, tables, subset_tables=True):
+def transform(ordination, tables, subset_tables=True, rclr_transform=True):
+    """
+    Function to apply dimensionality reduction to table(s).
+    The table(s) is projected on the first principal components
+    previously extracted from a training set.
+
+    Parameters
+    ----------
+    ordination: OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+        produced from the training data.
+
+    tables: list of biom.Table, required
+        A list of at least one feature table in biom format containing
+        shared samples over which metric should be computed.
+
+    subset_tables: bool, optional : default is True
+        Subsets the input tables to contain only features used in the
+        training data. If set to False and the tables are not perfectly
+        matched a ValueError will be produced.
+
+    rclr_transform: bool, optional : default is True
+        If set to false the function will expect `tables` to be dataframes
+        already rclr transformed. This is used for internal functionality
+        in the joint-rpca function.
+
+    Returns
+    -------
+    OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+        with both the input training data and new test data.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: The input tables do not contain all
+        the features in the ordination.`.
+
+    ValueError
+        `ValueError: Removing # features(s) in table(s)
+        but not the ordination.`.
+
+    ValueError
+        `ValueError: Features in the input table(s) not in
+        the features in the ordination.  Either set subset_tables to
+        True or match the tables to the ordination.`.
+    """
+
     # extract current U & V matrix
     Udf = ordination.samples.copy()
     Vdf = ordination.features.copy()
@@ -828,11 +872,14 @@ def transform(ordination, tables, subset_tables=True):
     # rclr each table
     rclr_table_df = []
     for table_n in tables:
-        rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
-        rclr_table_df.append(pd.DataFrame(rclr_tmp,
-                                          table_n.ids('observation'),
-                                          table_n.ids()))
-    rclr_table_df = pd.concat(rclr_table_df, axis=1)
+        if rclr_transform:
+            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+            rclr_table_df.append(pd.DataFrame(rclr_tmp,
+                                              table_n.ids('observation'),
+                                              table_n.ids()))
+        else:
+            rclr_table_df.append(table_n)
+    rclr_table_df = pd.concat(rclr_table_df, axis=1).T
     # ensure feature IDs match
     shared_features = set(rclr_table_df.index) & set(Vdf.index)
     if len(shared_features) < len(set(Vdf.index)):
@@ -842,7 +889,7 @@ def transform(ordination, tables, subset_tables=True):
         unshared_N = len(set(rclr_table_df.index)) - len(shared_features)
         warnings.warn('Removing %i features(s) in table(s)'
                       ' but not the ordination.'
-                      % (len(unshared_N)), RuntimeWarning)
+                      % (unshared_N), RuntimeWarning)
     else:
         raise ValueError('Features in the input table(s) not in'
                          ' the features in the ordination.'
