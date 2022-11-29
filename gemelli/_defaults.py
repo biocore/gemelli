@@ -25,7 +25,7 @@ DEFAULT_METACV = None
 DEFAULT_COLCV = None
 DEFAULT_TESTS = 10
 DEFAULT_MATCH = True
-DEFAULT_TRNSFRM = False
+DEFAULT_TRNSFRM = True
 DESC_BIN = ("The feature table containing the "
             "samples over which metric should be computed.")
 DESC_COUNTS = ("The feature table in biom format containing the "

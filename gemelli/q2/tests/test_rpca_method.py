@@ -81,6 +81,18 @@ class Test_qiime2_rpca(unittest.TestCase):
         mf_test.loc[train_, 'train_test'] = 'test'
         mf_test.index.name = '#SampleID'
         self.sample_metadata = Metadata(mf_test)
+        # make same table but with diff IDs for transform (1)
+        bt_tmp = self.q2table.view(Table).copy()
+        new_ids = {i:'t' + str(i) for i in bt_tmp.ids()}
+        bt_tmp = bt_tmp.update_ids(new_ids)
+        self.q2table_rename = Artifact.import_data("FeatureTable[Frequency]",
+                                                   bt_tmp)
+        # make same table but with diff IDs for transform (1)
+        bt_tmp = self.q2table_two.view(Table).copy()
+        new_ids = {i:'t' + str(i) for i in bt_tmp.ids()}
+        bt_tmp = bt_tmp.update_ids(new_ids)
+        self.q2table_two_rename = Artifact.import_data("FeatureTable[Frequency]",
+                                                       bt_tmp)
 
     def test_qiime2_auto_rpca(self):
         """ Test Q2 rank estimate matches standalone."""
@@ -202,6 +214,70 @@ class Test_qiime2_rpca(unittest.TestCase):
         # np.testing.assert_array_almost_equal(q2distmatrix_values,
         #                                      exdistmatrix_values)
 
+    def test_qiime2_transform_rpca(self):
+        """Tests that the Q2 and standalone RPCA transformer results match."""
+
+        tstdir = "test_output"
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        ordination_qza, distmatrix_qza = q2gemelli.actions.rpca(self.q2table)
+        # Run transformer on same data through QIIME 2
+        t_ordination_qza = q2gemelli.actions.rpca_transform(ordination_qza,
+                                                            self.q2table_rename)
+        t_ordination_qza = t_ordination_qza.projected_biplot
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        self.q2table.export_data(get_data_path("", tstdir))
+        self.q2table_rename.export_data(get_data_path("two", tstdir))
+        q2table_loc = get_data_path('feature-table.biom', tstdir)
+        q2table_rename_loc = get_data_path('two/feature-table.biom', tstdir)
+        # Derived from a line in test_standalone_rpca()
+        tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
+        # Run gemelli outside of QIIME 2...
+        result = CliRunner().invoke(sdc.commands['rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--output-dir', tstdir_absolute])
+        ordination = OrdinationResults.read(tstdir_absolute + '/ordination.txt')
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        result = CliRunner().invoke(sdc.commands['rpca-transform'],
+                                    ['--in-ordination',
+                                    tstdir_absolute + '/ordination.txt',
+                                     '--in-biom',
+                                     q2table_rename_loc,
+                                     '--output-dir',
+                                     tstdir_absolute])
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        t_ordination = OrdinationResults.read(tstdir_absolute + '/projected-ordination.txt')
+        # now heck the projected ordination(s) match the origonals [standalone]
+        exp_res = ordination.samples.copy()
+        res_ord = t_ordination.samples.copy()
+        res_ord = res_ord.drop(exp_res.index)
+        res_ord.index = [ind.replace('t', '') for ind in res_ord.index]
+        res_ord = res_ord.reindex(exp_res.index)
+        np.testing.assert_allclose(exp_res.values,
+                                   res_ord.values,
+                                   atol=0.8)
+        # now heck the projected ordination(s) match the origonals [QIIME2]
+        exp_res = ordination_qza.view(OrdinationResults).samples.copy()
+        res_ord = t_ordination_qza.view(OrdinationResults).samples.copy()
+        res_ord = res_ord.drop(exp_res.index)
+        res_ord.index = [ind.replace('t', '') for ind in res_ord.index]
+        res_ord = res_ord.reindex(exp_res.index)
+        np.testing.assert_allclose(exp_res.values,
+                                   res_ord.values,
+                                   atol=0.8)
+
     def test_qiime2_jointrpca(self):
         """Tests that the Q2 and standalone Joint-RPCA results match."""
 
@@ -284,6 +360,88 @@ class Test_qiime2_rpca(unittest.TestCase):
         # assert_gemelli_ordinationresults_equal(q2ordination, exordination)
         # np.testing.assert_array_almost_equal(q2distmatrix_values,
         #                                      exdistmatrix_values)
+
+    def test_qiime2_transform_jointrpca(self):
+        """Tests that the Q2 and standalone Joint-RPCA transformer results match."""
+
+        tstdir = "test_output"
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        res_tmp = q2gemelli.actions.joint_rpca([self.q2table, self.q2table_two],
+                                               sample_metadata=self.sample_metadata,
+                                               train_test_column='train_test')
+        # Get the underlying data from these artifacts
+        # q2ordination = ordination_qza.view(OrdinationResults)
+        ordination_qza, distmatrix_qza, cv_qza = res_tmp
+        # Run transformer on same data through QIIME 2
+        t_ordination_qza = q2gemelli.actions.transform(ordination_qza,
+                                                       [self.q2table_rename,
+                                                        self.q2table_two_rename])
+        t_ordination_qza = t_ordination_qza.projected_biplot
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        self.q2table.export_data(get_data_path("", tstdir))
+        q2table_loc = get_data_path('feature-table.biom', tstdir)
+        self.q2table_two.export_data(get_data_path("two", tstdir))
+        self.sample_metadata.save(get_data_path("", tstdir) + 'sample_metadata.tsv')
+        q2table_loc_two = get_data_path('two/feature-table.biom', tstdir)
+        q2sm_loc = get_data_path('sample_metadata.tsv', tstdir)
+        # and renames
+        self.q2table_rename.export_data(get_data_path("rename", tstdir))
+        q2table_rename_loc = get_data_path('rename/feature-table.biom', tstdir)
+        self.q2table_two_rename.export_data(get_data_path("rename_two", tstdir))
+        q2table_two_rename_loc = get_data_path('rename_two/feature-table.biom', tstdir)
+        # Derived from a line in test_standalone_rpca()
+        tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
+        # Run gemelli outside of QIIME 2...
+        result = CliRunner().invoke(sdc.commands['joint-rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--in-biom', q2table_loc_two,
+                                     '--sample-metadata-file', q2sm_loc,
+                                     '--train-test-column', 'train_test',
+                                     '--output-dir', tstdir_absolute])
+        ordination = OrdinationResults.read(tstdir_absolute + '/ordination.txt')
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        result = CliRunner().invoke(sdc.commands['joint-rpca-transform'],
+                                    ['--in-ordination',
+                                    tstdir_absolute + '/ordination.txt',
+                                     '--in-biom',
+                                     q2table_rename_loc,
+                                     '--in-biom',
+                                     q2table_two_rename_loc,
+                                     '--output-dir',
+                                     tstdir_absolute])
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        t_ordination = OrdinationResults.read(tstdir_absolute + '/projected-ordination.txt')
+        # now heck the projected ordination(s) match the origonals [standalone]
+        exp_res = ordination.samples.copy()
+        res_ord = t_ordination.samples.copy()
+        res_ord = res_ord.drop(exp_res.index)
+        res_ord.index = [ind.replace('t', '') for ind in res_ord.index]
+        res_ord = res_ord.reindex(exp_res.index)
+        np.testing.assert_allclose(exp_res.values,
+                                   res_ord.values,
+                                   atol=0.8)
+        # now heck the projected ordination(s) match the origonals [QIIME2]
+        exp_res = ordination_qza.view(OrdinationResults).samples.copy()
+        res_ord = t_ordination_qza.view(OrdinationResults).samples.copy()
+        res_ord = res_ord.drop(exp_res.index)
+        res_ord.index = [ind.replace('t', '') for ind in res_ord.index]
+        res_ord = res_ord.reindex(exp_res.index)
+        np.testing.assert_allclose(exp_res.values,
+                                   res_ord.values,
+                                   atol=0.8)
 
     def test_qiime2_phylogenetic_rpca(self):
         """Tests that the Q2 (without taxonomy) & standalone phylogenetic RPCA

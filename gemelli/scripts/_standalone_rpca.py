@@ -307,7 +307,7 @@ def rpca_transform(in_ordination: str,
     ord_res = _transform(ordination, [table],
                          subset_tables=subset_tables)
     # write results
-    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
+    ord_res.write(os.path.join(output_dir, 'projected-ordination.txt'))
 
 
 @cli.command(name='joint-rpca-transform')
@@ -346,7 +346,7 @@ def joint_pca_transform(in_ordination: str,
     ord_res = _transform(ordination, tables,
                          subset_tables=subset_tables)
     # write results
-    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
+    ord_res.write(os.path.join(output_dir, 'projected-ordination.txt'))
 
 
 @cli.command(name='auto-rpca')

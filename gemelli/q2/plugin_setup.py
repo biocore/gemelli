@@ -16,7 +16,7 @@ from gemelli.ctf import (ctf, phylogenetic_ctf,
 from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
-                          transform)
+                          transform, rpca_transform)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from ._type import (SampleTrajectory, FeatureTrajectory, CrossValidationResults)
@@ -499,12 +499,12 @@ plugin.methods.register_function(
             'tables': List[FeatureTable[Frequency]]},
     parameters={'subset_tables': Bool,
                 'rclr_transform': Bool % Choices(DEFAULT_TRNSFRM)},
-    outputs=[('biplot', PCoAResults % Properties("biplot"))],
+    outputs=[('projected_biplot', PCoAResults % Properties("biplot"))],
     input_descriptions={'ordination': DESC_TRAINORDS,
                         'tables': DESC_TRAINTABLES},
     parameter_descriptions={'subset_tables': DESC_MATCH,
                             'rclr_transform': DESC_TRNSFRM},
-    output_descriptions={'biplot': QBIPLOT},
+    output_descriptions={'projected_biplot': QBIPLOT},
     name='Project dimensionality reduction to new table(s).',
     description=("Apply dimensionality reduction to table(s). The table(s)"
                  " is projected on the first principal components"
@@ -512,6 +512,26 @@ plugin.methods.register_function(
                  " This function works from output of RPCA with"
                  " one table as input or"
                  " Joint-RPCA but not yet phylo-RPCA."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=rpca_transform,
+    inputs={'ordination': PCoAResults % Properties("biplot"),
+            'table': FeatureTable[Frequency]},
+    parameters={'subset_tables': Bool,
+                'rclr_transform': Bool % Choices(DEFAULT_TRNSFRM)},
+    outputs=[('projected_biplot', PCoAResults % Properties("biplot"))],
+    input_descriptions={'ordination': DESC_TRAINORDS,
+                        'table': DESC_TRAINTABLES},
+    parameter_descriptions={'subset_tables': DESC_MATCH,
+                            'rclr_transform': DESC_TRNSFRM},
+    output_descriptions={'projected_biplot': QBIPLOT},
+    name='Project dimensionality reduction to a new table.',
+    description=("Apply dimensionality reduction to a table. The table"
+                 " is projected on the first principal components"
+                 "previously extracted from a training set."
+                 " This function works from output of RPCA only."),
     citations=[citations['Martino2019']]
 )
 

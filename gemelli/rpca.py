@@ -874,15 +874,16 @@ def transform(ordination: OrdinationResults,
     Udf = ordination.samples.copy()
     Vdf = ordination.features.copy()
     s_eig = ordination.eigvals.copy().values
-    # rclr each table
+    # rclr each table [if needed]
     rclr_table_df = []
-    for table_n in tables:
-        if rclr_transform:
-            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+    if rclr_transform:
+        for table_n in tables:
+            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T)
             rclr_table_df.append(pd.DataFrame(rclr_tmp,
-                                              table_n.ids('observation'),
-                                              table_n.ids()))
-        else:
+                                              table_n.ids(),
+                                              table_n.ids('observation')))
+    else:
+        for table_n in tables:
             rclr_table_df.append(table_n)
     rclr_table_df = pd.concat(rclr_table_df, axis=1).T
     # ensure feature IDs match
@@ -920,6 +921,21 @@ def transform_helper(Udf, Vdf, s_eig, table_rclr_project):
                                table_rclr_project.columns,
                                Udf.columns)
     return pd.concat([Udf, U_projected])
+
+
+def rpca_transform(ordination: OrdinationResults,
+                   table: biom.Table,
+                   subset_tables: bool = DEFAULT_MATCH,
+                   rclr_transform: bool = DEFAULT_TRNSFRM) -> (
+        OrdinationResults):
+    """
+    To avoid confusion this helper function takes one input
+    to use in QIIME2.
+    """
+    ordination = transform(ordination, [table],
+                           subset_tables=subset_tables,
+                           rclr_transform=rclr_transform)
+    return ordination
 
 
 def feature_covariance_table(ordination, features_use=None):
