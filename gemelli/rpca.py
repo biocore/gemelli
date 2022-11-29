@@ -25,7 +25,8 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
                                DEFAULT_MFF, DEFAULT_METACV,
-                               DEFAULT_COLCV, DEFAULT_TESTS)
+                               DEFAULT_COLCV, DEFAULT_TESTS,
+                               DEFAULT_MATCH, DEFAULT_TRNSFRM)
 from scipy.linalg import svd
 # import QIIME2 if in a Q2env otherwise set type to str
 try:
@@ -817,7 +818,11 @@ def joint_optspace_helper(tables,
     return ord_res, U_dist_res, cv_dist
 
 
-def transform(ordination, tables, subset_tables=True, rclr_transform=True):
+def transform(ordination: OrdinationResults,
+              tables: biom.Table,
+              subset_tables: bool = DEFAULT_MATCH,
+              rclr_transform: bool = DEFAULT_TRNSFRM) -> (
+        OrdinationResults):
     """
     Function to apply dimensionality reduction to table(s).
     The table(s) is projected on the first principal components

@@ -24,6 +24,8 @@ DEFAULT_COND = None
 DEFAULT_METACV = None
 DEFAULT_COLCV = None
 DEFAULT_TESTS = 10
+DEFAULT_MATCH = True
+DEFAULT_TRNSFRM = False
 DESC_BIN = ("The feature table containing the "
             "samples over which metric should be computed.")
 DESC_COUNTS = ("The feature table in biom format containing the "
@@ -116,3 +118,20 @@ DESC_TESTS = ("Number of random samples to choose for test split samples "
               "if sample metadata and a train-test column are not provided.")
 DESC_TABLES = ("The collection of feature tables containing shared "
                "samples over which metric should be computed.")
+DESC_TRAINTABLES = ("The tables to be projected on the first"
+                    " principal components previously extracted"
+                    " from a training set.")
+DESC_TRAINTABLE = ("The table to be projected on the first"
+                   " principal components previously extracted"
+                   " from a training set.")
+DESC_TRAINORDS = ("A joint-biplot of the (Robust Aitchison) RPCA"
+                  " feature loadings produced from the training data.")
+DESC_TRAINORD = ("A biplot of the (Robust Aitchison) RPCA"
+                 " feature loadings produced from the training data.")
+DESC_MATCH = ("Subsets the input tables to contain only features used in the"
+              " training data. If set to False and the tables are not"
+              " perfectly. Matched a ValueError will be produced.")
+DESC_TRNSFRM = ("If set to false the function will expect `tables`"
+                "to be dataframes already rclr transformed."
+                " This is used for internal functionality in the "
+                "joint-rpca function and is set to be only False.")

@@ -4,11 +4,13 @@ import pandas as pd
 from .__init__ import cli
 from biom import load_table
 from biom.util import biom_open
+from skbio import OrdinationResults
 from gemelli.preprocessing import TaxonomyError
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
 from gemelli.rpca import joint_rpca as _joint_rpca
+from gemelli.rpca import transform as _transform
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DEFAULT_MFC, DEFAULT_OPTSPACE_ITERATIONS,
                                DESC_COMP, DESC_MSC, DESC_MFC,
@@ -17,7 +19,10 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DESC_COUNTS, DESC_TREE, DESC_TAX_SA,
                                DESC_METACV, DESC_COLCV, DESC_TESTS,
                                DEFAULT_METACV, DEFAULT_COLCV,
-                               DEFAULT_TESTS, DESC_TABLES)
+                               DEFAULT_TESTS, DESC_TABLES,
+                               DEFAULT_MATCH, DESC_MATCH,
+                               DESC_TRAINTABLES, DESC_TRAINORDS,
+                               DESC_TRAINTABLE, DESC_TRAINORD)
 
 @cli.command(name='phylogenetic-rpca')
 @click.option('--in-biom',
@@ -270,6 +275,78 @@ def standalone_rpca(in_biom: str,
     # behavior if you specify --output-dir instead).
     ord_res.write(os.path.join(output_dir, 'ordination.txt'))
     dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))
+
+
+@cli.command(name='rpca-transform')
+@click.option('--in-ordination',
+              help=DESC_TRAINORD,
+              required=True)
+@click.option('--in-biom',
+              help=DESC_TRAINTABLE,
+              required=True)
+@click.option('--output-dir',
+              help='Location of output files.',
+              required=True)
+@click.option('--subset-tables',
+              default=DEFAULT_MATCH,
+              show_default=True,
+              help=DESC_MATCH)
+def rpca_transform(in_ordination: str,
+                   in_biom: str,
+                   output_dir: str,
+                   subset_tables: bool) -> None:
+    """ 
+    Apply dimensionality reduction to table.
+    The table is projected on the first principal components
+    previously extracted from a training set.
+    """
+    # import data
+    table = load_table(in_biom)
+    ordination = OrdinationResults.read(in_ordination)
+    # apply the transformation
+    ord_res = _transform(ordination, [table],
+                         subset_tables=subset_tables)
+    # write results
+    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
+
+
+@cli.command(name='joint-rpca-transform')
+@click.option('--in-ordination',
+              help=DESC_TRAINORDS,
+              required=True)
+@click.option('--in-biom',
+              help=DESC_TRAINTABLES,
+              required=True,
+              multiple=True)
+@click.option('--output-dir',
+              help='Location of output files.',
+              required=True)
+@click.option('--subset-tables',
+              default=DEFAULT_MATCH,
+              show_default=True,
+              help=DESC_MATCH)
+def joint_pca_transform(in_ordination: str,
+                        in_biom: str,
+                        output_dir: str,
+                        subset_tables: bool) -> None:
+    """ 
+    Apply dimensionality reduction to tables.
+    The tables is projected on the first principal components
+    previously extracted from a training set.
+    """
+
+    # import tables
+    if isinstance(in_biom, list) or isinstance(in_biom, tuple):
+        tables = [load_table(table) for table in in_biom]
+    else:
+        tables = [load_table(in_biom)]
+    # import OrdinationResults
+    ordination = OrdinationResults.read(in_ordination)
+    # apply the transformation
+    ord_res = _transform(ordination, tables,
+                         subset_tables=subset_tables)
+    # write results
+    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
 
 
 @cli.command(name='auto-rpca')

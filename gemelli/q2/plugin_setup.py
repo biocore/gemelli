@@ -15,12 +15,14 @@ from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_with_taxonomy)
 from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
                           phylogenetic_rpca_with_taxonomy,
-                          phylogenetic_rpca_without_taxonomy)
+                          phylogenetic_rpca_without_taxonomy,
+                          transform)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from ._type import (SampleTrajectory, FeatureTrajectory, CrossValidationResults)
 from ._format import (TrajectoryDirectoryFormat, CVDirectoryFormat)
-from qiime2.plugin import (Properties, Int, Float, Metadata, Str, List)
+from qiime2.plugin import (Properties, Int, Float, Metadata,
+                           Str, List, Bool, Choices)
 from q2_types.ordination import PCoAResults
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import SampleData
@@ -39,7 +41,9 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_ITERATIONS, DESC_MFF, DESC_TAX_Q2,
                                DESC_T2T_TAX, DESC_STBL, DESC_METACV,
                                DESC_TABLES, DESC_COLCV, DESC_TESTS,
-                               DESC_TABLES)
+                               DESC_TABLES, DESC_MATCH, 
+                               DEFAULT_TRNSFRM, DESC_TRNSFRM,
+                               DESC_TRAINTABLES, DESC_TRAINORDS)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -486,6 +490,28 @@ plugin.methods.register_function(
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD. Automatically"
                  " estimates the underlying rank (i.e. n-components)."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=transform,
+    inputs={'ordination': PCoAResults % Properties("biplot"),
+            'tables': List[FeatureTable[Frequency]]},
+    parameters={'subset_tables': Bool,
+                'rclr_transform': Bool % Choices(DEFAULT_TRNSFRM)},
+    outputs=[('biplot', PCoAResults % Properties("biplot"))],
+    input_descriptions={'ordination': DESC_TRAINORDS,
+                        'tables': DESC_TRAINTABLES},
+    parameter_descriptions={'subset_tables': DESC_MATCH,
+                            'rclr_transform': DESC_TRNSFRM},
+    output_descriptions={'biplot': QBIPLOT},
+    name='Project dimensionality reduction to new table(s).',
+    description=("Apply dimensionality reduction to table(s). The table(s)"
+                 " is projected on the first principal components"
+                 "previously extracted from a training set."
+                 " This function works from output of RPCA with"
+                 " one table as input or"
+                 " Joint-RPCA but not yet phylo-RPCA."),
     citations=[citations['Martino2019']]
 )
 
