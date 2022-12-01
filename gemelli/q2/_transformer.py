@@ -2,7 +2,21 @@ import numpy as np
 import pandas as pd
 from qiime2 import Metadata
 from .plugin_setup import plugin
-from ._format import TrajectoryFormat, CVFormat
+from ._format import TrajectoryFormat, CVFormat, CorrelationFormat
+
+
+@plugin.register_transformer
+def _1(ff: CorrelationFormat) -> pd.DataFrame:
+    df = pd.read_csv(str(ff), sep='\t',
+                     header=0, index_col=0)
+    return df
+
+
+@plugin.register_transformer
+def _2(df: pd.DataFrame) -> CorrelationFormat:
+    ff = CorrelationFormat()
+    df.to_csv(str(ff), sep='\t', header=True, index=True)
+    return
 
 
 @plugin.register_transformer

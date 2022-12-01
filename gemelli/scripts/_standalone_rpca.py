@@ -8,6 +8,8 @@ from skbio import OrdinationResults
 from gemelli.preprocessing import TaxonomyError
 from gemelli.utils import filter_ordination as _filter_ordination
 from gemelli.rpca import rpca as _rpca
+from gemelli.rpca import (feature_correlation_table as 
+                          _feature_correlation_table)
 from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
 from gemelli.rpca import joint_rpca as _joint_rpca
@@ -25,7 +27,7 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DESC_TRAINTABLES, DESC_TRAINORDS,
                                DESC_TRAINTABLE, DESC_TRAINORD,
                                DESC_MTABLE, DESC_MORD, DESC_FM,
-                               DESC_SM)
+                               DESC_SM, DESC_CORRTBLORD)
 
 @cli.command(name='phylogenetic-rpca')
 @click.option('--in-biom',
@@ -386,6 +388,23 @@ def filter_ordination(ordination: str,
     # write results
     out_ordination.write(os.path.join(output_dir,
                                       'subset-ordination.txt'))
+
+
+@cli.command(name='feature-correlation-table')
+@click.option('--in-ordination',
+              help=DESC_CORRTBLORD,
+              required=True)
+@click.option('--output-dir',
+              help='Location of output files.',
+              required=True)
+def feature_correlation_table(ordination: str) -> None:
+    # import OrdinationResults
+    ordination = OrdinationResults.read(in_ordination)
+    # import table
+    corr_table = _feature_correlation_table(ordination)
+    # write results
+    out_ = os.path.join(output_dir, 'feature-correlation-table.tsv')
+    corr_table.to_csv(out_, sep='\t')
 
 
 @cli.command(name='auto-rpca')

@@ -1,5 +1,8 @@
 import qiime2.plugin.model as model
 from qiime2.plugin import ValidationError
+from qiime2.plugin import SemanticType
+from q2_types.feature_data import FeatureData
+
 
 class CVFormat(model.TextFileFormat):
     def _validate(self, n_records=None):
@@ -43,6 +46,11 @@ class TrajectoryFormat(model.TextFileFormat):
         self._validate(record_count_map[level])
 
 
+class CorrelationFormat(model.TextFileFormat):
+    def validate(*args):
+        pass
+
+
 def is_float(str):
     try:
         float(str)
@@ -58,3 +66,6 @@ TrajectoryDirectoryFormat = model.SingleFileDirectoryFormat(
 CVDirectoryFormat = model.SingleFileDirectoryFormat(
     'CVDirectoryFormat', 'cv.tsv',
     CVFormat)
+
+Correlation = SemanticType('Correlation',
+                           variant_of=FeatureData.field['type'])

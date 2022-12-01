@@ -15,13 +15,19 @@ from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
 from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
+                          feature_correlation_table,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
                           transform, rpca_transform)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
-from ._type import (SampleTrajectory, FeatureTrajectory, CrossValidationResults)
-from ._format import (TrajectoryDirectoryFormat, CVDirectoryFormat)
+from ._type import (SampleTrajectory, FeatureTrajectory,
+                    CrossValidationResults,
+                    CorrelationDirFmt)
+from ._format import (TrajectoryDirectoryFormat,
+                      CVDirectoryFormat,
+                      CorrelationFormat,
+                      Correlation)
 from qiime2.plugin import (Properties, Int, Float, Metadata,
                            Str, List, Bool, Choices)
 from q2_types.ordination import PCoAResults
@@ -46,7 +52,8 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DEFAULT_TRNSFRM, DESC_TRNSFRM,
                                DESC_TRAINTABLES, DESC_TRAINORDS,
                                DESC_MTABLE, DESC_MORD, DESC_FM,
-                               DESC_SM, DESC_MORDOUT)
+                               DESC_SM, DESC_MORDOUT,
+                               DESC_CORRTBLORD, DESC_CORRTBL)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -556,6 +563,25 @@ plugin.methods.register_function(
     citations=[citations['Martino2019']]
 )
 
+plugin.methods.register_function(
+    function=feature_correlation_table,
+    inputs={'ordination': PCoAResults % Properties("biplot")},
+    parameters={},
+    outputs=[('correlation_table', FeatureData[Correlation])],
+    input_descriptions={'ordination': DESC_CORRTBLORD},
+    parameter_descriptions={},
+    output_descriptions={'correlation_table': DESC_CORRTBL},
+    name='Generates a feature-by-feature correlation table.',
+    description=("Produces a feature by feature correlation table from"
+                 " Joint-RPCA/RPCA ordination results. Note that the"
+                 " output can be very large in file size because it"
+                 " is all omics features by all omics features and"
+                 " is fully dense. If you would like to get a subset,"
+                 " just subset the ordination with the function "
+                 "`filter_ordination` in utils first."),
+    citations=[citations['Martino2019']]
+)
+
 plugin.register_semantic_types(SampleTrajectory, FeatureTrajectory)
 plugin.register_semantic_type_to_format(
     SampleData[SampleTrajectory],
@@ -570,5 +596,10 @@ plugin.register_semantic_type_to_format(
     SampleData[CrossValidationResults],
     artifact_format=CVDirectoryFormat)
 plugin.register_formats(CVDirectoryFormat)
+
+plugin.register_formats(CorrelationFormat, CorrelationDirFmt)
+plugin.register_semantic_types(Correlation)
+plugin.register_semantic_type_to_format(
+    FeatureData[Correlation], CorrelationDirFmt)
 
 importlib.import_module('gemelli.q2._transformer')

@@ -976,3 +976,39 @@ def feature_covariance_table(ordination, features_use=None):
                                   vjoint.index)
 
     return joint_features
+
+
+def feature_correlation_table(ordination: OrdinationResults) -> (pd.DataFrame):
+    """
+    Function to produce a feature by feature
+    correlation table from RPCA ordination
+    results. Note that the output can be very large in
+    file size because it is all omics features by all
+    omics features and is fully dense. If you would like to
+    get a subset, just subset the ordination with the function
+    `filter_ordination` in utils first.
+
+    Parameters
+    ----------
+    ordination: OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings.
+
+    Returns
+    -------
+    DataFrame
+        A feature by feature correlation table.
+
+    """
+    joint_features = feature_covariance_table(ordination)
+    # this part of the function is taken from:
+    # https://gist.github.com/wiso/ce2a9919ded228838703c1c7c7dad13b
+    covariance = joint_features.values
+    v = np.sqrt(np.diag(covariance))
+    outer_v = np.outer(v, v)
+    correlation = covariance / outer_v
+    correlation[covariance == 0] = 0
+    # convert back to dataframe
+    correlation = pd.DataFrame(correlation,
+                               joint_features.index,
+                               joint_features.columns)
+    return correlation

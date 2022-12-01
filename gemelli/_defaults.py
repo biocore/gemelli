@@ -142,3 +142,6 @@ DESC_MORD = ("The feature table in biom format containing the"
 DESC_FM = "If set to True the features in the ordination will be matched."
 DESC_SM = "If set to True the samples in the ordination will be matched."
 DESC_MORDOUT = "A subset biplot with the input table."
+DESC_CORRTBLORD = ("A joint-biplot or subset joint-biplot"
+                   " of the (Robust Aitchison) RPCA feature loadings.")
+DESC_CORRTBL = "A feature by feature correlation table."
