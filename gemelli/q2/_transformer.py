@@ -6,17 +6,17 @@ from ._format import TrajectoryFormat, CVFormat, CorrelationFormat
 
 
 @plugin.register_transformer
-def _1(ff: CorrelationFormat) -> pd.DataFrame:
-    df = pd.read_csv(str(ff), sep='\t',
-                     header=0, index_col=0)
-    return df
+def _1(data: pd.DataFrame) -> (CorrelationFormat):
+    ff = CorrelationFormat()
+    with ff.open() as fh:
+        data.to_csv(fh, sep='\t', header=True, na_rep=np.nan)
+    return ff
 
 
 @plugin.register_transformer
-def _2(df: pd.DataFrame) -> CorrelationFormat:
-    ff = CorrelationFormat()
-    df.to_csv(str(ff), sep='\t', header=True, index=True)
-    return
+def _2(ff: CorrelationFormat) -> (pd.DataFrame):
+    # with ff.open() as fh:
+    return Metadata.load(str(ff)).to_dataframe()
 
 
 @plugin.register_transformer

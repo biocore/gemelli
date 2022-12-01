@@ -23,11 +23,10 @@ from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from ._type import (SampleTrajectory, FeatureTrajectory,
                     CrossValidationResults,
-                    CorrelationDirFmt)
+                    OrdinationCorrelation)
 from ._format import (TrajectoryDirectoryFormat,
                       CVDirectoryFormat,
-                      CorrelationFormat,
-                      Correlation)
+                      CorrelationDirectoryFormat)
 from qiime2.plugin import (Properties, Int, Float, Metadata,
                            Str, List, Bool, Choices)
 from q2_types.ordination import PCoAResults
@@ -567,7 +566,7 @@ plugin.methods.register_function(
     function=feature_correlation_table,
     inputs={'ordination': PCoAResults % Properties("biplot")},
     parameters={},
-    outputs=[('correlation_table', FeatureData[Correlation])],
+    outputs=[('correlation_table', FeatureData[OrdinationCorrelation])],
     input_descriptions={'ordination': DESC_CORRTBLORD},
     parameter_descriptions={},
     output_descriptions={'correlation_table': DESC_CORRTBL},
@@ -597,9 +596,10 @@ plugin.register_semantic_type_to_format(
     artifact_format=CVDirectoryFormat)
 plugin.register_formats(CVDirectoryFormat)
 
-plugin.register_formats(CorrelationFormat, CorrelationDirFmt)
-plugin.register_semantic_types(Correlation)
+plugin.register_semantic_types(OrdinationCorrelation)
 plugin.register_semantic_type_to_format(
-    FeatureData[Correlation], CorrelationDirFmt)
+    FeatureData[OrdinationCorrelation],
+    artifact_format=CorrelationDirectoryFormat)
+plugin.register_formats(CorrelationDirectoryFormat)
 
 importlib.import_module('gemelli.q2._transformer')
