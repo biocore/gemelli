@@ -2,9 +2,9 @@
 
 # Gemelli
 
-Gemelli is a tool box for running both Robust Aitchison PCA (RPCA) and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
+Gemelli is a tool box for running Robust Aitchison PCA (RPCA), Joint Robust Aitchison PCA (Joint-RPCA), and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
 
-RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). Both methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them. 
+RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). Joint-RPCA allows for the exploration of multiple omics datasets with shared samples at once. All these methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them.
 
 The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and a interactive introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transforms the observed (nonzero) values before centering. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) performed on dense data. If the data also has an associated phylogeny it can be incorporated through the phylogenetic rclr, details can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-RPCA-moving-pictures.ipynb).
 
@@ -21,9 +21,11 @@ To install the most up to date version of gemelli, run the following command
 
 Gemelli can be run standalone or through [QIIME2](https://qiime2.org/) and as a python API or CLI. 
 
-## Cross-sectional study (i.e. one sample per subject) with RPCA
+## Cross-sectional / multi-omics study (i.e. one sample per subject) with RPCA
 
 If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross-sectional_study) with only one sample per subject then RPCA is the appropriate method to use in gemelli.  There are two commands within RPCA. The first is `rpca` and the second is `auto-rpca`. The only difference is that `auto-rpca` automatically estimates the underlying-rank of the matrix and requires no input for the `n_components` parameter. In the `rpca` command the `n_components` must be set explicitly. For examples of using RPCA we provide tutorials below exploring the microbiome between body sites.
+
+Joint-RPCA allows for the exploration of those feature that seperate jointly across sample groupings and the potential interactions of those features.  
 
 ### Tutorials
 
@@ -31,10 +33,15 @@ If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross
 
 * [RPCA QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb)
 * [Phylogenetic RPCA QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-RPCA-moving-pictures.ipynb)
+* [Joint-RPCA QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-QIIME2-CLI.ipynb)
+* [Joint-RPCA QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-QIIME2-API.ipynb)
+
 
 #### Standalone tutorial outside of QIIME2
 
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
+* [Joint-RPCA CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI.ipynb)
+* [Joint-RPCA API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-API.ipynb)
 
 ## Repeated measures study (i.e. one sample per subject) with CTF
 
@@ -93,6 +100,32 @@ Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Pert
 	URL = {https://msystems.asm.org/content/4/1/e00016-19},
 	eprint = {https://msystems.asm.org/content/4/1/e00016-19.full.pdf},
 	journal = {mSystems}
+}
+```
+
+
+## Citation for Phylogenetic RPCA
+
+```
+Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Perturbations. mSystems 4, (2019)
+```
+
+```
+@ARTICLE{Martino2022,
+  author = {Martino, Cameron and McDonald, Daniel and Cantrell, Kalen and
+            Dilmore, Amanda Hazel and Vázquez-Baeza, Yoshiki and Shenhav,
+            Liat and Shaffer, Justin P and Rahman, Gibraan and Armstrong,
+            George and Allaband, Celeste and Song, Se Jin and Knight, Rob},
+  title = {Compositionally Aware Phylogenetic {Beta-Diversity} Measures
+           Better Resolve Microbiomes Associated with Phenotype},
+  volume = {7},
+  number = {3},
+  elocation-id = {e0005022},
+  year =  {2022},
+  doi = {10.1128/msystems.00050-22},
+  publisher = {American Society for Microbiology Journals},
+  URL = {http://dx.doi.org/10.1128/msystems.00050-22},
+  journal = {mSystems},
 }
 ```
 
