@@ -813,6 +813,10 @@ def joint_optspace_helper(tables,
                            ord_res.samples.copy())
     U_dist_res = DistanceMatrix(Udist, ids=ord_res.samples.index)
     cv_dist = pd.DataFrame(dists, ['mean_CV', 'std_CV']).T
+    cv_dist['run'] = 'tables_%i.n_components_%i.max_iterations_%i.n_test_%i' \
+                     % (len(tables), n_components,
+                        max_iterations, len(test_samples))
+    cv_dist['iteration'] = list(cv_dist.index.astype(int))
     cv_dist.index.name = 'sampleid'
 
     return ord_res, U_dist_res, cv_dist
