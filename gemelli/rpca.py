@@ -1011,4 +1011,5 @@ def feature_correlation_table(ordination: OrdinationResults) -> (pd.DataFrame):
     correlation = pd.DataFrame(correlation,
                                joint_features.index,
                                joint_features.columns)
+    correlation.index.name = 'featureid'
     return correlation
