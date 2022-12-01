@@ -135,3 +135,10 @@ DESC_TRNSFRM = ("If set to false the function will expect `tables`"
                 "to be dataframes already rclr transformed."
                 " This is used for internal functionality in the "
                 "joint-rpca function and is set to be only False.")
+DESC_MTABLE = ("The biplot ordination in"
+               " skbio.OrdinationResults format to match.")
+DESC_MORD = ("The feature table in biom format containing the"
+             "samples and features to match the ordination with.")
+DESC_FM = "If set to True the features in the ordination will be matched."
+DESC_SM = "If set to True the samples in the ordination will be matched."
+DESC_MORDOUT = "A subset biplot with the input table."

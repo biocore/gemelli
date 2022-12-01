@@ -10,6 +10,7 @@ import qiime2.plugin
 import qiime2.sdk
 import importlib
 from gemelli import __version__
+from gemelli.utils import (filter_ordination)
 from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
@@ -43,7 +44,9 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_TABLES, DESC_COLCV, DESC_TESTS,
                                DESC_TABLES, DESC_MATCH, 
                                DEFAULT_TRNSFRM, DESC_TRNSFRM,
-                               DESC_TRAINTABLES, DESC_TRAINORDS)
+                               DESC_TRAINTABLES, DESC_TRAINORDS,
+                               DESC_MTABLE, DESC_MORD, DESC_FM,
+                               DESC_SM, DESC_MORDOUT)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -532,6 +535,24 @@ plugin.methods.register_function(
                  " is projected on the first principal components"
                  "previously extracted from a training set."
                  " This function works from output of RPCA only."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=filter_ordination,
+    inputs={'ordination': PCoAResults % Properties("biplot"),
+            'table': FeatureTable[Frequency]},
+    parameters={'match_features': Bool,
+                'match_samples': Bool},
+    outputs=[('subset_biplot', PCoAResults % Properties("biplot"))],
+    input_descriptions={'ordination': DESC_MORD,
+                        'table': DESC_MTABLE},
+    parameter_descriptions={'match_features': DESC_FM,
+                            'match_samples': DESC_SM},
+    output_descriptions={'subset_biplot': DESC_MORDOUT},
+    name='Filter a biplot ordination to a tables samples & features.',
+    description=("Subsets an OrdinationResults to only those"
+                 " samples and features shared with the input table."),
     citations=[citations['Martino2019']]
 )
 

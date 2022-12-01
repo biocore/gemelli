@@ -6,6 +6,7 @@ from biom import load_table
 from biom.util import biom_open
 from skbio import OrdinationResults
 from gemelli.preprocessing import TaxonomyError
+from gemelli.utils import filter_ordination as _filter_ordination
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
@@ -22,7 +23,9 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC, DEFAULT_MTD,
                                DEFAULT_TESTS, DESC_TABLES,
                                DEFAULT_MATCH, DESC_MATCH,
                                DESC_TRAINTABLES, DESC_TRAINORDS,
-                               DESC_TRAINTABLE, DESC_TRAINORD)
+                               DESC_TRAINTABLE, DESC_TRAINORD,
+                               DESC_MTABLE, DESC_MORD, DESC_FM,
+                               DESC_SM)
 
 @cli.command(name='phylogenetic-rpca')
 @click.option('--in-biom',
@@ -347,6 +350,42 @@ def joint_pca_transform(in_ordination: str,
                          subset_tables=subset_tables)
     # write results
     ord_res.write(os.path.join(output_dir, 'projected-ordination.txt'))
+
+
+@cli.command(name='subset-ordination')
+@click.option('--in-ordination',
+              help=DESC_MORD,
+              required=True)
+@click.option('--in-biom',
+              help=DESC_MTABLE,
+              required=True,
+              multiple=True)
+@click.option('--output-dir',
+              help='Location of output files.',
+              required=True)
+@click.option('--match-features',
+              default=DEFAULT_MATCH,
+              show_default=True,
+              help=DESC_FM)
+@click.option('--match-samples',
+              default=DEFAULT_MATCH,
+              show_default=True,
+              help=DESC_SM)
+def filter_ordination(ordination: str,
+                      table: str,
+                      match_features : bool,
+                      match_samples : bool) -> None:
+    # import OrdinationResults
+    ordination = OrdinationResults.read(in_ordination)
+    # import table
+    table = load_table(in_biom)
+    out_ordination = _filter_ordination(ordination,
+                                        table,
+                                        match_features=match_features,
+                                        match_samples=match_samples)
+    # write results
+    out_ordination.write(os.path.join(output_dir,
+                                      'subset-ordination.txt'))
 
 
 @cli.command(name='auto-rpca')
