@@ -311,6 +311,13 @@ def rpca_transform(in_ordination: str,
     # apply the transformation
     ord_res = _transform(ordination, [table],
                          subset_tables=subset_tables)
+    # If it doesn't already exist, create the output directory.
+    # Note that there is technically a race condition here: it's ostensibly
+    # possible that some process could delete the output directory after we
+    # check that it exists here but before we write the output files to it.
+    # However, in this case, we'd just get an error from skbio.io.util.open()
+    # (which is called by skbio.OrdinationResults.write()), which makes sense.
+    os.makedirs(output_dir, exist_ok=True)
     # write results
     ord_res.write(os.path.join(output_dir, 'projected-ordination.txt'))
 
@@ -350,18 +357,24 @@ def joint_pca_transform(in_ordination: str,
     # apply the transformation
     ord_res = _transform(ordination, tables,
                          subset_tables=subset_tables)
+    # If it doesn't already exist, create the output directory.
+    # Note that there is technically a race condition here: it's ostensibly
+    # possible that some process could delete the output directory after we
+    # check that it exists here but before we write the output files to it.
+    # However, in this case, we'd just get an error from skbio.io.util.open()
+    # (which is called by skbio.OrdinationResults.write()), which makes sense.
+    os.makedirs(output_dir, exist_ok=True)
     # write results
     ord_res.write(os.path.join(output_dir, 'projected-ordination.txt'))
 
 
-@cli.command(name='subset-ordination')
+@cli.command(name='filter-ordination')
 @click.option('--in-ordination',
               help=DESC_MORD,
               required=True)
 @click.option('--in-biom',
               help=DESC_MTABLE,
-              required=True,
-              multiple=True)
+              required=True)
 @click.option('--output-dir',
               help='Location of output files.',
               required=True)
@@ -373,8 +386,9 @@ def joint_pca_transform(in_ordination: str,
               default=DEFAULT_MATCH,
               show_default=True,
               help=DESC_SM)
-def filter_ordination(ordination: str,
-                      table: str,
+def filter_ordination(in_ordination: str,
+                      in_biom: str,
+                      output_dir : str,
                       match_features : bool,
                       match_samples : bool) -> None:
     # import OrdinationResults
@@ -385,6 +399,13 @@ def filter_ordination(ordination: str,
                                         table,
                                         match_features=match_features,
                                         match_samples=match_samples)
+    # If it doesn't already exist, create the output directory.
+    # Note that there is technically a race condition here: it's ostensibly
+    # possible that some process could delete the output directory after we
+    # check that it exists here but before we write the output files to it.
+    # However, in this case, we'd just get an error from skbio.io.util.open()
+    # (which is called by skbio.OrdinationResults.write()), which makes sense.
+    os.makedirs(output_dir, exist_ok=True)
     # write results
     out_ordination.write(os.path.join(output_dir,
                                       'subset-ordination.txt'))
@@ -397,11 +418,19 @@ def filter_ordination(ordination: str,
 @click.option('--output-dir',
               help='Location of output files.',
               required=True)
-def feature_correlation_table(ordination: str) -> None:
+def feature_correlation_table(in_ordination: str,
+                              output_dir: str) -> None:
     # import OrdinationResults
     ordination = OrdinationResults.read(in_ordination)
     # import table
     corr_table = _feature_correlation_table(ordination)
+    # If it doesn't already exist, create the output directory.
+    # Note that there is technically a race condition here: it's ostensibly
+    # possible that some process could delete the output directory after we
+    # check that it exists here but before we write the output files to it.
+    # However, in this case, we'd just get an error from skbio.io.util.open()
+    # (which is called by skbio.OrdinationResults.write()), which makes sense.
+    os.makedirs(output_dir, exist_ok=True)
     # write results
     out_ = os.path.join(output_dir, 'feature-correlation-table.tsv')
     corr_table.to_csv(out_, sep='\t')
