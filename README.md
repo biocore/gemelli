@@ -40,8 +40,7 @@ Joint-RPCA allows for the exploration of those feature that seperate jointly acr
 #### Standalone tutorial outside of QIIME2
 
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
-* [Joint-RPCA CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI.ipynb)
-* [Joint-RPCA API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-API.ipynb)
+* [Joint-RPCA API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI-API.ipynb)
 
 ## Repeated measures study (i.e. one sample per subject) with CTF
 
