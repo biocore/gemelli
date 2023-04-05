@@ -36,7 +36,7 @@ If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross
 
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
 
-## Repeated measures study (i.e. one sample per subject) with CTF
+## Repeated measures study (i.e. multiple sample per subject) with CTF
 
 ### Tutorials
 
