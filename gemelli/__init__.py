@@ -6,4 +6,4 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"

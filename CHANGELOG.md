@@ -1,3 +1,11 @@
+v0.0.9 (2023-05-24)
+
+### Bug fixes
+
+* Fixes in `preprocessing.py` function
+    * fixes bug that can drastically change taxonomic assigmennt
+        * see issue #66
+
 v0.0.8 (2022-03-28)
 
 ### Bug fixes
