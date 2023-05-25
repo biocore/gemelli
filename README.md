@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/biocore/gemelli.svg?branch=master)](https://travis-ci.org/biocore/gemelli)
 
 # Gemelli
 
@@ -42,7 +41,7 @@ Joint-RPCA allows for the exploration of those feature that seperate jointly acr
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
 * [Joint-RPCA API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI-API.ipynb)
 
-## Repeated measures study (i.e. one sample per subject) with CTF
+## Repeated measures study (i.e. multiple sample per subject) with CTF
 
 ### Tutorials
 

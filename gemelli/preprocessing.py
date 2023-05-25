@@ -93,7 +93,7 @@ def retrieve_t2t_taxonomy(phylogeny, taxonomy=None):
     counts = nl.collect_names_at_ranks_counts(tree_)
 
     nl.decorate_ntips(tree_)
-    nl.decorate_name_relative_freqs(tree_, counts, 2)
+    nl.decorate_name_relative_freqs(tree_, counts, 1)
     nl.set_ranksafe(tree_)
     nl.pick_names(tree_)
 
@@ -205,7 +205,6 @@ def _get_taxonomy_io_stream(taxonomy):
                 "following (case insensitive): {}."
             ).format(VALID_TAXONOMY_COLUMN_NAMES)
         )
-    stream = io.StringIO()
 
     # Split the single column of taxonomy strings into n columns, where n
     # is the highest number of taxonomic levels in any string. This is to
@@ -217,16 +216,19 @@ def _get_taxonomy_io_stream(taxonomy):
     highest_rank_indx = taxonomy.dropna(axis=0, how='any').first_valid_index()
     rank_order = [rank[0]
                   for rank in taxonomy.loc[highest_rank_indx].values.tolist()]
-    nl.set_rank_order(rank_order)
 
+    fill_missing_dict = {i: f'{r}__' for i, r in enumerate(rank_order)}
     # collapse taxonomy back into a single string
-    taxonomy.fillna('', inplace=True)
+    taxonomy.fillna(value=fill_missing_dict, inplace=True)
     taxonomy = taxonomy.apply(
         lambda levels: '; '.join(levels.values.tolist()),
         axis=1)
 
     # convert taxonomy dataframe to a StringIO for use in t2t
+    stream = io.StringIO()
     taxonomy.to_csv(stream, sep='\t', index=True, header=False)
+    stream.seek(0)
+    nl.determine_rank_order(stream.readline().strip().split('\t')[1])
 
     # set stream to point to first line
     stream.seek(0)
