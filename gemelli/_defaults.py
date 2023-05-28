@@ -10,7 +10,6 @@
 # descriptions. This is used by both the standalone RPCA and QIIME 2 RPCA sides
 # of gemelli.
 
-
 DEFAULT_MTD = 0
 DEFAULT_BL = None
 DEFAULT_COMP = 3
@@ -26,6 +25,14 @@ DEFAULT_COLCV = None
 DEFAULT_TESTS = 10
 DEFAULT_MATCH = True
 DEFAULT_TRNSFRM = True
+DEFAULT_TEMPTED_PC = 1
+DEFAULT_TEMPTED_EP = 1e-4
+DEFAULT_TEMPTED_SMTH = 1e-6
+DEFAULT_TEMPTED_RES = 101
+DEFAULT_TEMPTED_MAXITER = 20
+DEFAULT_TEMPTED_RH = 'sum'
+DEFAULT_TEMPTED_SVDC = True
+DEFAULT_TEMPTED_SVDCN = 1
 DESC_BIN = ("The feature table containing the "
             "samples over which metric should be computed.")
 DESC_COUNTS = ("The feature table in biom format containing the "

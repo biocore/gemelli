@@ -1073,7 +1073,6 @@ class build_sparse(_BaseConstruct):
                   pseudo_count=1,
                   branch_lengths=None,
                   replicate_handling='sum',
-                  feature_order=None,
                   svd_centralized=True,
                   n_components_centralize=1):
         """
@@ -1112,10 +1111,6 @@ class build_sparse(_BaseConstruct):
             detected, "error" causes method to fail; "drop" will discard
             all replicated samples; "random" chooses one representative at
             random from among replicates.
-
-        feature_order: list, optional : Default is None
-            The feature_order to use. Can be a subset of features but can not
-            contain items not in table features.
 
         svd_centralized: bool, optional : Default is True
             Removes the mean structure of the temporal tensor.

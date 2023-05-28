@@ -1,9 +1,27 @@
 import copy
+import biom
 import numpy as np
 import pandas as pd
 import warnings
+from typing import Callable
+from scipy.spatial import distance
+from skbio import (OrdinationResults,
+                   DistanceMatrix)
 from scipy.sparse.linalg import svds
 from gemelli.optspace import svd_sort
+from gemelli.ctf import ctf_table_processing
+from gemelli.preprocessing import (build_sparse,
+                                   matrix_rclr)
+from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
+                               DEFAULT_MFC, DEFAULT_MFF,
+                               DEFAULT_TEMPTED_PC,
+                               DEFAULT_TEMPTED_EP,
+                               DEFAULT_TEMPTED_SMTH,
+                               DEFAULT_TEMPTED_RES,
+                               DEFAULT_TEMPTED_MAXITER,
+                               DEFAULT_TEMPTED_RH,
+                               DEFAULT_TEMPTED_SVDC,
+                               DEFAULT_TEMPTED_SVDCN)
 np.random.seed(42)
 
 
@@ -103,12 +121,272 @@ def bernoulli_kernel(x, y):
     return kern_xy
 
 
-def tempted(individual_id_tables,
-            individual_id_state_orders,
-            feature_order,
-            n_components=3, smooth=1e-6,
-            interval=None, resolution=101,
-            maxiter=20, epsilon=1e-4):
+def tempted(table: biom.Table,
+            sample_metadata: pd.DataFrame,
+            individual_id_column: str,
+            state_column: str,
+            n_components: int = DEFAULT_COMP,
+            min_sample_count: int = DEFAULT_MSC,
+            min_feature_count: int = DEFAULT_MFC,
+            min_feature_frequency: float = DEFAULT_MFF,
+            transformation: Callable = matrix_rclr,
+            pseudo_count: float = DEFAULT_TEMPTED_PC,
+            replicate_handling: str = DEFAULT_TEMPTED_RH,
+            svd_centralized: bool = DEFAULT_TEMPTED_SVDC,
+            n_components_centralize: int = DEFAULT_TEMPTED_SVDCN,
+            smooth: float = DEFAULT_TEMPTED_SMTH,
+            resolution: int = DEFAULT_TEMPTED_RES,
+            max_iterations: int = DEFAULT_TEMPTED_MAXITER,
+            epsilon: int = DEFAULT_TEMPTED_EP) -> (OrdinationResults,
+                                                   pd.DataFrame,
+                                                   DistanceMatrix,
+                                                   pd.DataFrame):
+    """
+    Decomposition of temporal tensors.
+
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+        The feature table in biom format containing the
+        samples over which metric should be computed.
+
+    sample_metadata: DataFrame, required
+        Sample metadata file in QIIME2 formatting. The file must
+        contain the columns for individual_id_column and
+        state_column and the rows matched to the table.
+
+    individual_id_column: str, required
+        Metadata column containing subject IDs to use for
+        pairing samples. WARNING: if replicates exist for an
+        individual ID at either state_1 to state_N, that
+        subject will be mean grouped by default.
+
+    state_column: str, required
+        Metadata column containing state (e.g.,Time,
+        BodySite) across which samples are paired. At least
+        one is required but up to four are allowed by other
+        state inputs.
+
+    n_components: int, optional : Default is 3
+        The underlying rank of the data and number of
+        output dimentions.
+
+    min_sample_count: int, optional : Default is 0
+        Minimum sum cutoff of sample across all features.
+        The value can be at minimum zero and must be an
+        whole integer. It is suggested to be greater than
+        or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+        Minimum sum cutoff of features across all samples.
+        The value can be at minimum zero and must be
+        an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+        Minimum percentage of samples a feature must appear
+        with a value greater than zero. This value can range
+        from 0 to 100 with decimal values allowed.
+
+    transformation: function, optional : Default is matrix_rclr
+        The transformation function to use on the data.
+
+    pseudo_count: float, optional : Default is 1
+        The pseudo count to add to all values before applying
+        the transformation.
+
+    replicate_handling: function, optional : Default is "sum"
+        Choose how replicate samples are handled. If replicates are
+        detected, "error" causes method to fail; "drop" will discard
+        all replicated samples; "random" chooses one representative at
+        random from among replicates.
+
+    svd_centralized: bool, optional : Default is True
+        Removes the mean structure of the temporal tensor.
+
+    n_components_centralize: int
+        Rank of approximation for average matrix in svd-centralize.
+
+    smooth: float, optional : Default is 1e-8
+        Smoothing parameter for RKHS norm. Larger means
+        smoother temporal loading functions.
+
+    resolution: int, optional : Default is 101
+        Number of time points to evaluate the value
+        of the temporal loading function.
+
+    max_iterations: int, optional : Default is 20
+        Maximum number of iteration in for rank-1 calculation.
+
+    epsilon: float, optional : Default is 0.0001
+        Convergence criteria for difference between iterations
+        for each rank-1 calculation.
+
+    Returns
+    -------
+    OrdinationResults
+        Compositional biplot of subjects as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows.
+
+    DataFrame
+        Each components temporal loadings across the
+        input resolution included as a column called
+        'time_interval'.
+
+    DistanceMatrix
+        A subject-subject distance matrix generated
+        from the euclidean distance of the
+        subject ordinations and itself.
+
+    DataFrame
+        The loadings from the SVD centralize
+        function, used for projecting new data.
+        Warning: If SVD-centering is not used
+        then the function will add all ones as the
+        output to avoid variable outputs.
+
+    Raises
+    ------
+    ValueError
+        if features don't match between tables
+        across the values of the dictionary
+    ValueError
+        if id_ not in mapping
+    ValueError
+        if any state_column not in mapping
+    ValueError
+        Table is not 2-dimensional
+    ValueError
+        Table contains negative values
+    ValueError
+        Table contains np.inf or -np.inf
+    ValueError
+        Table contains np.nan or missing.
+    Warning
+        If a conditional-sample pair
+        has multiple IDs associated
+        with it. In this case the
+        default method is to mean them.
+    ValueError
+        `ValueError: n_components must be at least 2`.
+    ValueError
+        `ValueError: Data-table contains
+         either np.inf or -np.inf`.
+    ValueError
+        `ValueError: The n_components must be less
+         than the minimum shape of the input tensor`.
+
+    Examples
+    --------
+    # load tables
+    table = load_table(in_table_path)
+    sample_metadata = read_csv(in_metadata_path,
+                               sep='\t',
+                               index_col=0)
+    # run TEMPTED
+    tempted_res = tempted(table,
+                          sample_metadata,
+                          sparse_tensor.feature_order,
+                          'host_subject_id',
+                          'time_points')
+
+    """
+
+    # check the table for validity and then filter
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           [state_column],
+                                           min_sample_count,
+                                           min_feature_count,
+                                           min_feature_frequency,
+                                           None)
+    table = process_results[0]
+    sample_metadata = process_results[1]
+    # build the sparse tensor format
+    tensor = build_sparse()
+    tensor.construct(table,
+                     sample_metadata,
+                     individual_id_column,
+                     state_column,
+                     transformation=transformation,
+                     pseudo_count=pseudo_count,
+                     branch_lengths=None,
+                     replicate_handling=replicate_handling,
+                     svd_centralized=svd_centralized,
+                     n_components_centralize=n_components_centralize)
+    # run TEMPTED
+    tempted_res = tempted_helper(tensor.individual_id_tables_centralized,
+                                 tensor.individual_id_state_orders,
+                                 tensor.feature_order,
+                                 n_components=n_components,
+                                 smooth=smooth,
+                                 resolution=resolution,
+                                 maxiter=max_iterations,
+                                 epsilon=epsilon)
+    (individual_loadings,
+     feature_loadings,
+     state_loadings,
+     time_return,
+     eigenvalues,
+     prop_explained) = tempted_res
+    # re-order TEMPTED results by prop_explained
+    new_order = np.argsort(prop_explained)
+    individual_loadings = individual_loadings.iloc[:, new_order]
+    feature_loadings = feature_loadings.iloc[:, new_order]
+    state_loadings = state_loadings.iloc[:, new_order]
+    eigenvalues = eigenvalues[new_order]
+    prop_explained = prop_explained[new_order]
+    columns_label = ['PC%i' % (i + 1)
+                     for i in range(len(new_order))]
+    individual_loadings.columns = columns_label
+    feature_loadings.columns = columns_label
+    state_loadings.columns = columns_label
+    # build formatted output
+    # save ordination results
+    short_method_name = 'tempted_biplot'
+    long_method_name = 'Individual level biplot'
+    prop_explained = pd.Series(prop_explained,
+                               index=individual_loadings.columns)
+    eigenvalues = pd.Series(eigenvalues,
+                            index=individual_loadings.columns)
+    individual_ord = OrdinationResults(short_method_name,
+                                       long_method_name,
+                                       eigenvalues,
+                                       samples=individual_loadings,
+                                       features=feature_loadings,
+                                       proportion_explained=prop_explained)
+    # build state level dataframe
+    state_loadings = pd.concat([state_loadings,
+                                time_return], axis=1)
+    # distance for subjects
+    dists = distance.cdist(individual_loadings.values,
+                           individual_loadings.values)
+    dists = DistanceMatrix(dists,
+                           ids=individual_loadings.index)
+    # make ordination file for SVD-center results
+    if svd_centralized:
+        svd_center = tensor.v_centralized.copy()
+        svd_center = pd.DataFrame(svd_center,
+                                  ['PC%i' % (i + 1)
+                                   for i in range(svd_center.shape[0])],
+                                  tensor.feature_order)
+    else:
+        n_feats = len(tensor.feature_order)
+        svd_center = pd.DataFrame(np.array([[1] * n_feats]),
+                                  ['PC1'],
+                                  tensor.feature_order)
+
+    return individual_ord, state_loadings, dists, svd_center
+
+
+def tempted_helper(individual_id_tables,
+                   individual_id_state_orders,
+                   feature_order,
+                   n_components=3, smooth=1e-6,
+                   interval=None, resolution=101,
+                   maxiter=20, epsilon=1e-4):
 
     """
     Decomposition of temporal tensors.
@@ -191,24 +469,6 @@ def tempted(individual_id_tables,
     ValueError
         if features don't match between tables
         across the values of the dictionary
-
-    Examples
-    --------
-    # load tables
-    table = load_table(in_table_path)
-    sample_metadata = read_csv(in_metadata_path,
-                               sep='\t',
-                               index_col=0)
-    # tensor building
-    sparse_tensor = build_sparse()
-    sparse_tensor.construct(table,
-                            sample_metadata,
-                            'host_subject_id',
-                            'time_points')
-    # run TEMPTED
-    tempted_res = tempted(sparse_tensor.individual_id_tables_centralized,
-                          sparse_tensor.individual_id_state_orders,
-                          sparse_tensor.feature_order, resolution=10)
 
     """
 
@@ -387,14 +647,230 @@ def tempted(individual_id_tables,
             lambda_coeff, rsquared)
 
 
-def tempted_transform(tables_test,
-                      state_orders_test,
-                      fl_train,
-                      state_loading_train,
-                      eigen_coeff_train,
-                      time_train,
-                      v_centralized_train=None,
-                      subset_tables=True):
+def tempted_transform(individual_ordination: OrdinationResults,
+                      state_loadings: pd.DataFrame,
+                      svd_center: pd.DataFrame,
+                      table: biom.Table,
+                      sample_metadata: pd.DataFrame,
+                      individual_id_column: str,
+                      state_column: str,
+                      min_sample_count: int = DEFAULT_MSC,
+                      min_feature_count: int = DEFAULT_MFC,
+                      min_feature_frequency: float = DEFAULT_MFF,
+                      transformation: Callable = matrix_rclr,
+                      pseudo_count: float = DEFAULT_TEMPTED_PC,
+                      replicate_handling: str = DEFAULT_TEMPTED_RH,):
+    """
+    Projection of new unseen temporal data to the low-dim
+    subject loading build on previous data. Warning: Ensure
+    the pre-processing parameters are the same as those use to
+    build the original results or the projection may be spurious.
+
+    Parameters
+    ----------
+    individual_ordination: OrdinationResults, required
+        Compositional biplot of subjects as points and
+        features as arrows. Where the variation between
+        subject groupings is explained by the log-ratio
+        between opposing arrows.
+
+    state_loadings: DataFrame, required
+        Each components temporal loadings across the
+        input resolution included as a column called
+        'time_interval'.
+
+    svd_center: DataFrame, required
+        The loadings from the SVD centralize
+        function, used for projecting new data.
+
+    table: numpy.ndarray, required
+        The feature table in biom format containing the
+        samples over which metric should be computed.
+
+    sample_metadata: DataFrame, required
+        Sample metadata file in QIIME2 formatting. The file must
+        contain the columns for individual_id_column and
+        state_column and the rows matched to the table.
+
+    individual_id_column: str, required
+        Metadata column containing subject IDs to use for
+        pairing samples. WARNING: if replicates exist for an
+        individual ID at either state_1 to state_N, that
+        subject will be mean grouped by default.
+
+    state_column: str, required
+        Metadata column containing state (e.g.,Time,
+        BodySite) across which samples are paired. At least
+        one is required but up to four are allowed by other
+        state inputs.
+
+    min_sample_count: int, optional : Default is 0
+        Minimum sum cutoff of sample across all features.
+        The value can be at minimum zero and must be an
+        whole integer. It is suggested to be greater than
+        or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+        Minimum sum cutoff of features across all samples.
+        The value can be at minimum zero and must be
+        an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+        Minimum percentage of samples a feature must appear
+        with a value greater than zero. This value can range
+        from 0 to 100 with decimal values allowed.
+
+    transformation: function, optional : Default is matrix_rclr
+        The transformation function to use on the data.
+
+    pseudo_count: float, optional : Default is 1
+        The pseudo count to add to all values before applying
+        the transformation.
+
+    replicate_handling: function, optional : Default is "sum"
+        Choose how replicate samples are handled. If replicates are
+        detected, "error" causes method to fail; "drop" will discard
+        all replicated samples; "random" chooses one representative at
+        random from among replicates.
+
+    Returns
+    -------
+    OrdinationResults
+        Projected compositional biplot of subjects
+        as points and features as arrows. Where the
+        variation between subject groupings is explained
+        by the log-ratio between opposing arrows.
+
+    Raises
+    ------
+    ValueError
+        if features don't match between tables
+        across the values of the dictionary
+    ValueError
+        if id_ not in mapping
+    ValueError
+        if any state_column not in mapping
+    ValueError
+        Table is not 2-dimensional
+    ValueError
+        Table contains negative values
+    ValueError
+        Table contains np.inf or -np.inf
+    ValueError
+        Table contains np.nan or missing.
+    Warning
+        If a conditional-sample pair
+        has multiple IDs associated
+        with it. In this case the
+        default method is to mean them.
+    ValueError
+        `ValueError: n_components must be at least 2`.
+    ValueError
+        `ValueError: Data-table contains
+         either np.inf or -np.inf`.
+    ValueError
+        `ValueError: The n_components must be less
+         than the minimum shape of the input tensor`.
+
+    Examples
+    --------
+    # load tables
+    table = load_table(in_table_path)
+    sample_metadata = read_csv(in_metadata_path,
+                               sep='\t',
+                               index_col=0)
+    # run TEMPTED
+    tempted_res = tempted(table,
+                          sample_metadata,
+                          sparse_tensor.feature_order,
+                          'host_subject_id',
+                          'time_points')
+    (individual_ord,
+    state_loadings,
+    dists,
+    svd_center) = tempted_res
+    # import new data
+    table_new = load_table(in_table_path_new)
+    sample_metadata_new = read_csv(in_metadata_path_new,
+                                   sep='\t',
+                                   index_col=0)
+    # project new data
+    individual_ord_new = tempted_transform(individual_ord,
+                                           state_loadings,
+                                           svd_center,
+                                           table_new,
+                                           sample_metadata_new,
+                                           'host_subject_id',
+                                           'time_points')
+
+    """
+
+    # format data for helper function
+    fl_train = individual_ordination.features.copy()
+    state_loading_train = state_loadings.copy()[fl_train.columns]
+    eigen_coeff_train = individual_ordination.eigvals.copy().values
+    time_train = state_loadings.copy()[['time_interval']]
+    if (svd_center.values == 1).all():
+        vc_train = None
+    else:
+        vc_train = svd_center.copy().values
+    # check the table for validity and then filter
+    process_results = ctf_table_processing(table,
+                                           sample_metadata,
+                                           individual_id_column,
+                                           [state_column],
+                                           min_sample_count,
+                                           min_feature_count,
+                                           min_feature_frequency,
+                                           None)
+    table = process_results[0]
+    sample_metadata = process_results[1]
+    # build the sparse tensor format
+    tensor = build_sparse()
+    tensor.construct(table,
+                     sample_metadata,
+                     individual_id_column,
+                     state_column,
+                     transformation=transformation,
+                     pseudo_count=pseudo_count,
+                     branch_lengths=None,
+                     replicate_handling=replicate_handling,
+                     svd_centralized=False)
+    # project the new data
+    table_project = tensor.individual_id_tables.copy()
+    order_project = tensor.individual_id_state_orders
+    individual_loading = tempted_transform_helper(table_project,
+                                                  order_project,
+                                                  fl_train,
+                                                  state_loading_train,
+                                                  eigen_coeff_train,
+                                                  time_train,
+                                                  v_centralized_train=vc_train)
+    # build output ordination and return it
+    short_method_name = 'tempted_biplot_projected'
+    long_method_name = 'Individual level biplot projected'
+    prop_explained = individual_ordination.proportion_explained
+    eigenvalues = individual_ordination.eigvals
+    fl_train = individual_ordination.features.copy()
+    individual_loading.columns = fl_train.columns
+    individual_ord = OrdinationResults(short_method_name,
+                                       long_method_name,
+                                       eigenvalues,
+                                       samples=individual_loading,
+                                       features=fl_train,
+                                       proportion_explained=prop_explained)
+
+    return individual_ord
+
+
+def tempted_transform_helper(tables_test,
+                             state_orders_test,
+                             fl_train,
+                             state_loading_train,
+                             eigen_coeff_train,
+                             time_train,
+                             v_centralized_train=None,
+                             subset_tables=True):
 
     """
     This function estimates the subject loading of the testing data

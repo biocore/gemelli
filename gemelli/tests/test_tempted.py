@@ -10,6 +10,8 @@ from skbio.util import get_data_path
 from gemelli.testing import assert_ordinationresults_equal
 from gemelli.tempted import (freg_rkhs,
                              bernoulli_kernel,
+                             tempted_transform_helper,
+                             tempted_helper,
                              tempted_transform,
                              tempted)
 from gemelli.preprocessing import build_sparse
@@ -136,9 +138,10 @@ class TestTempted(unittest.TestCase):
                                 'host_subject_id',
                                 'time_points')
         # run TEMPTED
-        tempted_res = tempted(sparse_tensor.individual_id_tables_centralized,
-                              sparse_tensor.individual_id_state_orders,
-                              sparse_tensor.feature_order)
+        tbl_cent = sparse_tensor.individual_id_tables_centralized
+        tempted_res = tempted_helper(tbl_cent,
+                                     sparse_tensor.individual_id_state_orders,
+                                     sparse_tensor.feature_order)
         # build res to test
         res_subject = OrdinationResults('exp', 'exp',
                                         tempted_res[4],
@@ -152,6 +155,31 @@ class TestTempted(unittest.TestCase):
         # run testing
         assert_ordinationresults_equal(res_subject, exp_subject)
         assert_ordinationresults_equal(res_state, exp_state)
+
+    def test_tempted_wrappers(self):
+        """
+        Test tempted & tempted projection wrappers.
+        """
+        # grab test data
+        in_table = get_data_path('test-small.biom', '../q2/tests/data')
+        in_meta = get_data_path('test-small.tsv', '../q2/tests/data')
+        # run tempted in gemelli
+        table = load_table(in_table)
+        sample_metadata = read_csv(in_meta, sep='\t', index_col=0)
+        sample_metadata['time_points'] = [int(x.split('_')[-1])
+                                          for x in sample_metadata['context']]
+        # run tempted
+        ord_res, tdf_, dist_, vdf_ = tempted(table, sample_metadata,
+                                             'host_subject_id',
+                                             'time_points')
+        # project same data as test
+        ord_p = tempted_transform(ord_res, tdf_, vdf_,
+                                  table,
+                                  sample_metadata,
+                                  'host_subject_id',
+                                  'time_points')
+        # make sure the projection is close
+        assert_ordinationresults_equal(ord_p, ord_res, precision=0)
 
     def test_tempted_projection(self):
         """
@@ -204,13 +232,13 @@ class TestTempted(unittest.TestCase):
                                               'ID2'])
 
         # Run the function
-        output = tempted_transform(individual_id_tables_test,
-                                   individual_id_state_orders_test,
-                                   feature_loading_train,
-                                   state_loading_train,
-                                   eigen_coeff_train,
-                                   time_train,
-                                   v_centralized_train)
+        output = tempted_transform_helper(individual_id_tables_test,
+                                          individual_id_state_orders_test,
+                                          feature_loading_train,
+                                          state_loading_train,
+                                          eigen_coeff_train,
+                                          time_train,
+                                          v_centralized_train)
         output.round(3).equals(expected_output.round(3))
 
 
