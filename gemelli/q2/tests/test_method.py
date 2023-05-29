@@ -9,12 +9,15 @@ from skbio.stats.distance import DistanceMatrix
 from skbio.util import get_data_path
 from qiime2 import Artifact
 from qiime2 import Metadata
+from skbio.stats.composition import clr
 from qiime2.plugins import gemelli as q2gemelli
 from gemelli.ctf import ctf
 from gemelli.scripts._standalone_ctf import (standalone_ctf,
                                              standalone_phylogenetic_ctf)
+from gemelli.scripts._standalone_tempted import (standalone_tempted,
+                                                 standalone_tempted_transform)
 from numpy.testing import (assert_allclose, assert_array_almost_equal)
-from gemelli.testing import absolute_sort
+from gemelli.testing import (absolute_sort, assert_ordinationresults_equal)
 from click.testing import CliRunner
 from nose.tools import nottest
 
@@ -242,6 +245,159 @@ class Test_qiime2_ctf(unittest.TestCase):
                                     n_components=2)
         # check exit code was 0 (indicating success)
         self.assertEqual(len(res), 5)
+
+
+class Test_qiime2_tempted(unittest.TestCase):
+
+    def setUp(self):
+        self.subj = 'host_subject_id'
+        self.state = 'context'
+        paths_ = create_test_table(include_phylogeny=True)
+        self.in_table, self.in_meta, self.in_tree = paths_
+        self.biom_table = load_table(self.in_table)
+        self.in_meta = self.in_meta.replace('test-small.tsv',
+                                            'test-small-numeric.tsv')
+        # clr transform table
+        """table_df = pd.DataFrame(clr(self.biom_table.matrix_data.toarray().T
+                                    + 1).T,
+                                self.biom_table.ids('observation'),
+                                self.biom_table.ids())
+        self.biom_table = Table(table_df.values,
+                                table_df.index,
+                                table_df.columns)"""
+        # import phylo for later
+        self.phylogeny = TreeNode.read(self.in_tree,
+                                       format='newick')
+        self.q2phylogeny = Artifact.import_data("Phylogeny[Rooted]",
+                                                self.phylogeny)
+        self.q2table = Artifact.import_data("FeatureTable[Frequency]",
+                                            self.biom_table)
+        self.meta_table = read_csv(self.in_meta, sep='\t', index_col=0)
+        # make metadata subjects and two-time
+        self.q2meta = Metadata(self.meta_table)
+        self.q2meta_two_time = Metadata(self.meta_table)
+        self.out_ = os_path_sep.join(self.in_table.split(os_path_sep)[:-1])
+
+    def test_qiime2_tempted(self):
+        """Tests that the Q2 and standalone tempted results match.
+
+           Also validates against ground truth "expected" results.
+        """
+
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        res = q2gemelli.actions.tempted_factorize(table=self.q2table,
+                                                  sample_metadata=self.q2meta,
+                                                  individual_id_column=self.subj,
+                                                  state_column=self.state)
+        oqza, sqza, dqza, cqza = res
+        # Get the underlying data from these artifacts
+        q2straj = cqza.view(pd.DataFrame)
+        q2cqza = sqza.view(pd.DataFrame)
+
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        # Derived from a line in test_standalone_ctf()
+        # Run gemelli outside of QIIME 2...
+        runner = CliRunner()
+        result = runner.invoke(standalone_tempted,
+                               ['--in-biom',
+                                self.in_table,
+                                '--sample-metadata-file',
+                                self.in_meta,
+                                '--individual-id-column',
+                                'host_subject_id',
+                                '--state-column',
+                                'context',
+                                '--output-dir',
+                                self.out_])
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        # ...and read in the resulting output files. This code was derived from
+        # test_standalone_ctf() elsewhere in gemelli's codebase.
+        samp_res = read_csv(
+            get_data_path('svd-center.tsv'),
+            sep='\t',
+            index_col=0)
+        state_res = read_csv(
+            get_data_path('state-loadings.tsv'),
+            sep='\t',
+            index_col=0)
+        # Check that the trajectory matrix matches our expectations
+        assert_allclose(absolute_sort(samp_res.values),
+                        absolute_sort(q2straj.values),
+                        atol=.5)
+        assert_allclose(absolute_sort(state_res.values),
+                        absolute_sort(q2cqza.values),
+                        atol=.5)
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        res_proj = q2gemelli.actions.tempted_project(individual_biplot=res.individual_biplot,
+                                                     state_loadings=res.state_loadings,
+                                                     svd_center=res.svd_center,
+                                                     table=self.q2table,
+                                                     sample_metadata=self.q2meta,
+                                                     individual_id_column=self.subj,
+                                                     state_column=self.state)
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        # Derived from a line in test_standalone_ctf()
+        # Run gemelli outside of QIIME 2...
+        runner = CliRunner()
+        result = runner.invoke(standalone_tempted,
+                               ['--in-biom',
+                                self.in_table,
+                                '--sample-metadata-file',
+                                self.in_meta,
+                                '--individual-id-column',
+                                'host_subject_id',
+                                '--state-column',
+                                'context',
+                                '--output-dir',
+                                self.out_])
+        runner = CliRunner()
+        result = runner.invoke(standalone_tempted_transform,
+                            ['--individual-ordination-file',
+                             self.out_ + '/individual-ordination.txt',
+                             '--state-loadings-file',
+                             self.out_ + '/state-loadings.tsv',
+                             '--svd-center-file',
+                             self.out_ + '/svd-center.tsv',
+                             '--in-biom',
+                             self.in_table,
+                             '--sample-metadata-file',
+                             self.in_meta,
+                             '--individual-id-column',
+                             'host_subject_id',
+                             '--state-column',
+                             'context',
+                             '--output-dir',
+                             self.out_])
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+        # check all ordinations
+        sa_ro = OrdinationResults.read(self.out_ + '/individual-ordination.txt')
+        sa_po = OrdinationResults.read(self.out_ + '/projected-ordination.txt')
+        q2_ro = res.individual_biplot.view(OrdinationResults)
+        q2_po = res_proj.individual_biplot.view(OrdinationResults)
+        sa_ro.samples.index = sa_ro.samples.index.astype(float).astype(int).astype(str)
+        sa_po.samples.index = sa_po.samples.index.astype(float).astype(int).astype(str)
+        q2_ro.samples.index = q2_ro.samples.index.astype(float).astype(int).astype(str)
+        q2_po.samples.index = q2_po.samples.index.astype(float).astype(int).astype(str)
+        assert_ordinationresults_equal(sa_ro, q2_ro)
+        assert_ordinationresults_equal(sa_po, q2_po)
 
 
 if __name__ == "__main__":

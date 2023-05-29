@@ -20,3 +20,4 @@ def cli(ctx):
 import_module('gemelli.scripts._standalone_transforms')
 import_module('gemelli.scripts._standalone_ctf')
 import_module('gemelli.scripts._standalone_rpca')
+import_module('gemelli.scripts._standalone_tempted')

@@ -19,6 +19,8 @@ from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
                           transform, rpca_transform)
+from gemelli.tempted import (tempted_factorize as tempted,
+                             tempted_project as tempted_transform)
 from gemelli.preprocessing import (rclr_transformation,
                                    phylogenetic_rclr_transformation)
 from ._type import (SampleTrajectory, FeatureTrajectory,
@@ -52,7 +54,12 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_TRAINTABLES, DESC_TRAINORDS,
                                DESC_MTABLE, DESC_MORD, DESC_FM,
                                DESC_SM, DESC_MORDOUT,
-                               DESC_CORRTBLORD, DESC_CORRTBL)
+                               DESC_CORRTBLORD, DESC_CORRTBL,
+                               DESC_TCOND, DESC_REP, DESC_SVD,
+                               DESC_SVDC, DESC_SMTH, DESC_RES,
+                               DESC_MXTR, DESC_EPS, DESC_IO,
+                               DESC_SLO, DESC_TDIST, DESC_SVDO,
+                               DESC_PIO)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -106,6 +113,67 @@ plugin.methods.register_function(
     description=("A phylogenetic robust centered log-ratio transformation "
                  "of only the observed values (non-zero) of the input table."),
     citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=tempted,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'sample_metadata': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'n_components': Int,
+                'replicate_handling': Str,
+                'svd_centralized': Bool,
+                'n_components_centralize': Int,
+                'smooth': Float,
+                'resolution': Int,
+                'max_iterations': Int,
+                'epsilon': Float},
+    outputs=[('individual_biplot', PCoAResults % Properties("biplot")),
+             ('state_loadings', SampleData[SampleTrajectory]),
+             ('distance_matrix', DistanceMatrix),
+             ('svd_center', SampleData[SampleTrajectory])],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_TCOND,
+                            'n_components': DESC_COMP,
+                            'replicate_handling': DESC_REP,
+                            'svd_centralized': DESC_SVD,
+                            'n_components_centralize': DESC_SVDC,
+                            'smooth': DESC_SMTH,
+                            'resolution': DESC_RES,
+                            'max_iterations': DESC_MXTR,
+                            'epsilon': DESC_EPS},
+    output_descriptions={'individual_biplot': DESC_IO,
+                         'state_loadings': DESC_SLO,
+                         'distance_matrix': DESC_TDIST,
+                         'svd_center': DESC_SVDO},
+    name='TEMPTED - TODO.',
+    description=("TODO"),
+    citations=[citations['Martino2020']]
+)
+
+plugin.methods.register_function(
+    function=tempted_transform,
+    inputs={'individual_biplot': PCoAResults % Properties("biplot"),
+            'state_loadings': SampleData[SampleTrajectory],
+            'svd_center': SampleData[SampleTrajectory],
+            'table': FeatureTable[Frequency]},
+    parameters={'sample_metadata': Metadata,
+                'individual_id_column': Str,
+                'state_column': Str,
+                'replicate_handling': Str},
+    outputs=[('individual_biplot', PCoAResults % Properties("biplot"))],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'sample_metadata': DESC_SMETA,
+                            'individual_id_column': DESC_SUBJ,
+                            'state_column': DESC_TCOND,
+                            'replicate_handling': DESC_REP},
+    output_descriptions={'individual_biplot': DESC_PIO},
+    name='TEMPTED - TODO.',
+    description=("TODO"),
+    citations=[citations['Martino2020']]
 )
 
 plugin.methods.register_function(

@@ -1193,8 +1193,9 @@ class build_sparse(_BaseConstruct):
             raise ValueError('Table contains either np.inf or -np.inf.')
         if np.count_nonzero(np.isnan(table.values)) != 0:
             raise ValueError('Table contains np.nan or missing.')
-        if (table.values < 0).any():
-            raise ValueError('Table contains negative values.')
+        if replicate_handling == 'sum':
+            if (table.values < 0).any():
+                raise ValueError('Table contains negative values.')
         # store all to self
         self.table = table.copy()
         self.feature_order = sorted(table.index)
