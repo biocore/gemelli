@@ -20,6 +20,7 @@ from skbio import TreeNode
 from .base import _BaseConstruct
 from inspect import getfullargspec
 from gemelli._defaults import DEFAULT_MTD
+from skbio.stats.composition import clr
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
 from scipy.sparse.linalg import svds
@@ -448,6 +449,61 @@ def rclr_transformation(table: Table) -> Table:
                   table.ids('observation'),
                   table.ids('sample'))
     return table
+
+
+def clr_transformation(table: Table,
+                       pseudocount: float = 0.0) -> (
+                       Table):
+    """
+    Takes biom table and returns
+    a clr transformed biom table.
+    By default a pseudocount is added
+    with the minimum non-zero value.
+    """
+    if pseudocount == 0.0:
+        pseudocount = min_pseudocount(table)
+    # transform table values (and return biom.Table)
+    table = Table(clr(table.matrix_data.toarray().T
+                      + pseudocount).T,
+                  table.ids('observation'),
+                  table.ids('sample'))
+    return table
+
+
+def min_pseudocount(table: Table) -> float:
+    """
+    Takes biom table and returns
+    the minimum non-zero value.
+    """
+    # transform table values (and return biom.Table)
+    mat = table.matrix_data.toarray()
+    pseudo_count = mat[mat != 0].min()
+    return pseudo_count
+
+
+def phylogenetic_clr_transformation(table: Table,
+                                    phylogeny: NewickFormat,
+                                    pseudocount: float = 0.0,
+                                    min_depth: int = DEFAULT_MTD) -> (
+                                    Table, Table, TreeNode):
+    """
+    Takes biom table and returns
+    a clr transformed biom table.
+    By default a pseudocount is added
+    with the minimum non-zero value.
+    """
+    if pseudocount == 0.0:
+        pseudocount = min_pseudocount(table)
+    # transform table values (and return biom.Table)
+    table = Table((table.matrix_data.toarray()
+                   + pseudocount),
+                  table.ids('observation'),
+                  table.ids('sample'))
+    (counts_by_node,
+     clr_table,
+     phylogeny) = phylogenetic_rclr_transformation(table)
+
+    return counts_by_node, clr_table, phylogeny
 
 
 def phylogenetic_rclr_transformation(table: Table,

@@ -180,3 +180,6 @@ DESC_SLO = ("Each components temporal loadings across the"
 DESC_SVDO = ("The loadings from the SVD centralize"
              " function, used for projecting new data.")
 DESC_TDIST = "Subject by subject distance matrix (not samples)."
+DESC_PC = ("The pseudocount to add to the table before applying the "
+           "transformation. Default is zero which will add the"
+           " minimum non-zero value to all the values.")

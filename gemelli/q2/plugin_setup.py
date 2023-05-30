@@ -19,10 +19,12 @@ from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
                           transform, rpca_transform)
-from gemelli.tempted import (tempted_factorize as tempted,
-                             tempted_project as tempted_transform)
+from gemelli.tempted import (tempted_factorize,
+                             tempted_project)
 from gemelli.preprocessing import (rclr_transformation,
-                                   phylogenetic_rclr_transformation)
+                                   phylogenetic_rclr_transformation,
+                                   clr_transformation,
+                                   phylogenetic_clr_transformation)
 from ._type import (SampleTrajectory, FeatureTrajectory,
                     CrossValidationResults,
                     OrdinationCorrelation)
@@ -59,7 +61,7 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_SVDC, DESC_SMTH, DESC_RES,
                                DESC_MXTR, DESC_EPS, DESC_IO,
                                DESC_SLO, DESC_TDIST, DESC_SVDO,
-                               DESC_PIO)
+                               DESC_PIO, DESC_PC)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -84,11 +86,27 @@ plugin.methods.register_function(
     parameter_descriptions=None,
     output_descriptions={'rclr_table': QRCLR},
     name=('Robust centered log-ratio (rclr) transformation.'
-          'Note: This is run automatically '
+          ' This is run automatically '
           'within CTF/RPCA/Auto-RPCA so there no '
           'need to run rclr before those functions.'),
     description=("A robust centered log-ratio transformation of only "
                  "the observed values (non-zero) of the input table."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=clr_transformation,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'pseudocount': Float},
+    outputs=[('clr_table', FeatureTable[Composition])],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'pseudocount': DESC_PC},
+    output_descriptions={'clr_table': QRCLR},
+    name=('Centered log-ratio (clr) transformation.'
+          'By default a pseudocount is added with the minimum '
+          'non-zero value.'),
+    description=("A centered log-ratio transformation "
+                 "of the input table."),
     citations=[citations['Martino2019']]
 )
 
@@ -116,7 +134,30 @@ plugin.methods.register_function(
 )
 
 plugin.methods.register_function(
-    function=tempted,
+    function=phylogenetic_clr_transformation,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'min_depth': Int,
+                'pseudocount': Float},
+    outputs=[('counts_by_node', FeatureTable[Frequency]),
+             ('clr_table', FeatureTable[Composition]),
+             ('counts_by_node_tree', Phylogeny[Rooted])],
+    input_descriptions={'table': DESC_BIN,
+                        'phylogeny': DESC_TREE},
+    parameter_descriptions={'min_depth': DESC_MINDEPTH,
+                            'pseudocount': DESC_PC},
+    output_descriptions={'counts_by_node': QTREECOUNT,
+                         'clr_table': QRCLR,
+                         'counts_by_node_tree': QTREE},
+    name=('Phylogenetic centered log-ratio (clr) transformation.'),
+    description=("A phylogenetic centered log-ratio transformation "
+                 "By default a pseudocount is added with the minimum "
+                 "non-zero value."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=tempted_factorize,
     inputs={'table': FeatureTable[Frequency]},
     parameters={'sample_metadata': Metadata,
                 'individual_id_column': Str,
@@ -149,13 +190,13 @@ plugin.methods.register_function(
                          'state_loadings': DESC_SLO,
                          'distance_matrix': DESC_TDIST,
                          'svd_center': DESC_SVDO},
-    name='TEMPTED - TODO.',
-    description=("TODO"),
+    name='TEMPTED temporal tensor factorization.',
+    description=("Decomposition of temporal tensors."),
     citations=[citations['Martino2020']]
 )
 
 plugin.methods.register_function(
-    function=tempted_transform,
+    function=tempted_project,
     inputs={'individual_biplot': PCoAResults % Properties("biplot"),
             'state_loadings': SampleData[SampleTrajectory],
             'svd_center': SampleData[SampleTrajectory],
@@ -171,8 +212,12 @@ plugin.methods.register_function(
                             'state_column': DESC_TCOND,
                             'replicate_handling': DESC_REP},
     output_descriptions={'individual_biplot': DESC_PIO},
-    name='TEMPTED - TODO.',
-    description=("TODO"),
+    name='TEMPTED projection or new data into the subject space.',
+    description=("Projection of new unseen temporal data to the low-dim"
+                 " subject loading build on previous data. Warning: Ensure"
+                 " the pre-processing parameters are the same as those use to"
+                 "build the original results or the projection may "
+                 "be spurious."),
     citations=[citations['Martino2020']]
 )
 
