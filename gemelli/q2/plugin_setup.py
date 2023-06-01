@@ -158,7 +158,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=tempted_factorize,
-    inputs={'table': FeatureTable[Frequency]},
+    inputs={'table': FeatureTable[Composition]},
     parameters={'sample_metadata': Metadata,
                 'individual_id_column': Str,
                 'state_column': Str,
@@ -200,7 +200,7 @@ plugin.methods.register_function(
     inputs={'individual_biplot': PCoAResults % Properties("biplot"),
             'state_loadings': SampleData[SampleTrajectory],
             'svd_center': SampleData[SampleTrajectory],
-            'table': FeatureTable[Frequency]},
+            'table': FeatureTable[Composition]},
     parameters={'sample_metadata': Metadata,
                 'individual_id_column': Str,
                 'state_column': Str,

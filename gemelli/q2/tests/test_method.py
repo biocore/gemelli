@@ -257,20 +257,12 @@ class Test_qiime2_tempted(unittest.TestCase):
         self.biom_table = load_table(self.in_table)
         self.in_meta = self.in_meta.replace('test-small.tsv',
                                             'test-small-numeric.tsv')
-        # clr transform table
-        """table_df = pd.DataFrame(clr(self.biom_table.matrix_data.toarray().T
-                                    + 1).T,
-                                self.biom_table.ids('observation'),
-                                self.biom_table.ids())
-        self.biom_table = Table(table_df.values,
-                                table_df.index,
-                                table_df.columns)"""
         # import phylo for later
         self.phylogeny = TreeNode.read(self.in_tree,
                                        format='newick')
         self.q2phylogeny = Artifact.import_data("Phylogeny[Rooted]",
                                                 self.phylogeny)
-        self.q2table = Artifact.import_data("FeatureTable[Frequency]",
+        self.q2table = Artifact.import_data("FeatureTable[Composition]",
                                             self.biom_table)
         self.meta_table = read_csv(self.in_meta, sep='\t', index_col=0)
         # make metadata subjects and two-time
