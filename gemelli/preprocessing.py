@@ -10,15 +10,21 @@ import warnings
 import io
 import sys
 import os
+import copy
+import biom
 import t2t.nlevel as nl
 import numpy as np
 import pandas as pd
 from biom import Table
 from skbio import TreeNode
 from .base import _BaseConstruct
+from inspect import getfullargspec
 from gemelli._defaults import DEFAULT_MTD
+from skbio.stats.composition import clr
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
+from scipy.sparse.linalg import svds
+np.random.seed(42)
 # import QIIME2 if in a Q2env otherwise set type to str
 try:
     from q2_types.tree import NewickFormat
@@ -443,6 +449,61 @@ def rclr_transformation(table: Table) -> Table:
                   table.ids('observation'),
                   table.ids('sample'))
     return table
+
+
+def clr_transformation(table: Table,
+                       pseudocount: float = 0.0) -> (
+                       Table):
+    """
+    Takes biom table and returns
+    a clr transformed biom table.
+    By default a pseudocount is added
+    with the minimum non-zero value.
+    """
+    if pseudocount == 0.0:
+        pseudocount = min_pseudocount(table)
+    # transform table values (and return biom.Table)
+    table = Table(clr(table.matrix_data.toarray().T
+                      + pseudocount).T,
+                  table.ids('observation'),
+                  table.ids('sample'))
+    return table
+
+
+def min_pseudocount(table: Table) -> float:
+    """
+    Takes biom table and returns
+    the minimum non-zero value.
+    """
+    # transform table values (and return biom.Table)
+    mat = table.matrix_data.toarray()
+    pseudo_count = mat[mat != 0].min()
+    return pseudo_count
+
+
+def phylogenetic_clr_transformation(table: Table,
+                                    phylogeny: NewickFormat,
+                                    pseudocount: float = 0.0,
+                                    min_depth: int = DEFAULT_MTD) -> (
+                                    Table, Table, TreeNode):
+    """
+    Takes biom table and returns
+    a clr transformed biom table.
+    By default a pseudocount is added
+    with the minimum non-zero value.
+    """
+    if pseudocount == 0.0:
+        pseudocount = min_pseudocount(table)
+    # transform table values (and return biom.Table)
+    table = Table((table.matrix_data.toarray()
+                   + pseudocount),
+                  table.ids('observation'),
+                  table.ids('sample'))
+    (counts_by_node,
+     clr_table,
+     phylogeny) = phylogenetic_rclr_transformation(table)
+
+    return counts_by_node, clr_table, phylogeny
 
 
 def phylogenetic_rclr_transformation(table: Table,
@@ -962,3 +1023,416 @@ class build(_BaseConstruct):
         self.feature_order = feature_order
         self.condition_orders = conditional_orders
         self.mf = self.mf
+
+
+class build_sparse(_BaseConstruct):
+
+    """
+    This function builds a sparse tensor format
+    for tempted.
+
+    Parameters
+    ----------
+    table: DataFrame or biom.Table
+        table of non-negative count data
+        rows = features
+        columns = samples
+
+    mapping: DataFrame
+        mapping metadata for table
+        rows = samples
+        columns = categories
+
+    individual_ids: str, int, or float
+        category of sample IDs in metadata
+
+    state_column: list of strings or ints
+        category of conditional in metadata
+
+    transformation: function, optional : Default is matrix_rclr
+        The transformation function to use on the data.
+
+    pseudo_count: float, optional : Default is 1
+        The pseudo count to add to all values before the transformation.
+
+    branch_lengths: array_like, np.float64, optional : Default is None
+        An array of branch lengths if the transformation can accept them.
+
+    replicate_handling: function, optional : Default is "sum"
+        Choose how replicate samples are handled. If replicates are detected,
+        "error" causes method to fail; "drop" will discard all replicated
+        samples; "random" chooses one representative at random from
+        among replicates.
+
+    feature_order: list, optional : Default is None
+        The feature_order to use. Can be a subset of features but can not
+        contain items not in table features.
+
+    svd_centralized: bool, optional : Default is True
+        Removes the mean structure of the temporal tensor.
+
+    n_components_centralize: int
+        Rank of approximation for average matrix in svd-centralize.
+
+    Returns
+    -------
+    self to abstract method
+
+    Raises
+    ------
+    ValueError
+        if id_ not in mapping
+    ValueError
+        if any state_column not in mapping
+    ValueError
+        Table is not 2-dimensional
+    ValueError
+        Table contains negative values
+    ValueError
+        Table contains np.inf or -np.inf
+    ValueError
+        Table contains np.nan or missing.
+    Warning
+        If a conditional-sample pair
+        has multiple IDs associated
+        with it. In this case the
+        default method is to mean them.
+
+    Examples
+    --------
+    # load tables
+    table = load_table(in_table_path)
+    sample_metadata = read_csv(in_metadata_path,
+                               sep='\t',
+                               index_col=0)
+    # tensor building
+    sparse_tensor = build_sparse()
+    sparse_tensor.construct(table,
+                            sample_metadata,
+                            'host_subject_id',
+                            'time_points')
+
+    """
+
+    def __init__(self):
+        """
+        Parameters
+        ----------
+        None
+
+        """
+
+    def construct(self, table, mf,
+                  individual_id_column,
+                  state_column,
+                  transformation=matrix_rclr,
+                  pseudo_count=1,
+                  branch_lengths=None,
+                  replicate_handling='sum',
+                  svd_centralized=True,
+                  n_components_centralize=1):
+        """
+        This function builds a sparse tensor format
+        for tempted.
+
+        Parameters
+        ----------
+        table: DataFrame or biom.Table
+            table of non-negative count data
+            rows = features
+            columns = samples
+
+        mapping: DataFrame
+            mapping metadata for table
+            rows = samples
+            columns = categories
+
+        individual_id_column: str, int, or float
+            category of sample IDs in metadata
+
+        state_column: list of strings or ints
+            category of conditional in metadata
+
+        transformation: function, optional : Default is matrix_rclr
+            The transformation function to use on the data.
+
+        pseudo_count: float, optional : Default is 1
+            The pseudo count to add to all values before the transformation.
+
+        branch_lengths: array_like, np.float64, optional : Default is None
+            An array of branch lengths if the transformation can accept them.
+
+        replicate_handling: function, optional : Default is "sum"
+            Choose how replicate samples are handled. If replicates are
+            detected, "error" causes method to fail; "drop" will discard
+            all replicated samples; "random" chooses one representative at
+            random from among replicates.
+
+        svd_centralized: bool, optional : Default is True
+            Removes the mean structure of the temporal tensor.
+
+        n_components_centralize: int
+            Rank of approximation for average matrix in svd-centralize.
+
+        Returns
+        -------
+        self to abstract method
+
+        Raises
+        ------
+        ValueError
+            if id_ not in mapping
+        ValueError
+            if any state_column not in mapping
+        ValueError
+            Table is not 2-dimensional
+        ValueError
+            Table contains negative values
+        ValueError
+            Table contains np.inf or -np.inf
+        ValueError
+            Table contains np.nan or missing.
+        Warning
+            If a conditional-sample pair
+            has multiple IDs associated
+            with it. In this case the
+            default method is to mean them.
+
+        Examples
+        --------
+        # load tables
+        table = load_table(in_table_path)
+        sample_metadata = read_csv(in_metadata_path,
+                                   sep='\t',
+                                   index_col=0)
+        # tensor building
+        sparse_tensor = build_sparse()
+        sparse_tensor.construct(table,
+                                sample_metadata,
+                                'host_subject_id',
+                                'time_points')
+
+        """
+
+        # export table if not already
+        if isinstance(table, biom.table.Table):
+            table = pd.DataFrame(table.matrix_data.toarray(),
+                                 table.ids('observation'),
+                                 table.ids('sample'))
+        elif not isinstance(table, pd.DataFrame):
+            raise ValueError("Table must be "
+                             "pd.DataFrame or biom.Table")
+        if individual_id_column not in mf.columns:
+            raise ValueError("id_ provided (" +
+                             str(individual_id_column) +
+                             ") category not in metadata columns.")
+        if state_column not in mf.columns:
+            raise ValueError("state_column provided (" +
+                             str(state_column) +
+                             ") category not in metadata columns.")
+        # check that more than one states exist
+        individual_ids_count = mf[individual_id_column].value_counts()
+        if individual_ids_count.min() <= 1:
+            raise ValueError("Subjects must have more than one time point.")
+        # check state is numeric
+        if np.issubdtype(mf[state_column].dtype, np.number):
+            pass
+        else:
+            raise ValueError('{0} is not a numeric metadata column. '
+                             'Please choose a metadata column containing only '
+                             'numeric values.'.format(state_column))
+        # check how to do replicate subject-time handling
+        if replicate_handling not in ['error', 'sum', 'random']:
+            raise ValueError('replicate_handling must be '
+                             'error, sum, or random.')
+        if np.count_nonzero(np.isinf(table.values)) != 0:
+            raise ValueError('Table contains either np.inf or -np.inf.')
+        if np.count_nonzero(np.isnan(table.values)) != 0:
+            raise ValueError('Table contains np.nan or missing.')
+        if replicate_handling == 'sum':
+            if (table.values < 0).any():
+                raise ValueError('Table contains negative values.')
+        # store all to self
+        self.table = table.copy()
+        self.feature_order = sorted(table.index)
+        self.table = self.table.reindex(self.feature_order)
+        self.mf = mf.copy()
+        self.individual_id_column = individual_id_column
+        self.state_column = state_column
+        self.branch_lengths = branch_lengths
+        self.pseudo_count = pseudo_count
+        self.transformation = transformation
+        self.replicate_handling = replicate_handling
+        self.svd_centralized = svd_centralized
+        self.n_components_centralize = n_components_centralize
+        self._construct()
+
+        return self
+
+    def _construct(self):
+        """
+        This function forms a tensor
+        with missing id_ x condition
+        pairs left as all zeros.
+
+        Raises
+        ------
+        Warning
+            If a conditional-id_ pair
+            has multiple samples associated
+            with it. In this case the
+            default method is to mean them.
+
+        """
+
+        # check for replicates
+        table_dereplicated = []
+        mf_dereplicated = []
+        for (id_,
+             id_df) in self.mf.groupby(self.individual_id_column):
+            replicate_tbl = id_df[self.state_column]
+            replicate_tbl = replicate_tbl.value_counts().to_dict()
+            if max(replicate_tbl.values()) > 1:
+                state_values_repeated_out = [str(k)
+                                             for (k,
+                                                  v) in replicate_tbl.items()
+                                             if v > 1]
+                # handle depending on user input
+                if self.replicate_handling == 'error':
+                    raise ValueError(
+                        'Detected replicate samples for individual ({0}) {1} '
+                        'at state(s) ({2}) {3}. Remove replicate values from '
+                        'input files or set replicate_handling parameter to '
+                        'select how replicates are handled.'.format(
+                            self.individual_id_column,
+                            id_,
+                            self.state_column,
+                            ', '.join(state_values_repeated_out)))
+                elif self.replicate_handling == 'random':
+                    id_df = id_df.drop_duplicates(subset=self.state_column,
+                                                  keep="first")
+                    table_dereplicated.append(self.table[id_df.index])
+                    mf_dereplicated.append(id_df)
+                elif self.replicate_handling == 'sum':
+                    # sum samples with repeated samples
+                    group_sum = {list(df.index)[0]: df.index
+                                 for k, df in id_df.groupby(self.state_column)}
+                    table_summed = []
+                    for index_id_use, ind_sum in group_sum.items():
+                        tmp_sum = pd.DataFrame(self.table[ind_sum].sum(1))
+                        tmp_sum.columns = [index_id_use]
+                        table_summed.append(tmp_sum)
+                    table_summed = pd.concat(table_summed, axis=1)
+                    table_dereplicated.append(table_summed)
+                    # drop repeated sample index
+                    id_df = id_df.reindex(table_summed.columns)
+                    mf_dereplicated.append(id_df)
+            else:
+                table_dereplicated.append(self.table.reindex(id_df.index,
+                                                             axis=1))
+                mf_dereplicated.append(id_df)
+        # final de-replicated tables
+        self.mf_dereplicated = pd.concat(mf_dereplicated, axis=0)
+        self.table_dereplicated = pd.concat(table_dereplicated, axis=1)
+        # transform - preprocessing
+        if 'branch_lengths' in getfullargspec(self.transformation).args:
+            tmp_tbl = self.table_dereplicated.values.T + self.pseudo_count
+            bl_ = self.branch_lengths
+            self.transformed_table = self.transformation(tmp_tbl,
+                                                         branch_lengths=bl_)
+        else:
+            tmp_tbl = self.table_dereplicated.values.T + self.pseudo_count
+            self.transformed_table = self.transformation(tmp_tbl)
+        self.transformed_table = pd.DataFrame(self.transformed_table.T,
+                                              self.table_dereplicated.index,
+                                              self.table_dereplicated.columns)
+        # split tables by time and id_
+        self.individual_id_tables = {}
+        self.individual_id_state_orders = {}
+        for (id_,
+             id_df) in self.mf_dereplicated.groupby(self.individual_id_column):
+            # check no NANs
+            if np.count_nonzero(np.isnan(self.transformed_table.values)) != 0:
+                raise ValueError('Table contains np.nan or '
+                                 'missing post transformation.')
+            # sort numeric values
+            id_df = id_df.sort_values(by=self.state_column)
+            tmp_trn_out = self.transformed_table.loc[self.feature_order,
+                                                     id_df.index]
+            self.individual_id_tables[id_] = tmp_trn_out
+            id_out_ = id_df[self.state_column].values
+            self.individual_id_state_orders[id_] = id_out_
+        if self.svd_centralized:
+            n_components_centralize = self.n_components_centralize
+            (individual_id_tables_centralized,
+             u_center,
+             s_center,
+             v_center) = svd_centralize(self.individual_id_tables,
+                                        n_components=n_components_centralize)
+            tmp_tbl_out = individual_id_tables_centralized
+            self.individual_id_tables_centralized = tmp_tbl_out
+            self.u_centralized = u_center
+            self.s_centralized = s_center
+            self.v_centralized = v_center
+
+
+def svd_centralize(individual_id_tables, n_components=1):
+
+    """
+    Removes the mean structure of the temporal tensor.
+
+    Parameters
+    ----------
+    individual_id_tables: dictionary
+        Dictionary of tables constructed
+        (see build_sparse class).
+
+    n_components: int
+        Rank of approximation for
+        average matrix.
+
+    Returns
+    -------
+    dictionary
+        The input dict of tables each
+        with the mean structure of the
+        temporal tensor removed.
+
+    numpy.ndarray
+        U from svd approximation.
+
+    numpy.ndarray
+        s from svd approximation.
+
+    numpy.ndarray
+        V from svd approximation.
+
+    Raises
+    ------
+    ValueError
+        if features don't match between tables
+        across the values of the dictionary
+
+    """
+
+    # make copy to svd centralize
+    tables_centralized = copy.deepcopy(individual_id_tables)
+    # get number of individuals
+    n_individuals = len(tables_centralized)
+    # get number of features and check all tables are the same
+    n_features_all = [m.shape[0] for m in tables_centralized.values()]
+    if not all([v == n_features_all[0] for v in n_features_all]):
+        raise ValueError('Individual tables do not have'
+                         ' the same number of features.')
+    # First the average feature value of all time points for each subject.
+    n_features = n_features_all[0]
+    mean_hat = np.zeros((n_individuals, n_features))
+    for i, m in enumerate(tables_centralized.values()):
+        mean_hat[i, :] = np.mean(m, axis=1)
+    # SVD of average matrix and construct the matrix's rank-r approximation.
+    u, s, v = svds(mean_hat, k=n_components, which='LM')
+    mean_svd = u @ (np.diag(s) * v.T).T
+    #  Subtract the rank-r subject by feature matrix from the temporal tensor.
+    for i, (id_, m) in enumerate(tables_centralized.items()):
+        tables_centralized[id_] = (m.T - mean_svd[[i]].flatten()).T
+    return tables_centralized, u, s, v

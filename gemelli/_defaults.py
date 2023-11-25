@@ -10,7 +10,6 @@
 # descriptions. This is used by both the standalone RPCA and QIIME 2 RPCA sides
 # of gemelli.
 
-
 DEFAULT_MTD = 0
 DEFAULT_BL = None
 DEFAULT_COMP = 3
@@ -26,6 +25,15 @@ DEFAULT_COLCV = None
 DEFAULT_TESTS = 10
 DEFAULT_MATCH = True
 DEFAULT_TRNSFRM = True
+DEFAULT_TEMPTED_PC = 1
+DEFAULT_TEMPTED_EP = 1e-4
+DEFAULT_TEMPTED_SMTH = 1e-6
+DEFAULT_TEMPTED_RES = 101
+DEFAULT_TEMPTED_MAXITER = 20
+DEFAULT_TEMPTED_RH = 'random'
+DEFAULT_TEMPTED_RHC = 'random'
+DEFAULT_TEMPTED_SVDC = True
+DEFAULT_TEMPTED_SVDCN = 1
 DESC_BIN = ("The feature table containing the "
             "samples over which metric should be computed.")
 DESC_COUNTS = ("The feature table in biom format containing the "
@@ -145,3 +153,33 @@ DESC_MORDOUT = "A subset biplot with the input table."
 DESC_CORRTBLORD = ("A joint-biplot or subset joint-biplot"
                    " of the (Robust Aitchison) RPCA feature loadings.")
 DESC_CORRTBL = "A feature by feature correlation table."
+DESC_TCOND = ("Metadata column containing time points"
+              " across which samples are paired.")
+DESC_REP = ('Choose how replicate samples are handled. If replicates are'
+            'detected, "error" causes method to fail; "drop" will discard'
+            ' all replicated samples; "random" chooses one representative at'
+            ' random from among replicates.')
+DESC_SVD = "Removes the mean structure of the temporal tensor."
+DESC_SVDC = "Rank of approximation for average matrix in svd-centralize."
+DESC_RES = ("Number of time points to evaluate the value"
+            " of the temporal loading function.")
+DESC_SMTH = ("Smoothing parameter for RKHS norm. Larger means "
+             "smoother temporal loading functions.")
+DESC_MXTR = "Maximum number of iteration in for rank-1 calculation."
+DESC_EPS = ("Convergence criteria for difference between iterations "
+            "for each rank-1 calculation.")
+DESC_IO = ("Compositional biplot of subjects as points and"
+           " features as arrows. Where the variation between"
+           " subject groupings is explained by the log-ratio"
+           " between opposing arrows.")
+DESC_PIO = ("Compositional biplot of subjects as points from"
+            " new data projected into a pre-generated space.")
+DESC_SLO = ("Each components temporal loadings across the"
+            "input resolution included as a column called"
+            "'time_interval'.")
+DESC_SVDO = ("The loadings from the SVD centralize"
+             " function, used for projecting new data.")
+DESC_TDIST = "Subject by subject distance matrix (not samples)."
+DESC_PC = ("The pseudocount to add to the table before applying the "
+           "transformation. Default is zero which will add the"
+           " minimum non-zero value to all the values.")
