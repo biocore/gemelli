@@ -146,8 +146,8 @@ class TestOptspace(unittest.TestCase):
         M0 = loadmat(get_data_path('large_test.mat'))['M0']
         M_E = loadmat(get_data_path('large_test.mat'))['M_E']
 
-        M0 = M0.astype(np.float)
-        M_E = np.array(M_E.todense()).astype(np.float)
+        M0 = M0.astype(float)
+        M_E = np.array(M_E.todense()).astype(float)
         X, S, Y = OptSpace(n_components=3,
                            max_iterations=11,
                            tol=1e-8).solve(M_E)
@@ -165,9 +165,9 @@ class TestOptspace(unittest.TestCase):
         M_E = [loadmat(get_data_path('large_test.mat'))['M_E'],
                loadmat(get_data_path('large_test.mat'))['M_E']]
 
-        M0 = M0.astype(np.float)
-        M_E = [[np.array(M_.todense()).astype(np.float),
-                np.array(M_.todense()).astype(np.float)]
+        M0 = M0.astype(float)
+        M_E = [[np.array(M_.todense()).astype(float),
+                np.array(M_.todense()).astype(float)]
                for M_ in M_E]
         X, S, Y, _ = OptSpace(n_components=3,
                               max_iterations=11,

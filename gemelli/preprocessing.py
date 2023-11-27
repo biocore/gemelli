@@ -572,7 +572,7 @@ def matrix_closure(mat):
        columns = components
     Returns
     -------
-    array_like, np.float64
+    array_like, float64
        A matrix of proportions where all of the values
        are nonzero and each composition (row) adds up to 1
     Examples
@@ -609,12 +609,12 @@ def fast_unifrac(table, tree):
        Tree containing the features in the table.
     Returns
     -------
-    counts_by_node: array_like, np.float64
+    counts_by_node: array_like, float64
        A matrix of counts with internal nodes
        vectorized.
     tree_index: dict
         A housekeeping dictionary.
-    branch_lengths: array_like, np.float64
+    branch_lengths: array_like, float64
         An array of branch lengths.
     fids: list
         A list of feature IDs matched to tree_index['id'].
@@ -1074,7 +1074,7 @@ class build_sparse(_BaseConstruct):
     pseudo_count: float, optional : Default is 1
         The pseudo count to add to all values before the transformation.
 
-    branch_lengths: array_like, np.float64, optional : Default is None
+    branch_lengths: array_like, float64, optional : Default is None
         An array of branch lengths if the transformation can accept them.
 
     replicate_handling: function, optional : Default is "sum"
@@ -1178,7 +1178,7 @@ class build_sparse(_BaseConstruct):
         pseudo_count: float, optional : Default is 1
             The pseudo count to add to all values before the transformation.
 
-        branch_lengths: array_like, np.float64, optional : Default is None
+        branch_lengths: array_like, float64, optional : Default is None
             An array of branch lengths if the transformation can accept them.
 
         replicate_handling: function, optional : Default is "sum"

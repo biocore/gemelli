@@ -159,7 +159,7 @@ class MatrixCompletion(_BaseImpute):
         having right singular vectors as rows. Of shape (N,n_components)
 
         """
-        X_sparse = X.copy().astype(np.float64)
+        X_sparse = X.copy().astype(float)
         self.X_sparse = X_sparse
         self._fit()
         return self.sample_weights
