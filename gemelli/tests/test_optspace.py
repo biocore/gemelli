@@ -6,8 +6,7 @@ from gemelli.optspace import (
     line_search,
     singular_values,
     OptSpace,
-    svd_sort,
-    rank_estimate)
+    svd_sort)
 import numpy as np
 from numpy.linalg import norm
 import unittest
@@ -20,23 +19,6 @@ from numpy.testing import assert_array_almost_equal
 class TestOptspace(unittest.TestCase):
     def setUp(self):
         pass
-
-    def test_rank_estimation(self):
-        """Test rank estimation is accurate."""
-        N = 100
-        D = 5000
-        k = 3
-        U = np.random.standard_normal(size=(N, k))
-        V = np.random.standard_normal(size=(k, D))
-        Y = U @ V
-        # randomly mask Y
-        mask = np.random.random(size=(N, D))
-        Y[mask > .5] = 0
-        # get eps
-        total_nonzeros = np.count_nonzero(Y)
-        eps = total_nonzeros / np.sqrt(N * D)
-        # estimate
-        self.assertEqual(k, rank_estimate(Y, eps))
 
     def test_G(self):
         """Test first grassmann manifold runs."""

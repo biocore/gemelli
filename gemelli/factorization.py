@@ -6,14 +6,12 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import warnings
 import numpy as np
 import pandas as pd
 from scipy.linalg import svd
 from numpy.linalg import norm
 from .base import _BaseImpute
 from scipy.spatial import distance
-from gemelli.optspace import rank_estimate
 
 
 class TensorFactorization(_BaseImpute):
@@ -524,19 +522,6 @@ def tenals(tensor,
     tensor_dimensions = tensor.shape
     # Frobenius norm initial for ALS minimization.
     initial_tensor_frobenius_norm = norm(tensor)**2
-    # rank est. (for each slice)
-    if len(tensor_dimensions) == 3:  # only for 3D
-        for i in range(tensor_dimensions[0]):
-            obs_tmp = tensor[i, :, :].copy()
-            total_nonzeros = np.count_nonzero(mask[i, :, :].copy())
-            n_, m_ = obs_tmp.shape
-            eps_tmp = total_nonzeros / np.sqrt(n_ * m_)
-            if min(obs_tmp.shape) <= 2:
-                # two-subjects/time is already low-rank
-                continue
-            if rank_estimate(obs_tmp, eps_tmp) >= (min(obs_tmp.shape) - 1):
-                warnings.warn('A component of your data may be high-rank.',
-                              RuntimeWarning)
     # initial by Robust Tensor Power Method (modified for non-symmetric
     # tensors).
     initial_eigvals, initial_loadings = robust_tensor_power_method(

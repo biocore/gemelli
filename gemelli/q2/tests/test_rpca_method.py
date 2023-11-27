@@ -8,7 +8,7 @@ from nose.tools import nottest
 from biom import Table, load_table
 from skbio.util import get_data_path
 from os.path import sep as os_path_sep
-from gemelli.rpca import rpca, auto_rpca
+from gemelli.rpca import rpca
 from gemelli.scripts.__init__ import cli as sdc
 from gemelli.simulations import build_block_model
 from qiime2.plugins import gemelli as q2gemelli
@@ -53,18 +53,6 @@ class Testrpca(unittest.TestCase):
         self.assertFalse(np.isnan(ord_test.features).any(axis=None))
         self.assertFalse(np.isnan(ord_test.samples).any(axis=None))
 
-    def test_auto_rpca(self):
-        """Tests the basic validity of the actual auto_rpca()."""
-        ord_test, dist_test = auto_rpca(table=self.test_table)
-        # Validate types of the RPCA outputs
-        self.assertIsInstance(ord_test, OrdinationResults)
-        self.assertIsInstance(dist_test, DistanceMatrix)
-        # Ensure that no NaNs are in the OrdinationResults
-        # NOTE that we have to use the DataFrame .any() functions instead of
-        # python's built-in any() functions -- see #29 for details on this
-        self.assertFalse(np.isnan(ord_test.features).any(axis=None))
-        self.assertFalse(np.isnan(ord_test.samples).any(axis=None))
-
 
 class Test_qiime2_rpca(unittest.TestCase):
 
@@ -93,57 +81,6 @@ class Test_qiime2_rpca(unittest.TestCase):
         bt_tmp = bt_tmp.update_ids(new_ids)
         self.q2table_two_rename = Artifact.import_data("FeatureTable[Frequency]",
                                                        bt_tmp)
-
-    def test_qiime2_auto_rpca(self):
-        """ Test Q2 rank estimate matches standalone."""
-
-        tstdir = "test_output"
-        # Run gemelli through QIIME 2 (specifically, the Artifact API)
-        res = q2gemelli.actions.auto_rpca(self.q2table)
-        ordination_qza, distmatrix_qza = res
-        # Get the underlying data from these artifacts
-        # q2ordination = ordination_qza.view(OrdinationResults)
-        q2distmatrix = distmatrix_qza.view(DistanceMatrix)
-
-        # Next, run gemelli outside of QIIME 2. We're gonna check that
-        # everything matches up.
-        # ...First, though, we need to write the contents of self.q2table to a
-        # BIOM file, so gemelli can understand it.
-        self.q2table.export_data(get_data_path("", tstdir))
-        q2table_loc = get_data_path('feature-table.biom', tstdir)
-        # Derived from a line in test_standalone_rpca()
-        tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
-
-        # Run gemelli outside of QIIME 2...
-        result = CliRunner().invoke(sdc.commands['auto-rpca'],
-                                    ['--in-biom', q2table_loc,
-                                     '--output-dir', tstdir_absolute])
-        # ...and read in the resulting output files. This code was derived from
-        # test_standalone_rpca() elsewhere in gemelli's codebase.
-        # stordination = OrdinationResults.read(get_data_path('ordination.txt',
-        #                                                    tstdir))
-        stdistmatrix_values = read_csv(
-            get_data_path(
-                'distance-matrix.tsv',
-                tstdir),
-            sep='\t',
-            index_col=0).values
-
-        # Convert the DistanceMatrix object a numpy array (which we can compare
-        # with the other _values numpy arrays we've created from the other
-        # distance matrices)
-        q2distmatrix_values = q2distmatrix.to_data_frame().values
-
-        # Finaly: actually check the consistency of Q2 and standalone results!
-        np.testing.assert_array_almost_equal(q2distmatrix_values,
-                                             stdistmatrix_values)
-        # check that exit code was 0 (indicating success)
-        try:
-            self.assertEqual(0, result.exit_code)
-        except AssertionError:
-            ex = result.exception
-            error = Exception('Command failed with non-zero exit code')
-            raise error.with_traceback(ex.__traceback__)
 
     def test_qiime2_rpca(self):
         """Tests that the Q2 and standalone RPCA results match."""

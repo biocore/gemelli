@@ -6,7 +6,6 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import warnings
 import numpy as np
 from numpy.matlib import repmat
 from numpy.linalg import norm
@@ -121,22 +120,8 @@ class OptSpace(object):
         # get a measure of sparsity level
         total_nonzeros = np.count_nonzero(mask)
         eps = total_nonzeros / np.sqrt(m * n)
-        if isinstance(self.n_components, str):
-            if self.n_components.lower() == 'auto':
-                # estimate the rank of the matrix
-                self.n_components = rank_estimate(obs, eps)
-                # check estimate again
-                if self.n_components >= min(n, m) - 1:
-                    warnings.warn('Your matrix is estimated '
-                                  'to be high-rank.',
-                                  RuntimeWarning)
-                # print rank estimate
-                print('Estimated rank is %i' % self.n_components)
-            else:
-                raise ValueError("n-components must be an "
-                                 "integer or 'auto'.")
         # raise future warning if hard set
-        elif isinstance(self.n_components, int):
+        if isinstance(self.n_components, int):
             if self.n_components > (min(n, m) - 1):
                 raise ValueError("n-components must be at most"
                                  " 1 minus the min. shape of the"
@@ -144,7 +129,7 @@ class OptSpace(object):
         # otherwise rase an error.
         else:
             raise ValueError("n-components must be "
-                             "an interger or 'auto'")
+                             "an interger.")
         # The rescaling factor compensates the smaller average size of
         # the of the missing entries (mask) with respect to obs
         rescal_param = np.count_nonzero(mask) * self.n_components
@@ -558,75 +543,3 @@ def grassmann_manifold_two(U, step_size, n_components):
     step = np.multiply(U, repmat(step, 1, n_components)) / \
         (step_size * n_components)
     return step
-
-
-def rank_estimate(obs, eps, k=20, lam=0.05,
-                  min_rank=3, max_iter=5000):
-    """
-    This function estimates the rank of a
-    sparse matrix (i.e. with missing values).
-
-    Parameters
-    ----------
-    obs: numpy.ndarray - a rclr preprocessed matrix of shape (M,N)
-        with missing values set to zero or np.nan.
-        N = Features (i.e. OTUs, metabolites)
-        M = Samples
-
-    eps: float - Measure of the level of sparsity
-        Equivalent to obs N-non-zeros / sqrt(obs.shape)
-
-    k: int - Max number of singular values / rank
-
-    lam: float - Step in the iteration
-
-    min_rank: int - The min. rank allowed
-
-    Returns
-    -------
-    The estimated rank of the matrix.
-
-    References
-    ----------
-    .. [1] Part C in Keshavan, R. H., Montanari,
-           A. & Oh, S. Low-rank matrix completion
-           with noisy observations: A quantitative
-           comparison. in 2009 47th Annual Allerton
-           Conference on Communication, Control,
-           and Computing (Allerton) 1216–1222 (2009).
-    """
-    # dim. of the data
-    n, m = obs.shape
-    # ensure rank worth estimating
-    if min(n, m) <= 2:
-        return min_rank
-    # get N-singular values
-    s = svds(obs,  min(k, n, m) - 1, which='LM',
-             return_singular_vectors=False)[::-1]
-    # get N+1 singular values
-    s_one = s[:-1] - s[1:]
-    # simplify iterations
-    s_one_ = s_one / np.mean(s_one[-10:])
-    # iteration one
-    r_one = 0
-    iter_ = 0
-    while r_one <= 0:
-        cost = []
-        # get the cost
-        for idx in range(s_one_.shape[0]):
-            cost.append(lam * max(s_one_[idx:]) + idx)
-        # estimate the rank
-        r_one = np.argmin(cost)
-        lam += lam
-        iter_ += 1
-        if iter_ > max_iter:
-            break
-
-    # iteration two
-    cost = []
-    # estimate the rank
-    for idx in range(s.shape[0] - 1):
-        cost.append((s[idx + 1] + np.sqrt(idx * eps) * s[0] / eps) / s[idx])
-    r_two = np.argmin(cost)
-    # return the final estimate
-    return max(r_one, r_two, min_rank)

@@ -555,25 +555,6 @@ def optspace_helper(rclr_table: np.array,
     return ord_res, dist_res
 
 
-def auto_rpca(table: biom.Table,
-              min_sample_count: int = DEFAULT_MSC,
-              min_feature_count: int = DEFAULT_MFC,
-              min_feature_frequency: float = DEFAULT_MFF,
-              max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        OrdinationResults,
-        DistanceMatrix):
-    """Runs RPCA but with auto estimation of the
-       rank peramater.
-    """
-    ord_res, dist_res = rpca(table,
-                             n_components='auto',
-                             min_sample_count=min_sample_count,
-                             min_feature_count=min_feature_count,
-                             min_feature_frequency=min_feature_frequency,
-                             max_iterations=max_iterations)
-    return ord_res, dist_res
-
-
 def rpca_table_processing(table: biom.Table,
                           min_sample_count: int = DEFAULT_MSC,
                           min_feature_count: int = DEFAULT_MFC,
@@ -707,9 +688,9 @@ def joint_rpca(tables: biom.Table,
     for n, table_n in enumerate(tables):
         if rclr_transform_tables:
             tables[n] = rpca_table_processing(table_n,
-                                            min_sample_count,
-                                            min_feature_count,
-                                            min_feature_frequency)
+                                              min_sample_count,
+                                              min_feature_count,
+                                              min_feature_frequency)
     # get set of shared samples
     shared_all_samples = set.intersection(*[set(table_n.ids())
                                             for table_n in tables])
@@ -728,10 +709,11 @@ def joint_rpca(tables: biom.Table,
     # filter each table again to subset samples.
     for n, table_n in enumerate(tables):
         if rclr_transform_tables:
-            tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
-                                            min_sample_count,
-                                            min_feature_count,
-                                            min_feature_frequency)
+            table_n = table_n.filter(shared_all_samples)
+            tables[n] = rpca_table_processing(table_n,
+                                              min_sample_count,
+                                              min_feature_count,
+                                              min_feature_frequency)
         else:
             tables[n] = table_n.filter(shared_all_samples)
     shared_all_samples = set.intersection(*[set(table_n.ids())

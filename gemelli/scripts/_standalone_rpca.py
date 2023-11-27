@@ -10,7 +10,6 @@ from gemelli.utils import filter_ordination as _filter_ordination
 from gemelli.rpca import rpca as _rpca
 from gemelli.rpca import (feature_correlation_table as 
                           _feature_correlation_table)
-from gemelli.rpca import auto_rpca as _auto_rpca
 from gemelli.rpca import phylogenetic_rpca as _phylo_rpca
 from gemelli.rpca import joint_rpca as _joint_rpca
 from gemelli.rpca import transform as _transform
@@ -442,65 +441,3 @@ def feature_correlation_table(in_ordination: str,
     # write results
     out_ = os.path.join(output_dir, 'feature-correlation-table.tsv')
     corr_table.to_csv(out_, sep='\t')
-
-
-@cli.command(name='auto-rpca')
-@click.option('--in-biom',
-              help=DESC_COUNTS,
-              required=True)
-@click.option('--output-dir',
-              help='Location of output files.',
-              required=True)
-@click.option(
-    '--min-sample-count',
-    default=DEFAULT_MSC,
-    show_default=True,
-    help=DESC_MSC)
-@click.option(
-    '--min-feature-count',
-    default=DEFAULT_MFC,
-    show_default=True,
-    help=DESC_MFC)
-@click.option(
-    '--min-feature-frequency',
-    default=DEFAULT_MFF,
-    show_default=True,
-    help=DESC_MFF)
-@click.option(
-    '--max-iterations',
-    default=DEFAULT_OPTSPACE_ITERATIONS,
-    show_default=True,
-    help=DESC_ITERATIONS)
-def auto_rpca(in_biom: str,
-              output_dir: str,
-              min_sample_count: int,
-              min_feature_count: int,
-              min_feature_frequency: float,
-              max_iterations: int) -> None:
-    """Runs RPCA with an rclr preprocessing step and auto-estimates the
-       rank (i.e. n-components parameter)."""
-
-    # import table
-    table = load_table(in_biom)
-    # run the RPCA wrapper
-    ord_res, dist_res = _auto_rpca(table,
-                                   min_sample_count,
-                                   min_feature_count,
-                                   min_feature_frequency,
-                                   max_iterations)
-
-    # If it doesn't already exist, create the output directory.
-    # Note that there is technically a race condition here: it's ostensibly
-    # possible that some process could delete the output directory after we
-    # check that it exists here but before we write the output files to it.
-    # However, in this case, we'd just get an error from skbio.io.util.open()
-    # (which is called by skbio.OrdinationResults.write()), which makes sense.
-    os.makedirs(output_dir, exist_ok=True)
-
-    # write files to output directory
-    # Note that this will overwrite files in the output directory that share
-    # these filenames (analogous to QIIME 2's behavior if you specify the
-    # --o-biplot and --o-distance-matrix options, but differing from QIIME 2's
-    # behavior if you specify --output-dir instead).
-    ord_res.write(os.path.join(output_dir, 'ordination.txt'))
-    dist_res.write(os.path.join(output_dir, 'distance-matrix.tsv'))

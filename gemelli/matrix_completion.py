@@ -117,12 +117,8 @@ class MatrixCompletion(_BaseImpute):
             raise ValueError("max_iterations must be at least 1")
 
         # check the settings for n_components
-        if isinstance(self.n_components, str) and \
-           self.n_components.lower() == 'auto':
-            # estimate the rank of the matrix
-            self.n_components = 'auto'
         # check hardset values
-        elif isinstance(self.n_components, int):
+        if isinstance(self.n_components, int):
             if self.n_components > (min(n, m) - 1):
                 raise ValueError("n-components must be at most"
                                  " 1 minus the min. shape of the"
@@ -133,7 +129,7 @@ class MatrixCompletion(_BaseImpute):
         # otherwise rase an error.
         else:
             raise ValueError("n-components must be "
-                             "an interger or 'auto'")
+                             "an interger.")
 
         # return solved matrix
         self.U, self.s, self.V = OptSpace(n_components=self.n_components,

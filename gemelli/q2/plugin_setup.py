@@ -14,7 +14,7 @@ from gemelli.utils import (filter_ordination)
 from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
-from gemelli.rpca import (rpca, joint_rpca, auto_rpca,
+from gemelli.rpca import (rpca, joint_rpca,
                           feature_correlation_table,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
@@ -87,7 +87,7 @@ plugin.methods.register_function(
     output_descriptions={'rclr_table': QRCLR},
     name=('Robust centered log-ratio (rclr) transformation.'
           ' This is run automatically '
-          'within CTF/RPCA/Auto-RPCA so there no '
+          'within CTF/RPCA so there no '
           'need to run rclr before those functions.'),
     description=("A robust centered log-ratio transformation of only "
                  "the observed values (non-zero) of the input table."),
@@ -590,30 +590,6 @@ plugin.methods.register_function(
     description=("Performs phylogenetic robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD"),
-    citations=[citations['Martino2019']]
-)
-
-plugin.methods.register_function(
-    function=auto_rpca,
-    inputs={'table': FeatureTable[Frequency]},
-    parameters={'min_sample_count': Int,
-                'min_feature_count': Int,
-                'min_feature_frequency': Float,
-                'max_iterations': Int},
-    outputs=[('biplot', PCoAResults % Properties("biplot")),
-             ('distance_matrix', DistanceMatrix)],
-    input_descriptions={'table': DESC_BIN},
-    parameter_descriptions={'min_sample_count': DESC_MSC,
-                            'min_feature_count': DESC_MFC,
-                            'min_feature_frequency': DESC_MFF,
-                            'max_iterations': DESC_ITERATIONS},
-    output_descriptions={'biplot': QBIPLOT,
-                         'distance_matrix': QADIST},
-    name='(Robust Aitchison) RPCA with n_components automatically detected.',
-    description=("Performs robust center log-ratio transform "
-                 "robust PCA and ranks the features by the "
-                 "loadings of the resulting SVD. Automatically"
-                 " estimates the underlying rank (i.e. n-components)."),
     citations=[citations['Martino2019']]
 )
 
