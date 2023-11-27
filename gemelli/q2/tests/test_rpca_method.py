@@ -361,6 +361,91 @@ class Test_qiime2_rpca(unittest.TestCase):
         # np.testing.assert_array_almost_equal(q2distmatrix_values,
         #                                      exdistmatrix_values)
 
+    def test_qiime2_jointrpca_no_transform(self):
+        """Tests that the Q2 and standalone Joint-RPCA results match (no RCLR)."""
+
+        tstdir = "test_output"
+        # Run gemelli through QIIME 2 (specifically, the Artifact API)
+        res_tmp = q2gemelli.actions.joint_rpca([self.q2table, self.q2table_two],
+                                               sample_metadata=self.sample_metadata,
+                                               train_test_column='train_test',
+                                               rclr_transform_tables=False)
+        # Get the underlying data from these artifacts
+        # q2ordination = ordination_qza.view(OrdinationResults)
+        ordination_qza, distmatrix_qza, cv_qza = res_tmp
+        q2distmatrix = distmatrix_qza.view(DistanceMatrix)
+
+        # Next, run gemelli outside of QIIME 2. We're gonna check that
+        # everything matches up.
+        # ...First, though, we need to write the contents of self.q2table to a
+        # BIOM file, so gemelli can understand it.
+        self.q2table.export_data(get_data_path("", tstdir))
+        self.q2table_two.export_data(get_data_path("two", tstdir))
+        self.sample_metadata.save(get_data_path("", tstdir) + 'sample_metadata.tsv')
+        q2table_loc = get_data_path('feature-table.biom', tstdir)
+        q2table_loc_two = get_data_path('two/feature-table.biom', tstdir)
+        q2sm_loc = get_data_path('sample_metadata.tsv', tstdir)
+        # Derived from a line in test_standalone_rpca()
+        tstdir_absolute = os_path_sep.join(q2table_loc.split(os_path_sep)[:-1])
+
+        # Run gemelli outside of QIIME 2...
+        result = CliRunner().invoke(sdc.commands['joint-rpca'],
+                                    ['--in-biom', q2table_loc,
+                                     '--in-biom', q2table_loc_two,
+                                     '--sample-metadata-file', q2sm_loc,
+                                     '--train-test-column', 'train_test',
+                                     '--output-dir', tstdir_absolute,
+                                     '--rclr-transform-tables'])
+        # ...and read in the resulting output files. This code was derived from
+        # test_standalone_rpca() elsewhere in gemelli's codebase.
+        # stordination = OrdinationResults.read(get_data_path('ordination.txt',
+        #                                                    tstdir))
+        stdistmatrix_values = read_csv(
+            get_data_path(
+                'joint-distance-matrix.tsv',
+                tstdir),
+            sep='\t',
+            index_col=0)
+
+        # Convert the DistanceMatrix object a numpy array (which we can compare
+        # with the other _values numpy arrays we've created from the other
+        # distance matrices)
+        q2distmatrix_values = q2distmatrix.to_data_frame()
+        q2distmatrix_values = q2distmatrix_values.loc[stdistmatrix_values.index,
+                                                      stdistmatrix_values.columns]
+        stdistmatrix_values = stdistmatrix_values.values
+        q2distmatrix_values = q2distmatrix_values.values
+
+        # Finaly: actually check the consistency of Q2 and standalone results!
+        np.testing.assert_array_almost_equal(q2distmatrix_values,
+                                             stdistmatrix_values)
+        # check that exit code was 0 (indicating success)
+        try:
+            self.assertEqual(0, result.exit_code)
+        except AssertionError:
+            ex = result.exception
+            error = Exception('Command failed with non-zero exit code')
+            raise error.with_traceback(ex.__traceback__)
+
+        # NOTE: This functionality is currently not used due to the inherent
+        # randomness in how the test table data is generated (and also because
+        # we're already checking the correctness of the standalone gemelli
+        # RPCA script), but if desired you can add ground truth data to a data/
+        # folder in this directory (i.e. a distance-matrix.tsv and
+        # ordination.txt file), and the code below will compare the Q2 results
+        # to those files.
+        #
+        # Read in expected output from data/, similarly to above
+        # exordination = OrdinationResults.read(get_data_path(
+        #                                       'ordination.txt'))
+        # exdistmatrix_values = read_csv(get_data_path('distance-matrix.tsv'),
+        #                                sep='\t', index_col=0).values
+        #
+        # ... And check consistency of Q2 results with the expected results
+        # assert_gemelli_ordinationresults_equal(q2ordination, exordination)
+        # np.testing.assert_array_almost_equal(q2distmatrix_values,
+        #                                      exdistmatrix_values)
+
     def test_qiime2_transform_jointrpca(self):
         """Tests that the Q2 and standalone Joint-RPCA transformer results match."""
 

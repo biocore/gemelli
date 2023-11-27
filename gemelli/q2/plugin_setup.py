@@ -61,7 +61,7 @@ from gemelli._defaults import (DESC_COMP, DESC_ITERATIONSALS,
                                DESC_SVDC, DESC_SMTH, DESC_RES,
                                DESC_MXTR, DESC_EPS, DESC_IO,
                                DESC_SLO, DESC_TDIST, DESC_SVDO,
-                               DESC_PIO, DESC_PC)
+                               DESC_PIO, DESC_PC, DESC_TJNT)
 
 citations = qiime2.plugin.Citations.load(
     'citations.bib', package='gemelli')
@@ -485,6 +485,7 @@ plugin.methods.register_function(
                 'sample_metadata': Metadata,
                 'train_test_column': Str,
                 'n_components': Int,
+                'rclr_transform_tables': Bool,
                 'min_sample_count': Int,
                 'min_feature_count': Int,
                 'min_feature_frequency': Float,
@@ -497,6 +498,7 @@ plugin.methods.register_function(
                             'sample_metadata':DESC_METACV,
                             'train_test_column':DESC_COLCV,
                             'n_components': DESC_COMP,
+                            'rclr_transform_tables':DESC_TJNT,
                             'min_sample_count': DESC_MSC,
                             'min_feature_count': DESC_MFC,
                             'min_feature_frequency': DESC_MFF,

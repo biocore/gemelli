@@ -439,6 +439,25 @@ def matrix_rclr(mat, branch_lengths=None):
     return lmat
 
 
+def mask_value_only(mat):
+    """
+    Mask values as if
+    rclr has been run.
+    """
+    # ensure array is at least 2D
+    mat = np.atleast_2d(np.array(mat))
+    # ensure array not more than 2D
+    if mat.ndim > 2:
+        raise ValueError("Input matrix can only have two dimensions or less")
+    # generate a mask of missing values
+    mask = [True] * mat.shape[0] * mat.shape[1]
+    mask = np.array(mat).reshape(mat.shape)
+    mask[np.isfinite(mat)] = False
+    lmat = np.ma.array(mat, mask=mask)
+    lmat[~np.isfinite(mat)] = np.nan
+    return lmat
+
+
 def rclr_transformation(table: Table) -> Table:
     """
     Takes biom table and returns

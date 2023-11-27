@@ -20,7 +20,8 @@ from gemelli.preprocessing import (matrix_rclr,
                                    fast_unifrac,
                                    bp_read_phylogeny,
                                    retrieve_t2t_taxonomy,
-                                   create_taxonomy_metadata)
+                                   create_taxonomy_metadata,
+                                   mask_value_only)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
@@ -614,6 +615,7 @@ def joint_rpca(tables: biom.Table,
                sample_metadata: pd.DataFrame = DEFAULT_METACV,
                train_test_column: str = DEFAULT_COLCV,
                n_components: Union[int, str] = DEFAULT_COMP,
+               rclr_transform_tables: bool = DEFAULT_TRNSFRM,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
                min_feature_frequency: float = DEFAULT_MFF,
@@ -646,6 +648,11 @@ def joint_rpca(tables: biom.Table,
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
     output dimensions.
+
+    rclr_transform_tables: bool, optional: If False Joint-RPCA
+    will not use the RCLR transformation and will instead
+    assume that the data has already been transformed
+    or normalized. Default is True.
 
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
@@ -698,16 +705,20 @@ def joint_rpca(tables: biom.Table,
 
     # filter each table
     for n, table_n in enumerate(tables):
-        tables[n] = rpca_table_processing(table_n,
-                                          min_sample_count,
-                                          min_feature_count,
-                                          min_feature_frequency)
+        if rclr_transform_tables:
+            tables[n] = rpca_table_processing(table_n,
+                                            min_sample_count,
+                                            min_feature_count,
+                                            min_feature_frequency)
     # get set of shared samples
     shared_all_samples = set.intersection(*[set(table_n.ids())
                                             for table_n in tables])
     # check sample overlaps
     if len(shared_all_samples) == 0:
-        raise ValueError('No samples overlap between all tables.')
+        raise ValueError('No samples overlap between all tables. '
+                         'If using pre-transformed or normalized '
+                         'tables, make sure the rclr_transform_tables '
+                         'is set to False or the flag is enabled.')
     unshared_samples = set([s_n
                             for table_n in tables
                             for s_n in table_n.ids()]) - shared_all_samples
@@ -716,16 +727,24 @@ def joint_rpca(tables: biom.Table,
                       % (len(unshared_samples)), RuntimeWarning)
     # filter each table again to subset samples.
     for n, table_n in enumerate(tables):
-        tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
-                                          min_sample_count,
-                                          min_feature_count,
-                                          min_feature_frequency)
+        if rclr_transform_tables:
+            tables[n] = rpca_table_processing(table_n.filter(shared_all_samples),
+                                            min_sample_count,
+                                            min_feature_count,
+                                            min_feature_frequency)
+        else:
+            tables[n] = table_n.filter(shared_all_samples)
     shared_all_samples = set.intersection(*[set(table_n.ids())
                                             for table_n in tables])
     # rclr each table
     rclr_tables = []
     for table_n in tables:
-        rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+        # perform RCLR
+        if rclr_transform_tables:
+            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+        # otherwise just mask zeros
+        else:
+            rclr_tmp = mask_value_only(table_n.matrix_data.toarray().T).T
         rclr_tables.append(pd.DataFrame(rclr_tmp,
                                         table_n.ids('observation'),
                                         table_n.ids()))

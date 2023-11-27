@@ -1,9 +1,9 @@
 
 # Gemelli
 
-Gemelli is a tool box for running Robust Aitchison PCA (RPCA), Joint Robust Aitchison PCA (Joint-RPCA), and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
+Gemelli is a tool box for running Robust Aitchison PCA (RPCA), Joint Robust Aitchison PCA (Joint-RPCA), TEMPoral TEnsor Decomposition (TEMPTED), and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
 
-RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). Joint-RPCA allows for the exploration of multiple omics datasets with shared samples at once. All these methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them.
+RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). TEMPTED is specifically designed for longitundal (time series) repeated measure studies, especially when samples are irregularly sampled across subjects. Joint-RPCA allows for the exploration of multiple omics datasets with shared samples at once. All these methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them.
 
 The preprocessing transform for both RPCA and CTF is the robust centered log-ratio transform (rlcr) which accounts for sparse data (i.e. many missing/zero values). Details on the rclr can be found [here](https://msystems.asm.org/content/4/1/e00016-19) and a interactive introduction into the transformation can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/introduction.ipynb). In short, the rclr log transforms the observed (nonzero) values before centering. RPCA and CTF then perform a matrix or tensor factorization on only the observed values after rclr transformation, similar to [Aitchison PCA](https://academic.oup.com/biomet/article-abstract/70/1/57/240898?redirectedFrom=fulltext) performed on dense data. If the data also has an associated phylogeny it can be incorporated through the phylogenetic rclr, details can be found [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-RPCA-moving-pictures.ipynb).
 
@@ -45,7 +45,7 @@ Joint-RPCA allows for the exploration of those feature that seperate jointly acr
 
 ### Tutorials
 
-If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. In some cases, this can require binning time my larger windows (e.g. instead of days use months). For examples of using CTF we provide a microbiome time series IBD study in the tutorials below.
+If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. If that is not the case and your study has irregular time sampling, then TEMPTED should be used. For examples, explore the tutorials below.
 
 #### Tutorials with QIIME2
 
@@ -54,9 +54,18 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 * [Phylogenetic CTF QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-CLI.ipynb)
 * [Phylogenetic CTF QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-API.ipynb)
 
+* [TEMPTED QIIME2 CLI](TODO)
+* [TEMPTED QIIME2 API](TODO)
+
+
 #### Standalone tutorial outside of QIIME2
 
 * [CTF Standalone Python API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
+* [TEMPTED Standalone Python API](TODO)
+
+#### TEMPTED (R implementation) 
+
+* [Intallation and tutorials](https://github.com/pixushi/tempted)
 
 # Citations
 
@@ -124,6 +133,26 @@ Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Pert
   publisher = {American Society for Microbiology Journals},
   URL = {http://dx.doi.org/10.1128/msystems.00050-22},
   journal = {mSystems},
+}
+```
+
+## Citation for TEMPTED
+
+```
+Shi, p. et al. Time-Informed Dimensionality Reduction for Longitudinal Microbiome Studies. bioRxiv, (2023)
+```
+
+```
+@ARTICLE{Shi2023,
+  author = {Shi, Pixu and Martino, Cameron and Han, Rungang and Janssen,
+            Stefan and Buck, Gregory and Serrano, Myrna and Owzar, Kouros and
+            Knight, Rob and Shenhav, Liat and Zhang, Anru R},
+  title = {{Time-Informed} Dimensionality Reduction for Longitudinal
+           Microbiome Studies},
+  year =  {2023},
+  doi = {10.1101/2023.07.26.550749},
+  URL = {https://www.biorxiv.org/content/10.1101/2023.07.26.550749v1},
+  journal = {bioRxiv},
 }
 ```
 

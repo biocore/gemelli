@@ -183,3 +183,10 @@ DESC_TDIST = "Subject by subject distance matrix (not samples)."
 DESC_PC = ("The pseudocount to add to the table before applying the "
            "transformation. Default is zero which will add the"
            " minimum non-zero value to all the values.")
+DESC_TJNT = ("If flagged Joint-RPCA will not use the RCLR "
+             "transformation and will instead assume that "
+             "the data has already been transformed or "
+             "normalized. Disabling the RCLR step will also "
+             "disable any filtering steps. It will be expected "
+             "that all filtering was done previously."
+             "Default is to use RCLR.")
