@@ -9,8 +9,11 @@ from biom import Table, load_table
 from skbio.util import get_data_path
 from os.path import sep as os_path_sep
 from gemelli.rpca import rpca
+from skbio.stats.distance import mantel as skmantel
 from gemelli.scripts.__init__ import cli as sdc
-from gemelli.simulations import build_block_model
+from gemelli.simulations import (build_block_model,
+                                 block_diagonal_gaus,
+                                 Subsample)
 from qiime2.plugins import gemelli as q2gemelli
 from skbio import OrdinationResults, TreeNode
 from skbio.stats.distance import DistanceMatrix
@@ -34,6 +37,80 @@ def create_test_table(feature_prefix=''):
     samp_ids = ['L%d' % i for i in range(test_table.shape[1])]
 
     return Table(test_table, feat_ids, samp_ids)
+
+
+@nottest
+def create_pos_cntrl_test_table(feature_prefix='',
+                                n_samp = 100,
+                                n_clust = 10,
+                                n_feat = 1000,
+                                seq_base = 1000,
+                                multiple = 1,
+                                multiple_inc = 5):
+    """
+    Build table where the sample clusters
+    correlate perfectly with the seq. depth.
+    """
+    table_base = Subsample(block_diagonal_gaus(n_samp, n_feat, n_clust),
+                        seq_base, n_samp)
+    # inflate seq. depth in perfect relation to clusters
+    multiple = 1
+    add_ = n_samp // n_clust
+    add_f = n_feat // n_clust
+    i_ = 0
+    j_ = 0
+    table_pos_cntrl = table_base.copy()
+    while i_ < n_samp:
+        j_end = j_ + add_f
+        i_end = i_ + add_
+        table_pos_cntrl[j_:j_end,
+                        i_:i_end] = (multiple
+                                     * table_pos_cntrl[j_:j_end,
+                                                       i_:i_end])
+        i_ = i_end
+        j_ = j_end
+        multiple += multiple_inc
+    feat_ids = [ '%sF%d' % (feature_prefix, i)
+                for i in range(table_pos_cntrl.shape[0])]
+    samp_ids = ['L%d' % i for i in range(table_pos_cntrl.shape[1])]
+    bt_pos_cntrl = Table(table_pos_cntrl, feat_ids, samp_ids)
+    bt_neg_cntrl = Table(table_base, feat_ids, samp_ids)
+
+    return bt_neg_cntrl, bt_pos_cntrl
+
+
+class Testqc(unittest.TestCase):
+
+    def setUp(self):
+        btneg, btpos = create_pos_cntrl_test_table()
+        self.btneg = Artifact.import_data("FeatureTable[Frequency]",
+                                          btneg)
+        self.btpos = Artifact.import_data("FeatureTable[Frequency]",
+                                          btpos)
+
+    def test_qc_neg(self):
+        """Tests the validity of qc_distance() on neg. control."""
+        (ord_test_neg,
+         dist_test_neg) = q2gemelli.actions.rpca(table=self.btneg)
+        qc_neg = q2gemelli.actions.qc_distances(dist_test_neg,
+                                                self.btneg)
+        # test negative control
+        dm1 = qc_neg.distance_matrix.view(DistanceMatrix)
+        dm2 = qc_neg.sample_sum_distance_matrix.view(DistanceMatrix)
+        _, p_, _ = skmantel(dm1, dm2)
+        self.assertFalse(p_ < 0.05)
+
+    def test_qc_pos(self):
+        """Tests the validity of qc_distance() on pos. control."""
+        (ord_test_pos,
+         dist_test_pos) = q2gemelli.actions.rpca(table=self.btpos)
+        qc_pos = q2gemelli.actions.qc_distances(dist_test_pos,
+                                                self.btpos)
+        # test pos control
+        dm1 = qc_pos.distance_matrix.view(DistanceMatrix)
+        dm2 = qc_pos.sample_sum_distance_matrix.view(DistanceMatrix)
+        _, p_, _ = skmantel(dm1, dm2)
+        self.assertTrue(p_ < 0.05)
 
 
 class Testrpca(unittest.TestCase):

@@ -7,8 +7,48 @@
 # ----------------------------------------------------------------------------
 
 import biom
-from skbio import OrdinationResults
+import warnings
+import numpy as np
+import pandas as pd
+from skbio import OrdinationResults, DistanceMatrix
 from gemelli._defaults import DEFAULT_MATCH
+
+
+def qc_distances(distances: DistanceMatrix,
+                 table: biom.Table) -> (
+                 DistanceMatrix, DistanceMatrix):
+    dist_ = distances.to_data_frame()
+    # get shared samples
+    shared_samples = set(dist_.index) & set(table.ids())
+    if len(shared_samples) == 0:
+        raise ValueError('No samples overlap between the distances '
+                         'and the input table.')
+    if len(shared_samples) < len(table.ids()):
+        warnings.warn("Less shared samples than samples "
+                      "in the table. Could lead to misleading "
+                      "results. RPCA distances should be "
+                      "rerun with shared sample subset.")
+    if len(shared_samples) < len(dist_.index):
+        warnings.warn("Less shared samples than samples "
+                      "in distances. Could lead to misleading "
+                      "results. RPCA distances should be "
+                      "rerun with shared sample subset.")
+    # match distance
+    dist_ = dist_.reindex(shared_samples, axis=1)
+    dist_ = dist_.reindex(shared_samples, axis=0)
+    dist_ = DistanceMatrix(dist_.values,
+                           ids=dist_.index)
+    # make the seq. depth diff distance
+    samp_sums = pd.Series(table.sum('sample'),
+                          table.ids('sample'))
+    samp_sum_dist = np.zeros(dist_.shape)
+    for i, id_i in enumerate(dist_.ids):
+        for j, id_j in enumerate(dist_.ids):
+            samp_sum_dist[i][j] = abs(samp_sums[id_i]
+                                      - samp_sums[id_j])
+    samp_sum_dist = DistanceMatrix(samp_sum_dist,
+                                   ids=dist_.ids)
+    return dist_, samp_sum_dist
 
 
 def filter_ordination(ordination: OrdinationResults,
