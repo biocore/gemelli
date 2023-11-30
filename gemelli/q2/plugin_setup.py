@@ -11,7 +11,7 @@ import qiime2.sdk
 import importlib
 from gemelli import __version__
 from gemelli.utils import (filter_ordination)
-from gemelli.q2._visualizer import qc_distances
+from gemelli.q2._visualizer import qc_rarefaction
 from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
@@ -617,40 +617,30 @@ plugin.methods.register_function(
     citations=[citations['Martino2019']]
 )
 
-plugin.pipelines.register_function(
-    function=qc_distances,
-    inputs={'distance': DistanceMatrix,
-            'table': FeatureTable[Frequency]},
-    parameters={'method': Str % Choices(['spearman', 'pearson']),
-                'permutations': Int % Range(0, None),},
-    outputs=[('distance_matrix', DistanceMatrix),
-             ('sample_sum_distance_matrix', DistanceMatrix),
-             ('mantel_scatter_visualization', Visualization)],
+plugin.visualizers.register_function(
+    function=qc_rarefaction,
+    inputs={'table': FeatureTable[Frequency],
+            'rarefied_distance': DistanceMatrix,
+            'unrarefied_distance': DistanceMatrix},
+    parameters={'permutations': Int % Range(0, None)},
     input_descriptions={
-        'distance': 'Distance matrix or Beta-Diversity.',
-        'table': 'Table used to generate the distance matrix.'
+        'table': 'Unrarefied table used to generate the distance matrix.',
+        'rarefied_distance': 'Distance matrix produced from rarefied table.',
+        'unrarefied_distance': 'Distance matrix produced from rarefied table '
+                               'with the same IDs as the unrarefied table.'
     },
     parameter_descriptions={
-        'method': 'The correlation test to be applied in the Mantel test.',
         'permutations': 'The number of permutations to be run when computing '
                         'p-values. Supplying a value of zero will disable '
                         'permutation testing and p-values will not be '
                         'calculated (this results in *much* quicker execution '
                         'time if p-values are not desired).',
     },
-    output_descriptions={
-        'distance_matrix': 'The Distance Matrix with the IDs matched '
-                           'to the table and used in the mantel '
-                           'test',
-        'sample_sum_distance_matrix': 'The symetric matrix of the absolute '
-                                      'differences in sample sums '
-                                      'and used in the mantel test',
-        'mantel_scatter_visualization': 'Scatter plot rendering of the mantel'
-                                        'test results'
-    },
-    name='QC distance and abs. sample sum difference correlation.',
+    name='QC distance and abs. sample sum difference correlation '
+         'with and without rarefaction.',
     description=('Determine whether the sample distances are '
-                 'correlated with the sample sum differences.'),
+                 'correlated with the sample sum differences. '
+                 'With and without rarefaction before using RPCA.'),
     citations=[],
 )
 

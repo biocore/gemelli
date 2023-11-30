@@ -19,6 +19,8 @@ from skbio import OrdinationResults, TreeNode
 from skbio.stats.distance import DistanceMatrix
 from numpy.testing import assert_array_almost_equal
 from gemelli.testing import assert_ordinationresults_equal
+from gemelli.utils import qc_rarefaction
+from qiime2.plugins.feature_table.methods import rarefy
 
 
 @nottest
@@ -89,27 +91,41 @@ class Testqc(unittest.TestCase):
                                           btpos)
 
     def test_qc_neg(self):
-        """Tests the validity of qc_distance() on neg. control."""
-        (ord_test_neg,
-         dist_test_neg) = q2gemelli.actions.rpca(table=self.btneg)
-        qc_neg = q2gemelli.actions.qc_distances(dist_test_neg,
-                                                self.btneg)
-        # test negative control
-        dm1 = qc_neg.distance_matrix.view(DistanceMatrix)
-        dm2 = qc_neg.sample_sum_distance_matrix.view(DistanceMatrix)
-        _, p_, _ = skmantel(dm1, dm2)
+        """Tests the validity of qc_rarefaction() on neg. control."""
+        rare_depth = 500
+        table = self.btneg
+        _, rarefied_distance = q2gemelli.actions.rpca(table,
+                                                      min_sample_count=rare_depth)
+        _, unrarefied_distance = q2gemelli.actions.rpca(rarefy(table, 
+                                                               rare_depth).rarefied_table)
+        table = table.view(Table).filter(rarefied_distance.view(DistanceMatrix).ids)
+        table = Artifact.import_data('FeatureTable[Frequency]', table)
+        # just test thta it runs, maybe add more tests later
+        q2gemelli.actions.qc_rarefaction(table, rarefied_distance,
+                                         unrarefied_distance).visualization
+        # test fucntion itself
+        _, p_ = qc_rarefaction(table.view(Table),
+                               rarefied_distance.view(DistanceMatrix),
+                               unrarefied_distance.view(DistanceMatrix))
         self.assertFalse(p_ < 0.05)
 
     def test_qc_pos(self):
-        """Tests the validity of qc_distance() on pos. control."""
-        (ord_test_pos,
-         dist_test_pos) = q2gemelli.actions.rpca(table=self.btpos)
-        qc_pos = q2gemelli.actions.qc_distances(dist_test_pos,
-                                                self.btpos)
-        # test pos control
-        dm1 = qc_pos.distance_matrix.view(DistanceMatrix)
-        dm2 = qc_pos.sample_sum_distance_matrix.view(DistanceMatrix)
-        _, p_, _ = skmantel(dm1, dm2)
+        """Tests the validity of qc_rarefaction() on pos. control."""
+        rare_depth = 500
+        table = self.btpos
+        _, rarefied_distance = q2gemelli.actions.rpca(table,
+                                                      min_sample_count=rare_depth)
+        _, unrarefied_distance = q2gemelli.actions.rpca(rarefy(table,
+                                                               rare_depth).rarefied_table)
+        table = table.view(Table).filter(rarefied_distance.view(DistanceMatrix).ids)
+        table = Artifact.import_data('FeatureTable[Frequency]', table)
+        # just test thta it runs, maybe add more tests later
+        q2gemelli.actions.qc_rarefaction(table, rarefied_distance,
+                                         unrarefied_distance).visualization
+        # test fucntion itself
+        _, p_ = qc_rarefaction(table.view(Table),
+                               rarefied_distance.view(DistanceMatrix),
+                               unrarefied_distance.view(DistanceMatrix))
         self.assertTrue(p_ < 0.05)
 
 
