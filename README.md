@@ -53,21 +53,15 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 * [CTF QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-QIIME2-API.ipynb)
 * [Phylogenetic CTF QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-CLI.ipynb)
 * [Phylogenetic CTF QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Phylogenetic-IBD-Tutorial-QIIME2-API.ipynb)
-
-* [TEMPTED QIIME2 CLI](TODO)
-* [TEMPTED QIIME2 API](TODO)
-
+* [TEMPTED QIIME2 CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/TEMPTED-QIIME2-CLI.ipynb)
+* [TEMPTED QIIME2 API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/TEMPTED-QIIME2-API.ipynb)
 
 #### Standalone tutorial outside of QIIME2
 
 * [CTF Standalone Python API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
-* [TEMPTED Standalone Python API](TODO)
+* [TEMPTED R implementation - Intallation and tutorials](https://github.com/pixushi/tempted)
 
-#### TEMPTED (R implementation) 
-
-* [Intallation and tutorials](https://github.com/pixushi/tempted)
-
-# Performing parameter optimization and QC on results
+## Performing parameter optimization and QC on results
 
 #### Cross-Validation
 

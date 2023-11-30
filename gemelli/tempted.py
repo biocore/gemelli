@@ -1281,10 +1281,7 @@ def tempted_transform_helper(tables_test,
     # ensure feature IDs match
     test_features_order = list(list(tables_test.values())[0].index)
     shared_features = set(test_features_order) & set(fl_train.index)
-    if len(shared_features) < len(set(fl_train.index)):
-        raise ValueError('The input tables do not contain all'
-                         ' the features in the ordination.')
-    elif subset_tables:
+    if subset_tables:
         unshared_N = len(set(test_features_order)) - len(shared_features)
         if unshared_N != 0:
             warnings.warn('Removing %i features(s) in table(s)'
@@ -1293,10 +1290,11 @@ def tempted_transform_helper(tables_test,
         tables_test = {id_: m.reindex(fl_train.index)
                        for id_, m in tables_test.items()}
     else:
-        raise ValueError('Features in the input table(s) not in'
-                         ' the features in the ordination.'
-                         ' Either set subset_tables to True or'
-                         ' match the tables to the ordination.')
+        if len(shared_features) < len(set(fl_train.index)):
+            raise ValueError('Features in the input table(s) not in'
+                            ' the features in the ordination.'
+                            ' Either set subset_tables to True or'
+                            ' match the tables to the ordination.')
     # convert back to the array representation
     time_train = time_train.values.flatten()
     n_components = len(fl_train.columns)
