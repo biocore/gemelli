@@ -400,7 +400,8 @@ def rpca_with_cv(table: biom.Table,
                  min_feature_count: int = DEFAULT_MFC,
                  min_feature_frequency: float = DEFAULT_MFF) -> (
                  OrdinationResults,
-                 DistanceMatrix):
+                 DistanceMatrix,
+                 pd.DataFrame):
     """
     RPCA but with CV used in Joint-RPCA.
 

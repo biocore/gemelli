@@ -16,6 +16,7 @@ from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
 from gemelli.rpca import (rpca, joint_rpca,
+                          rpca_with_cv,
                           feature_correlation_table,
                           phylogenetic_rpca_with_taxonomy,
                           phylogenetic_rpca_without_taxonomy,
@@ -474,6 +475,40 @@ plugin.methods.register_function(
     output_descriptions={'biplot': QBIPLOT,
                          'distance_matrix': QADIST},
     name='(Robust Aitchison) RPCA with manually chosen n_components.',
+    description=("Performs robust center log-ratio transform "
+                 "robust PCA and ranks the features by the "
+                 "loadings of the resulting SVD."),
+    citations=[citations['Martino2019']]
+)
+
+plugin.methods.register_function(
+    function=rpca_with_cv,
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'n_test_samples': Int,
+                'sample_metadata': Metadata,
+                'train_test_column': Str,
+                'n_components': Int,
+                'min_sample_count': Int,
+                'min_feature_count': Int,
+                'min_feature_frequency': Float,
+                'max_iterations': Int},
+    outputs=[('biplot', PCoAResults % Properties("biplot")),
+             ('distance_matrix', DistanceMatrix),
+             ('cross_validation_error', SampleData[CrossValidationResults])],
+    input_descriptions={'table': DESC_BIN},
+    parameter_descriptions={'n_test_samples':DESC_TESTS,
+                            'sample_metadata':DESC_METACV,
+                            'train_test_column':DESC_COLCV,
+                            'n_components': DESC_COMP,
+                            'min_sample_count': DESC_MSC,
+                            'min_feature_count': DESC_MFC,
+                            'min_feature_frequency': DESC_MFF,
+                            'max_iterations': DESC_ITERATIONS},
+    output_descriptions={'biplot': QBIPLOT,
+                         'distance_matrix': QADIST,
+                         'cross_validation_error': QACV},
+    name='(Robust Aitchison) RPCA with manually chosen n_components.'
+         ' with cross-validation output.',
     description=("Performs robust center log-ratio transform "
                  "robust PCA and ranks the features by the "
                  "loadings of the resulting SVD."),
