@@ -22,7 +22,7 @@ Gemelli can be run standalone or through [QIIME2](https://qiime2.org/) and as a 
 
 ## Cross-sectional / multi-omics study (i.e. one sample per subject) with RPCA
 
-If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross-sectional_study) with only one sample per subject then RPCA is the appropriate method to use in gemelli.  There are two commands within RPCA. The first is `rpca` and the second is `auto-rpca`. The only difference is that `auto-rpca` automatically estimates the underlying-rank of the matrix and requires no input for the `n_components` parameter. In the `rpca` command the `n_components` must be set explicitly. For examples of using RPCA we provide tutorials below exploring the microbiome between body sites.
+If you have a [cross-sectional study design](https://en.wikipedia.org/wiki/Cross-sectional_study) with only one sample per subject then RPCA is the appropriate method to use in gemelli. For examples of using RPCA we provide tutorials below exploring the microbiome between body sites.
 
 Joint-RPCA allows for the exploration of those feature that seperate jointly across sample groupings and the potential interactions of those features.  
 
@@ -41,11 +41,11 @@ Joint-RPCA allows for the exploration of those feature that seperate jointly acr
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
 * [Joint-RPCA API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI-API.ipynb)
 
-## Repeated measures study (i.e. multiple sample per subject) with CTF
+## Repeated measures study (i.e. multiple sample per subject) with CTF & TEMPTED
 
 ### Tutorials
 
-If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. If that is not the case and your study has irregular time sampling, then TEMPTED should be used. For examples, explore the tutorials below.
+If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Repeated_measures_design) with multiple samples per subject over time or space then CTF is the appropriate method to use in gemelli. For optimal results CTF requires samples for each subject in each time or space measurement. If that is not the case and your study has irregular time sampling, then TEMPTED should be used. TEMPTED also allows for the projection of new data into an existing factorization which is necessary for machine learning. For examples, explore the tutorials below.
 
 #### Tutorials with QIIME2
 
