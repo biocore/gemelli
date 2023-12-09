@@ -63,13 +63,15 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 
 ## Performing parameter optimization and QC on results
 
+For an introduction to these QC methods see the tutorial [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-CV-QC-introduction.ipynb).
+
 #### Cross-Validation
 
 Choosing the number of components and iterations can be optimized for RPCA and Joint-RPCA by ensuring the cross-validation (CV) error is minimized. Joint-RPCA returns the CV error by default but RPCA can also generate a CV with the rpca-with-cv commands, which behave similarly to Joint-RPCA. There is also a lot of great literature on choosing the right number of components out there (e.g., [here](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006907)).
 
 #### QC on large differences in sequencing depth/sample sums (e.g., low-biomass data)
 
-The tools built here operate on compositional transforms which generally do not require rarefaction. However, there are cases where the impact of sequencing depth / total sample sum differences could overwhelm these methods or those differences could correlate well with your sample groupings of interest. To test this, generate a distance matrix using rarefied data at the same level as the `min-sample-count` used without rarefaction. Then input the unrarefied table, rarefied distances and unrarefied distances into the qc-rarefaction command. You will want to see a p-value greater than alpha (usually 0.05) in the Steiger test to continue without rarefaction. All the tools here can be run normally if the data input has been rarefied first. Examples are provided in the RPCA tutorials [here (RPCA QIIME2 CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb) & [here (RPCA Python API & CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb) but the test can be applied to any of the methods in Gemelli. 
+The tools built here operate on compositional transforms which generally do not require rarefaction. However, there are cases where the impact of sequencing depth / total sample sum differences could overwhelm these methods or those differences could correlate well with your sample groupings of interest (see point 9 [here](https://journals.asm.org/doi/epdf/10.1128/msphere.00355-23)). To test this, generate a distance matrix using after rarefying the data at the same level as the `min-sample-count` used without rarefying. Then input the raw count (unrare) table, associated distances and rarefy distances into the qc-rarefaction command. You will want to see a p-value greater than alpha (usually 0.05) in the Steiger test to continue without rarefying. All the tools here can be run normally if the data input has been rarefied first. Examples are also provided in the RPCA tutorials [here (RPCA QIIME2 CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb) & [here (RPCA Python API & CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb) but the test can be applied to any of the methods in Gemelli. 
 
 # Citations
 
