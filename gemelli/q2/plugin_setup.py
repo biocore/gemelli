@@ -11,7 +11,7 @@ import qiime2.sdk
 import importlib
 from gemelli import __version__
 from gemelli.utils import (filter_ordination)
-from gemelli.q2._visualizer import qc_rarefaction
+from gemelli.q2._visualizer import qc_rarefy
 from gemelli.ctf import (ctf, phylogenetic_ctf,
                          phylogenetic_ctf_without_taxonomy,
                          phylogenetic_ctf_with_taxonomy)
@@ -653,7 +653,7 @@ plugin.methods.register_function(
 )
 
 plugin.visualizers.register_function(
-    function=qc_rarefaction,
+    function=qc_rarefy,
     inputs={'table': FeatureTable[Frequency],
             'rarefied_distance': DistanceMatrix,
             'unrarefied_distance': DistanceMatrix},

@@ -20,7 +20,8 @@ def qc_rarefaction(table,
                    rarefied_distance,
                    unrarefied_distance,
                    mantel_permutations=1000,
-                   return_mantel=False):
+                   return_mantel=False,
+                   samp_sum_dist=False):
     """
     Tests if the mantel correlations between
     distances produced from rarefied or from
@@ -77,7 +78,7 @@ def qc_rarefaction(table,
     """
     # the current method requires two-tail and pearson
     # future improvements might be made to allow for more options
-    method = 'pearson'
+    method = 'spearman'
     two_tailed = True
     # Find the symmetric difference between ID sets.
     ids1 = set(unrarefied_distance.ids)
@@ -96,8 +97,12 @@ def qc_rarefaction(table,
             'running this command.\n\n%s'
             % ', '.join(sorted(mismatched_ids)))
     # get the sample sum dist
-    (_, samp_sum_dist) = qc_distances(unrarefied_distance,
-                                      table)
+    if not samp_sum_dist:
+        (_, samp_sum_dist) = qc_distances(unrarefied_distance,
+                                          table)
+    # make sure they are matched
+    samp_sum_dist = samp_sum_dist.filter(unrarefied_distance.ids)
+    rarefied_distance = rarefied_distance.filter(unrarefied_distance.ids)
     # test if corr(x, y) is diff. than corr(x, z)
     # x = samp_sum_dist
     # y = rarefied_distance
@@ -128,7 +133,7 @@ def qc_rarefaction(table,
     if not return_mantel:
         return t_, p_
     else:
-        return t_, p_, xy, p_xy, xz, pxz_, samp_sum_dist
+        return t_, p_, xy, p_xy, xz, pxz_, yz, samp_sum_dist
 
 
 def qc_distances(distances: DistanceMatrix,

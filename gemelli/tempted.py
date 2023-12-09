@@ -1292,9 +1292,9 @@ def tempted_transform_helper(tables_test,
     else:
         if len(shared_features) < len(set(fl_train.index)):
             raise ValueError('Features in the input table(s) not in'
-                            ' the features in the ordination.'
-                            ' Either set subset_tables to True or'
-                            ' match the tables to the ordination.')
+                             ' the features in the ordination.'
+                             ' Either set subset_tables to True or'
+                             ' match the tables to the ordination.')
     # convert back to the array representation
     time_train = time_train.values.flatten()
     n_components = len(fl_train.columns)

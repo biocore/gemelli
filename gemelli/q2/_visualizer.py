@@ -17,11 +17,11 @@ import matplotlib.pyplot as plt
 TEMPLATES = pkg_resources.resource_filename('gemelli', 'q2')
 
 
-def qc_rarefaction(output_dir: str,
-                   table: biom.Table,
-                   rarefied_distance: DistanceMatrix,
-                   unrarefied_distance: DistanceMatrix,
-                   permutations: int = 999) -> None:
+def qc_rarefy(output_dir: str,
+              table: biom.Table,
+              rarefied_distance: DistanceMatrix,
+              unrarefied_distance: DistanceMatrix,
+              permutations: int = 999) -> None:
     """
     Much of this code copies the method used in:
     qiime2/q2-diversity/q2_diversity/_beta/_visualizer.py
@@ -33,7 +33,7 @@ def qc_rarefaction(output_dir: str,
     # run mantel test and get stats on comparison
     (t_, p_, 
      xy, p_xy, 
-     xz, pxz_,
+     xz, pxz_, yz,
      samp_sum_dist) = _qc_rarefaction(table,
                                       rarefied_distance, 
                                       unrarefied_distance,

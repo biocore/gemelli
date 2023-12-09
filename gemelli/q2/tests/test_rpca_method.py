@@ -101,8 +101,8 @@ class Testqc(unittest.TestCase):
         table = table.view(Table).filter(rarefied_distance.view(DistanceMatrix).ids)
         table = Artifact.import_data('FeatureTable[Frequency]', table)
         # just test thta it runs, maybe add more tests later
-        q2gemelli.actions.qc_rarefaction(table, rarefied_distance,
-                                         unrarefied_distance).visualization
+        q2gemelli.actions.qc_rarefy(table, rarefied_distance,
+                                    unrarefied_distance).visualization
         # test fucntion itself
         _, p_ = qc_rarefaction(table.view(Table),
                                rarefied_distance.view(DistanceMatrix),
@@ -120,8 +120,8 @@ class Testqc(unittest.TestCase):
         table = table.view(Table).filter(rarefied_distance.view(DistanceMatrix).ids)
         table = Artifact.import_data('FeatureTable[Frequency]', table)
         # just test thta it runs, maybe add more tests later
-        q2gemelli.actions.qc_rarefaction(table, rarefied_distance,
-                                         unrarefied_distance).visualization
+        q2gemelli.actions.qc_rarefy(table, rarefied_distance,
+                                    unrarefied_distance).visualization
         # test fucntion itself
         _, p_ = qc_rarefaction(table.view(Table),
                                rarefied_distance.view(DistanceMatrix),
