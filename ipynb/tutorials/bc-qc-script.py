@@ -34,9 +34,8 @@ n_iter_subsample = 100
 # It also helps make the run time reasonable since
 # we are doing 100 subsamples.
 min_feature_count = 2
-min_feature_frequency = 10
-# close to the 1/3 quantile for all samples
-min_sample_count = 18000
+min_feature_frequency = 25
+min_sample_count = 10000
 # import data (all Qiita fecal)
 bulk_studies_mf = pd.read_csv('bulk-qiita-feces.txt', sep='\t', index_col=0)
 bulk_studies_mf['qiita_study_id'] =  [int(x.split('.')[0]) for x in bulk_studies_mf.index]
@@ -51,11 +50,12 @@ bulk_studies_mf = bulk_studies_mf[~bulk_studies_mf.host_subject_id.isin(bulk_stu
 # should go back at some point and check with CTF/TEMPTED but
 # that will require a study by study analysis since we need
 # to understand how the samples distribute across repeated measures.
-drop_ = [2538, 11052, 11358, 11710, 2202, 1240, 11405, 10184, 10533, 
-         894,  1288, 10793, 1622, 10180, 11937, 723, 2192, 10394, 1642,
-         12496, 10156, 2382, 940, 1998, 678, 1288, 990, 10894, 11757, 945, 864,
-         10171, 2318, 1191, 1718, 10317, 1634, 11884, 11882, 2086,
-         755, 13512, 11166, 1579, 11874]
+drop_ = [1288, 11405, 10894, 1038, 2192, 2318, 11666, 10394, 2202, 11166, 
+         11937, 10533, 678, 1191, 2086, 10793, 1579, 11052, 10156, 940,
+         10925, 945, 1718, 10171, 11710, 10689, 10180, 10184, 13512, 10317, 
+         2382, 1998, 12496, 723, 1622, 11479, 1240, 
+         11358, 990, 864, 1634, 11874, 2538, 1642, 11884, 
+         11757, 11882, 755, 894]
 # ^ there are a lot more than I realized
 bulk_studies_mf = bulk_studies_mf[~bulk_studies_mf.qiita_study_id.isin(drop_)]
 # for each study run RPCA test 
