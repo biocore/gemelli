@@ -151,8 +151,8 @@ def standalone_phylogenetic_rpca(in_biom: str,
               default=DEFAULT_COMP,
               show_default=True,
               help=DESC_COMP)
-@click.option('--rclr-transform-tables',
-              default=DEFAULT_TRNSFRM,
+@click.option('--no-rclr-transform-tables',
+              default=False,
               show_default=True,
               is_flag=True,
               help=DESC_TJNT)
@@ -178,7 +178,7 @@ def standalone_joint_rpca(in_biom: list,
                           sample_metadata_file: str,
                           train_test_column: str,
                           n_components: int,
-                          rclr_transform_tables: bool,
+                          no_rclr_transform_tables: bool,
                           min_sample_count: int,
                           min_feature_count: int,
                           min_feature_frequency: float,
@@ -198,6 +198,7 @@ def standalone_joint_rpca(in_biom: list,
     else:
         sample_metadata = None
     # run the RPCA wrapper
+    rclr_transform_tables = not no_rclr_transform_tables
     res_tmp = _joint_rpca(tables,
                           n_test_samples=n_test_samples,
                           sample_metadata=sample_metadata,

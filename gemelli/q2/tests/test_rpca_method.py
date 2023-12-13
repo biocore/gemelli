@@ -9,7 +9,6 @@ from biom import Table, load_table
 from skbio.util import get_data_path
 from os.path import sep as os_path_sep
 from gemelli.rpca import rpca
-from skbio.stats.distance import mantel as skmantel
 from gemelli.scripts.__init__ import cli as sdc
 from gemelli.simulations import (build_block_model,
                                  block_diagonal_gaus,
@@ -425,7 +424,7 @@ class Test_qiime2_rpca(unittest.TestCase):
                                      '--sample-metadata-file', q2sm_loc,
                                      '--train-test-column', 'train_test',
                                      '--output-dir', tstdir_absolute,
-                                     '--rclr-transform-tables'])
+                                     '--no-rclr-transform-tables'])
         # ...and read in the resulting output files. This code was derived from
         # test_standalone_rpca() elsewhere in gemelli's codebase.
         # stordination = OrdinationResults.read(get_data_path('ordination.txt',

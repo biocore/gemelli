@@ -234,7 +234,7 @@ class Test_standalone_rpca(unittest.TestCase):
                                 '--sample-metadata-file', in_sample_meta,
                                 '--train-test-column', 'train_test',
                                 '--output-dir', out_,
-                                '--rclr-transform-tables'])
+                                '--no-rclr-transform-tables'])
         # Read the results
         dist_res = pd.read_csv(get_data_path('joint-distance-matrix.tsv',
                                              subfolder='rpca_data'),
