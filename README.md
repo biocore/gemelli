@@ -41,12 +41,6 @@ Joint-RPCA allows for the exploration of those feature that seperate jointly acr
 * [RPCA Python API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb)
 * [Joint-RPCA API & CLI](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/Joint-RPCA-CLI-API.ipynb)
 
-#### Performing parameter optimization and QC on results
-
-For an introduction to these QC methods see the tutorial [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-CV-QC-introduction.ipynb). Examples are also provided in the RPCA tutorials [here (RPCA QIIME2 CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb) & [here (RPCA Python API & CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb). 
-
-Users are encrouaged to report the QC/CV results for thier data.
-
 ## Repeated measures study (i.e. multiple sample per subject) with CTF & TEMPTED
 
 ### Tutorials
@@ -66,6 +60,10 @@ If you have a [repeated measures study design](https://en.wikipedia.org/wiki/Rep
 
 * [CTF Standalone Python API](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/IBD-Tutorial-standalone-API.ipynb)
 * [TEMPTED R implementation - Intallation and tutorials](https://github.com/pixushi/tempted)
+
+## Performing parameter optimization and QC on results
+
+For an introduction to these QC methods see the tutorial [here](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-CV-QC-introduction.ipynb). Examples are also provided in the RPCA tutorials [here (RPCA QIIME2 CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures.ipynb) & [here (RPCA Python API & CLI)](https://github.com/biocore/gemelli/blob/master/ipynb/tutorials/RPCA-moving-pictures-standalone-cli-and-api.ipynb). Users are encrouaged to report the QC/CV results for thier data.
 
 # Citations
 
