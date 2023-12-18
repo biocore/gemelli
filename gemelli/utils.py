@@ -76,8 +76,7 @@ def qc_rarefaction(table,
     improvement over the rareified distances.
 
     """
-    # the current method requires two-tail and pearson
-    # future improvements might be made to allow for more options
+    # set mantel settings
     method = 'spearman'
     two_tailed = True
     # Find the symmetric difference between ID sets.
