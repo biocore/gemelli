@@ -26,6 +26,7 @@ v0.0.10 (2023-12-01)
 * auto_rpca across the package and rank_estimate in optspace.py
     * was not performing correctly and no reasonable quick fix is available.
         * see issue #70
+    * **Change from `auto_rpca` to `gemelli.rpca import rpca`**
 
 v0.0.9 (2023-05-24)
 
