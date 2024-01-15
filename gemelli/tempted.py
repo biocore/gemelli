@@ -23,7 +23,6 @@ from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MSC,
                                DEFAULT_TEMPTED_RHC as DEFAULT_RC,
                                DEFAULT_TEMPTED_SVDC,
                                DEFAULT_TEMPTED_SVDCN as DEFAULT_TSCN)
-np.random.seed(42)
 
 
 def freg_rkhs(Ly, a_hat, ind_vec, Kmat,
