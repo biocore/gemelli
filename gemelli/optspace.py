@@ -198,7 +198,43 @@ class OptSpace(object):
         return U, S, V
 
     def joint_solve(self, multiple_obs):
+        """
+        Solver adaptation to OptSpace with
+        multiple input tables.
 
+        Parameters
+        ----------
+        multiple_obs:  list of tuples of numpy.ndarray -
+            A list of tuples where the tuples have two matricies
+            of shape (M_train, N) and (M_test, N) where
+            the M_train/M_test are shared but N is not
+            across tables. Missing values set to zero or np.nan.
+            N = Features (i.e. OTUs, metabolites)
+            M = Samples
+
+        Returns
+        -------
+        self.U_shared: numpy.ndarray -
+            "Sample Loadings" or the unitary matrix
+            having left singular vectors as columns.
+            Of shape (M, n_components).
+
+        self.S_shared: numpy.ndarray -
+            The singular values,
+            sorted in non-increasing order.
+            Of shape (n_components, n_components).
+
+        self.feature_loadings list of numpy.ndarray -
+            "Feature Loadings" or Unitary matrix
+            having right singular vectors as rows.
+            Of shape (N, n_components). For each
+            table in multiple_obs and in the same
+            order as  multiple_obs.
+
+        self.dists: numpy.ndarray -
+            The cross validation error for the test
+            set on the training set.
+        """
         # adjust iteration indexing by one
         self.max_iterations += 1
         test_obs = []

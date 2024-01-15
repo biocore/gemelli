@@ -24,7 +24,6 @@ from skbio.stats.composition import clr
 from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
 from scipy.sparse.linalg import svds
-np.random.seed(42)
 # import QIIME2 if in a Q2env otherwise set type to str
 try:
     from q2_types.tree import NewickFormat
