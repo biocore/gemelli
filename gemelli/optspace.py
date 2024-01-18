@@ -6,7 +6,6 @@
 # The full license is in the file COPYING.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import warnings
 import numpy as np
 from numpy.matlib import repmat
 from numpy.linalg import norm
@@ -115,28 +114,14 @@ class OptSpace(object):
         obs[np.isnan(obs)] = 0
         # generate a mask that tracks where missing
         # values exist in the obs dataset
-        mask = (np.abs(obs) > 0).astype(np.int)
+        mask = (np.abs(obs) > 0).astype(int)
         # save the shape of the matrix
         n, m = obs.shape
         # get a measure of sparsity level
         total_nonzeros = np.count_nonzero(mask)
         eps = total_nonzeros / np.sqrt(m * n)
-        if isinstance(self.n_components, str):
-            if self.n_components.lower() == 'auto':
-                # estimate the rank of the matrix
-                self.n_components = rank_estimate(obs, eps)
-                # check estimate again
-                if self.n_components >= min(n, m) - 1:
-                    warnings.warn('Your matrix is estimated '
-                                  'to be high-rank.',
-                                  RuntimeWarning)
-                # print rank estimate
-                print('Estimated rank is %i' % self.n_components)
-            else:
-                raise ValueError("n-components must be an "
-                                 "integer or 'auto'.")
         # raise future warning if hard set
-        elif isinstance(self.n_components, int):
+        if isinstance(self.n_components, int):
             if self.n_components > (min(n, m) - 1):
                 raise ValueError("n-components must be at most"
                                  " 1 minus the min. shape of the"
@@ -144,7 +129,7 @@ class OptSpace(object):
         # otherwise rase an error.
         else:
             raise ValueError("n-components must be "
-                             "an interger or 'auto'")
+                             "an interger.")
         # The rescaling factor compensates the smaller average size of
         # the of the missing entries (mask) with respect to obs
         rescal_param = np.count_nonzero(mask) * self.n_components
@@ -203,7 +188,7 @@ class OptSpace(object):
                                'fro') / np.sqrt(total_nonzeros)
             # if the gradient decent has coverged then break the loop
             # and return the results
-            if(dist[i + 1] < self.tol):
+            if (dist[i + 1] < self.tol):
                 break
         # compensates the smaller average size of
         # observed values vs. missing
@@ -211,6 +196,198 @@ class OptSpace(object):
         # ensure the loadings are sorted properly
         U, S, V = svd_sort(U, S, V)
         return U, S, V
+
+    def joint_solve(self, multiple_obs):
+        """
+        Solver adaptation to OptSpace with
+        multiple input tables.
+
+        Parameters
+        ----------
+        multiple_obs:  list of tuples of numpy.ndarray -
+            A list of tuples where the tuples have two matricies
+            of shape (M_train, N) and (M_test, N) where
+            the M_train/M_test are shared but N is not
+            across tables. Missing values set to zero or np.nan.
+            N = Features (i.e. OTUs, metabolites)
+            M = Samples
+
+        Returns
+        -------
+        self.U_shared: numpy.ndarray -
+            "Sample Loadings" or the unitary matrix
+            having left singular vectors as columns.
+            Of shape (M, n_components).
+
+        self.S_shared: numpy.ndarray -
+            The singular values,
+            sorted in non-increasing order.
+            Of shape (n_components, n_components).
+
+        self.feature_loadings list of numpy.ndarray -
+            "Feature Loadings" or Unitary matrix
+            having right singular vectors as rows.
+            Of shape (N, n_components). For each
+            table in multiple_obs and in the same
+            order as  multiple_obs.
+
+        self.dists: numpy.ndarray -
+            The cross validation error for the test
+            set on the training set.
+        """
+        # adjust iteration indexing by one
+        self.max_iterations += 1
+        test_obs = []
+        masks = []
+        dims = []
+        for i_obs, (t_obs, obs) in enumerate(multiple_obs):
+            # Convert any nan input to zeros
+            # optspace considers zero  and only zero
+            # as missing.
+            obs[np.isnan(obs)] = 0
+            multiple_obs[i_obs] = obs
+            # masked test set
+            test_obs_m = np.ma.array(t_obs, mask=np.isnan(t_obs))
+            test_obs_m = test_obs_m - test_obs_m.mean(axis=1).reshape(-1, 1)
+            test_obs_m = test_obs_m - test_obs_m.mean(axis=0)
+            test_obs.append(test_obs_m)
+            # generate a mask that tracks where missing
+            # values exist in the obs dataset
+            mask = (np.abs(obs) > 0).astype(int)
+            masks.append(mask)
+            # save the shape of the matrix
+            dims.append(obs.shape)
+        # raise future warning if hard set
+        if isinstance(self.n_components, int):
+            if self.n_components > min([min(n, m) - 1 for n, m in dims]):
+                raise ValueError("n-components must be at most"
+                                 " 1 minus the min. shape of the"
+                                 " smallest input matrix.")
+        # otherwise rase an error.
+        else:
+            raise ValueError("n-components must be "
+                             "an interger")
+
+        # new stacked init
+        dists = np.zeros((2, self.max_iterations - 1))
+        dist_sum_iter = []
+        # stack data
+        obs_stacked = np.hstack(multiple_obs)
+        mask_stacked = np.hstack(masks)
+        n, m = obs_stacked.shape
+        # get a measure of sparsity level
+        total_nonzeros = np.count_nonzero(mask_stacked)
+        eps = total_nonzeros / np.sqrt(m * n)
+        # The rescaling factor compensates the smaller average size of
+        # the of the missing entries (mask) with respect to obs
+        rescal_param = np.count_nonzero(mask_stacked) * self.n_components
+        rescal_param = np.sqrt(rescal_param / (norm(obs_stacked, 'fro') ** 2))
+        obs_stacked = obs_stacked * rescal_param
+        # Our initial first guess are the loadings generated
+        # by the traditional SVD
+        U, S, V = svds(obs_stacked, self.n_components, which='LM')
+        # the shape and number of non-zero values
+        # can set the input perameters for the gradient
+        # decent
+        rho = eps * n
+        U = U * np.sqrt(n)
+        V = (V * np.sqrt(m)).T
+        S = S / eps
+        # generate the new singular values from
+        # the initialization of U and V
+        S = singular_values(U, V, obs_stacked, mask_stacked)
+        # initialize the difference between the
+        # observed values of the matrix and the
+        # the imputed matrix generated by the loadings
+        # from this point on we call this "distortion"
+        obs_error = obs_stacked - U.dot(S).dot(V.T)
+        # starting initialization of the distortion between obs and imputed
+        # separate feature loadings
+        feature_loadings = []
+        feat_index_start = 0
+        for _, feat_index in dims:
+            feat_index_end = feat_index_start + feat_index
+            feature_loadings.append(V[feat_index_start:feat_index_end, :])
+            feat_index_start += feat_index
+        # store shared init
+        U_shared = U
+        S_shared = S
+        # we will perform gradient decent for at most self.max_iterations
+        for i in range(1, self.max_iterations):
+            # re-init
+            dist_sum_iter = []
+            sample_loadings = []
+            all_singular = []
+            for i_obs, V in enumerate(feature_loadings):
+                # load saved arrays
+                mask = masks[i_obs]
+                n, m = dims[i_obs]
+                obs = multiple_obs[i_obs]
+                # generate new optimized loadings from F(X,Y) [1]
+                U_update, V_update = gradient_decent(
+                    U_shared, V, S_shared, obs, mask, self.step_size, rho)
+                # Line search for the optimum jump length in gradient decent
+                line = line_search(
+                    U_shared,
+                    U_update,
+                    V,
+                    V_update,
+                    S_shared,
+                    obs,
+                    mask,
+                    self.step_size,
+                    rho,
+                    resolution_limit=self.resolution_limit)
+                # with line and iterations loading update U,V loadings
+                U = U_shared - self.sign * line * U_update
+                V = V - self.sign * line * V_update
+                # generate new singular values from the new
+                # loadings
+                S = singular_values(U_shared, V, obs, mask)
+                # Compute the distortion
+                obs_error = obs - U.dot(S).dot(V.T)
+                # update the new distortion
+                # add samples and singular values
+                sample_loadings.append(U)
+                feature_loadings[i_obs] = V
+                all_singular.append(S)
+                # CV dist
+                U_test = np.ma.dot(test_obs[i_obs], V).data
+                U_test /= np.diag(S)
+                reconstruct_test = U_test.dot(S).dot(V.T)
+                reconstruct_test = np.ma.array(reconstruct_test,
+                                               mask=np.isnan(reconstruct_test))
+                obs_error = test_obs[i_obs] - reconstruct_test
+                # update the new distortion
+                obs_error_data = obs_error.data
+                obs_error_data[np.isnan(obs_error_data)] = 0
+                error_ = norm(obs_error, 'fro')
+                error_ = error_ / np.sqrt(np.sum(~test_obs[i_obs].mask))
+                dist_sum_iter.append(error_)
+            # CV error
+            dists[0][i - 1] = np.mean(dist_sum_iter)
+            dists[1][i - 1] = np.std(dist_sum_iter)
+            # mean of U and S, ensure same rotation
+            X_U = np.mean([u_i.dot(u_i.T)
+                           for u_i in sample_loadings], axis=0)
+            _, S_shared, _ = svds(X_U, k=self.n_components, which='LM')
+            S_shared = np.diag(S_shared)
+            S_shared = S_shared / np.linalg.norm(S_shared)
+            U_shared = np.average(sample_loadings, axis=0)
+            U_shared -= U_shared.mean(0)
+            feature_loadings = [(S_shared).dot(v_i.T).T
+                                for v_i in feature_loadings]
+
+        # compensates the smaller average size of
+        # observed values vs. missing
+        S_shared = S_shared / rescal_param
+        # ensure the loadings are sorted properly
+        idx = np.argsort(np.diag(S_shared))[::-1]
+        S_shared = S_shared[idx, :][:, idx]
+        U_shared = U_shared[:, idx]
+        feature_loadings = [V[:, idx] for V in feature_loadings]
+
+        return U_shared, S_shared, feature_loadings, dists
 
 
 def svd_sort(U, S, V):
@@ -334,7 +511,7 @@ def line_search(
                                 U_update, V +
                                 line *
                                 V_update, S, obs, mask, step_size, rho)
-        if((cost[i + 1] - cost[0]) <= .5 * line * norm_update):
+        if ((cost[i + 1] - cost[0]) <= .5 * line * norm_update):
             return line
         line = line / 2
     return line
@@ -402,75 +579,3 @@ def grassmann_manifold_two(U, step_size, n_components):
     step = np.multiply(U, repmat(step, 1, n_components)) / \
         (step_size * n_components)
     return step
-
-
-def rank_estimate(obs, eps, k=20, lam=0.05,
-                  min_rank=3, max_iter=5000):
-    """
-    This function estimates the rank of a
-    sparse matrix (i.e. with missing values).
-
-    Parameters
-    ----------
-    obs: numpy.ndarray - a rclr preprocessed matrix of shape (M,N)
-        with missing values set to zero or np.nan.
-        N = Features (i.e. OTUs, metabolites)
-        M = Samples
-
-    eps: float - Measure of the level of sparsity
-        Equivalent to obs N-non-zeros / sqrt(obs.shape)
-
-    k: int - Max number of singular values / rank
-
-    lam: float - Step in the iteration
-
-    min_rank: int - The min. rank allowed
-
-    Returns
-    -------
-    The estimated rank of the matrix.
-
-    References
-    ----------
-    .. [1] Part C in Keshavan, R. H., Montanari,
-           A. & Oh, S. Low-rank matrix completion
-           with noisy observations: A quantitative
-           comparison. in 2009 47th Annual Allerton
-           Conference on Communication, Control,
-           and Computing (Allerton) 1216–1222 (2009).
-    """
-    # dim. of the data
-    n, m = obs.shape
-    # ensure rank worth estimating
-    if min(n, m) <= 2:
-        return min_rank
-    # get N-singular values
-    s = svds(obs,  min(k, n, m) - 1, which='LM',
-             return_singular_vectors=False)[::-1]
-    # get N+1 singular values
-    s_one = s[:-1] - s[1:]
-    # simplify iterations
-    s_one_ = s_one / np.mean(s_one[-10:])
-    # iteration one
-    r_one = 0
-    iter_ = 0
-    while r_one <= 0:
-        cost = []
-        # get the cost
-        for idx in range(s_one_.shape[0]):
-            cost.append(lam * max(s_one_[idx:]) + idx)
-        # estimate the rank
-        r_one = np.argmin(cost)
-        lam += lam
-        iter_ += 1
-        if iter_ > max_iter:
-            break
-
-    # iteration two
-    cost = []
-    # estimate the rank
-    for idx in range(s.shape[0] - 1):
-        cost.append((s[idx + 1] + np.sqrt(idx * eps) * s[0] / eps) / s[idx])
-    r_two = np.argmin(cost)
-    # return the final estimate
-    return max(r_one, r_two, min_rank)

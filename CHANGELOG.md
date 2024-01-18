@@ -1,3 +1,33 @@
+
+v0.0.10 (2023-12-01)
+
+### Bug fixes
+
+* Removed np.int types
+    * fixes bug that prevents use in newer versions of numpy / QIIME2
+        * see issue #71
+
+### Features [experimental]
+
+* rpca projection of new data and with cross validation
+    * A new function for RPCA where new data can be projected into an existing ordination.
+    * Also allows for internal CV, where the hold out data is projected into the training ordination, which is then used to re-build the test data, and the error between the projection and the real test data is calculated.
+        * see issue #70
+* tempted.py and assocated tests/commands/tutorials
+    * Added in a python implementation TEMPTED, more details on the methods inm this paper [here](https://www.biorxiv.org/content/10.1101/2023.07.26.550749v1).
+* joint-rpca and associated tests/commands/tutorials
+    * Joint-RPCA is an extention of RPCA for multiple omics types.
+* qc_rarefaction
+    * This function compares the mantel correlation of distances to the abs. differences in sample sum between rarefied and unrarefied input data. This is an easy check to ensure the results are not bieng significantly altered by non-rarefaction is cases of large differences (e.g., low-biomass) or where the sample sum differences can not be seperated from the phenotypes/low-rank structure of the data (i.e., deep sequencing of controls and shallow of sick).
+        * see issue #70
+
+### Deprecated functionality
+
+* auto_rpca across the package and rank_estimate in optspace.py
+    * was not performing correctly and no reasonable quick fix is available.
+        * see issue #70
+    * **Change from `auto_rpca` to `gemelli.rpca import rpca`**
+
 v0.0.9 (2023-05-24)
 
 ### Bug fixes

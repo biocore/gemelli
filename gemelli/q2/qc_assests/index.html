@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>QC Test of Distances w/ Rarefy vs. Non-Rarefy</h1>
+
+  <div class="row">
+    <div class="col-lg-12">
+      {{ table }}
+      <div class="text-center">
+        <img src="mantel-scatter-1.svg"/>
+        <div>
+          <a href="mantel-scatter-1.svg" target="_blank" rel="noopener noreferrer" class="btn btn-default">
+            Download SVG
+          </a>
+        </div>
+        <img src="mantel-scatter-2.svg"/>
+        <div>
+          <a href="mantel-scatter-2.svg" target="_blank" rel="noopener noreferrer" class="btn btn-default">
+            Download SVG
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

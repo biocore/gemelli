@@ -8,20 +8,26 @@
 
 import biom
 import skbio
+import warnings
 import numpy as np
 import pandas as pd
+from scipy.spatial import distance
 from typing import Union, Optional
 from skbio import TreeNode, OrdinationResults, DistanceMatrix
 from gemelli.matrix_completion import MatrixCompletion
+from gemelli.optspace import OptSpace
 from gemelli.preprocessing import (matrix_rclr,
                                    fast_unifrac,
                                    bp_read_phylogeny,
                                    retrieve_t2t_taxonomy,
-                                   create_taxonomy_metadata)
+                                   create_taxonomy_metadata,
+                                   mask_value_only)
 from gemelli._defaults import (DEFAULT_COMP, DEFAULT_MTD,
                                DEFAULT_MSC, DEFAULT_MFC,
                                DEFAULT_OPTSPACE_ITERATIONS,
-                               DEFAULT_MFF)
+                               DEFAULT_MFF, DEFAULT_METACV,
+                               DEFAULT_COLCV, DEFAULT_TESTS,
+                               DEFAULT_MATCH, DEFAULT_TRNSFRM)
 from scipy.linalg import svd
 # import QIIME2 if in a Q2env otherwise set type to str
 try:
@@ -128,7 +134,7 @@ def phylogenetic_rpca(table: biom.Table,
 
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
-    output dimentions.
+    output dimensions.
 
     min_sample_count: int, optional : Default is 0
     Minimum sum cutoff of sample across all features.
@@ -149,7 +155,7 @@ def phylogenetic_rpca(table: biom.Table,
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
     If iteration is not specified, then the default iteration is 5.
-    Which redcues to a satisfactory error threshold.
+    Which reduces to a satisfactory error threshold.
 
     Returns
     -------
@@ -295,7 +301,7 @@ def rpca(table: biom.Table,
 
     n_components: int, optional : Default is 3
     The underlying rank of the data and number of
-    output dimentions.
+    output dimensions.
 
     min_sample_count: int, optional : Default is 0
     Minimum sum cutoff of sample across all features.
@@ -316,7 +322,7 @@ def rpca(table: biom.Table,
     max_iterations: int, optional : Default is 5
     The number of convex iterations to optimize the solution
     If iteration is not specified, then the default iteration is 5.
-    Which redcues to a satisfactory error threshold.
+    Which reduces to a satisfactory error threshold.
 
     Returns
     -------
@@ -382,6 +388,104 @@ def rpca(table: biom.Table,
                                         table.ids(), n_components=n_components)
 
     return ord_res, dist_res
+
+
+def rpca_with_cv(table: biom.Table,
+                 n_test_samples: int = DEFAULT_TESTS,
+                 sample_metadata: pd.DataFrame = DEFAULT_METACV,
+                 train_test_column: str = DEFAULT_COLCV,
+                 n_components: Union[int, str] = DEFAULT_COMP,
+                 max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS,
+                 min_sample_count: int = DEFAULT_MSC,
+                 min_feature_count: int = DEFAULT_MFC,
+                 min_feature_frequency: float = DEFAULT_MFF) -> (
+                 OrdinationResults,
+                 DistanceMatrix,
+                 pd.DataFrame):
+    """
+    RPCA but with CV used in Joint-RPCA.
+
+    Parameters
+    ----------
+    table: numpy.ndarray, required
+    The feature table in biom format containing the
+    samples over which metric should be computed.
+
+    n_test_samples: int, optional : Default is 10
+    Number of random samples to choose for test split samples.
+
+    metadata: DataFrame, optional : Default is None
+    Sample metadata file in QIIME2 formatting. The file must
+    contain a train-test column with labels `train` and `test`
+    and the row ids matched to the table(s).
+
+    train_test_column: str, optional : Default is None
+    Sample metadata column containing `train` and `test`
+    labels to use for the cross-validation evaluation.
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimensions.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    max_iterations: int, optional : Default is 5
+    The number of convex iterations to optimize the solution
+    If iteration is not specified, then the default iteration is 5.
+    Which reduces to a satisfactory error threshold.
+
+    Returns
+    -------
+    OrdinationResults
+        A biplot of the (Robust Aitchison) RPCA feature loadings
+
+    DistanceMatrix
+        The Aitchison distance of the sample loadings from RPCA.
+
+    DataFrame
+        The cross-validation reconstruction error.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: max_iterations must be at least 1`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input table`.
+
+    """
+    res_tmp = joint_rpca([table],
+                         n_test_samples=n_test_samples,
+                         sample_metadata=sample_metadata,
+                         train_test_column=train_test_column,
+                         n_components=n_components,
+                         max_iterations=max_iterations,
+                         min_sample_count=min_sample_count,
+                         min_feature_count=min_feature_count,
+                         min_feature_frequency=min_feature_frequency)
+    ord_res, dist_res, cv_dist = res_tmp
+    return ord_res, dist_res, cv_dist
 
 
 def optspace_helper(rclr_table: np.array,
@@ -452,25 +556,6 @@ def optspace_helper(rclr_table: np.array,
     return ord_res, dist_res
 
 
-def auto_rpca(table: biom.Table,
-              min_sample_count: int = DEFAULT_MSC,
-              min_feature_count: int = DEFAULT_MFC,
-              min_feature_frequency: float = DEFAULT_MFF,
-              max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        OrdinationResults,
-        DistanceMatrix):
-    """Runs RPCA but with auto estimation of the
-       rank peramater.
-    """
-    ord_res, dist_res = rpca(table,
-                             n_components='auto',
-                             min_sample_count=min_sample_count,
-                             min_feature_count=min_feature_count,
-                             min_feature_frequency=min_feature_frequency,
-                             max_iterations=max_iterations)
-    return ord_res, dist_res
-
-
 def rpca_table_processing(table: biom.Table,
                           min_sample_count: int = DEFAULT_MSC,
                           min_feature_count: int = DEFAULT_MFC,
@@ -505,3 +590,428 @@ def rpca_table_processing(table: biom.Table,
         raise ValueError('Data-table contains duplicate feature IDs')
 
     return table
+
+
+def joint_rpca(tables: biom.Table,
+               n_test_samples: int = DEFAULT_TESTS,
+               sample_metadata: pd.DataFrame = DEFAULT_METACV,
+               train_test_column: str = DEFAULT_COLCV,
+               n_components: Union[int, str] = DEFAULT_COMP,
+               rclr_transform_tables: bool = DEFAULT_TRNSFRM,
+               min_sample_count: int = DEFAULT_MSC,
+               min_feature_count: int = DEFAULT_MFC,
+               min_feature_frequency: float = DEFAULT_MFF,
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
+        OrdinationResults,
+        DistanceMatrix,
+        pd.DataFrame):
+    """
+    Performs joint-RPCA across data tables
+    with shared samples.
+
+    Parameters
+    ----------
+    tables: list of biom.Table, required
+    A list of feature table in biom format containing shared
+    samples over which metric should be computed.
+
+    n_test_samples: int, optional : Default is 10
+    Number of random samples to choose for test split samples.
+
+    metadata: DataFrame, optional : Default is None
+    Sample metadata file in QIIME2 formatting. The file must
+    contain a train-test column with labels `train` and `test`
+    and the row ids matched to the table(s).
+
+    train_test_column: str, optional : Default is None
+    Sample metadata column containing `train` and `test`
+    labels to use for the cross-validation evaluation.
+
+    n_components: int, optional : Default is 3
+    The underlying rank of the data and number of
+    output dimensions.
+
+    rclr_transform_tables: bool, optional: If False Joint-RPCA
+    will not use the RCLR transformation and will instead
+    assume that the data has already been transformed
+    or normalized. Default is True.
+
+    max_iterations: int, optional : Default is 5
+    The number of convex iterations to optimize the solution
+    If iteration is not specified, then the default iteration is 5.
+    Which reduces to a satisfactory error threshold.
+
+    min_sample_count: int, optional : Default is 0
+    Minimum sum cutoff of sample across all features.
+    The value can be at minimum zero and must be an
+    whole integer. It is suggested to be greater than
+    or equal to 500.
+
+    min_feature_count: int, optional : Default is 0
+    Minimum sum cutoff of features across all samples.
+    The value can be at minimum zero and must be
+    an whole integer.
+
+    min_feature_frequency: float, optional : Default is 0
+    Minimum percentage of samples a feature must appear
+    with a value greater than zero. This value can range
+    from 0 to 100 with decimal values allowed.
+
+    Returns
+    -------
+    OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+
+    DistanceMatrix
+        The Aitchison distance of the sample loadings from RPCA.
+
+    DataFrame
+        The cross-validation reconstruction error.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: n_components must be at least 2`.
+
+    ValueError
+        `ValueError: max_iterations must be at least 1`.
+
+    ValueError
+        `ValueError: Data-table contains either np.inf or -np.inf`.
+
+    ValueError
+        `ValueError: The n_components must be less
+            than the minimum shape of the input table`.
+
+    """
+
+    # filter each table
+    for n, table_n in enumerate(tables):
+        if rclr_transform_tables:
+            tables[n] = rpca_table_processing(table_n,
+                                              min_sample_count,
+                                              min_feature_count,
+                                              min_feature_frequency)
+    # get set of shared samples
+    shared_all_samples = set.intersection(*[set(table_n.ids())
+                                            for table_n in tables])
+    # check sample overlaps
+    if len(shared_all_samples) == 0:
+        raise ValueError('No samples overlap between all tables. '
+                         'If using pre-transformed or normalized '
+                         'tables, make sure the rclr_transform_tables '
+                         'is set to False or the flag is enabled.')
+    unshared_samples = set([s_n
+                            for table_n in tables
+                            for s_n in table_n.ids()]) - shared_all_samples
+    if len(unshared_samples) != 0:
+        warnings.warn('Removing %i sample(s) that do not overlap in tables.'
+                      % (len(unshared_samples)), RuntimeWarning)
+    # filter each table again to subset samples.
+    for n, table_n in enumerate(tables):
+        if rclr_transform_tables:
+            table_n = table_n.filter(shared_all_samples)
+            tables[n] = rpca_table_processing(table_n,
+                                              min_sample_count,
+                                              min_feature_count,
+                                              min_feature_frequency)
+        else:
+            tables[n] = table_n.filter(shared_all_samples)
+    shared_all_samples = set.intersection(*[set(table_n.ids())
+                                            for table_n in tables])
+    # rclr each table
+    rclr_tables = []
+    for table_n in tables:
+        # perform RCLR
+        if rclr_transform_tables:
+            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T).T
+        # otherwise just mask zeros
+        else:
+            rclr_tmp = mask_value_only(table_n.matrix_data.toarray().T).T
+        rclr_tables.append(pd.DataFrame(rclr_tmp,
+                                        table_n.ids('observation'),
+                                        table_n.ids()))
+    # get training and test sample IDs
+    if sample_metadata is not None and not isinstance(sample_metadata,
+                                                      pd.DataFrame):
+        sample_metadata = sample_metadata.to_dataframe()
+    if sample_metadata is None or train_test_column is None:
+        test_samples = sorted(list(shared_all_samples))[:n_test_samples]
+        train_samples = list(set(shared_all_samples) - set(test_samples))
+    else:
+        sample_metadata = sample_metadata.loc[shared_all_samples, :]
+        train_samples = sample_metadata[train_test_column] == 'train'
+        test_samples = sample_metadata[train_test_column] == 'test'
+        train_samples = sample_metadata[train_samples].index
+        test_samples = sample_metadata[test_samples].index
+    ord_res, U_dist_res, cv_dist = joint_optspace_helper(rclr_tables,
+                                                         n_components,
+                                                         max_iterations,
+                                                         test_samples,
+                                                         train_samples)
+    return ord_res, U_dist_res, cv_dist
+
+
+def joint_optspace_helper(tables,
+                          n_components,
+                          max_iterations,
+                          test_samples,
+                          train_samples):
+    """
+    Helper function for joint-RPCA
+    """
+
+    # split the tables by training and test samples
+    tables_split = [[table_i.loc[:, test_samples].T,
+                     table_i.loc[:, train_samples].T]
+                    for table_i in tables]
+    # run OptSpace
+    opt_model = OptSpace(n_components=n_components,
+                         max_iterations=max_iterations,
+                         tol=None)
+    U, s, Vs, dists = opt_model.joint_solve([[t_s.values for t_s in t]
+                                             for t in tables_split])
+    rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
+    vjoint = pd.concat([pd.DataFrame(Vs_n,
+                                     index=t_n.index,
+                                     columns=rename_cols)
+                        for t_n, Vs_n in zip(tables, Vs)])
+    ujoint = pd.DataFrame(U,
+                          index=list(train_samples),
+                          columns=rename_cols)
+    # center again around zero after completion
+    X = ujoint.values @ s @ vjoint.values.T
+    X = X - X.mean(axis=0)
+    X = X - X.mean(axis=1).reshape(-1, 1)
+    u, s_new, v = svd(X, full_matrices=False)
+    s_eig = s_new[:n_components]
+    rename_cols = ['PC' + str(i + 1) for i in range(n_components)]
+    v = v.T[:, :n_components]
+    u = u[:, :n_components]
+    # create ordination
+    vjoint = pd.DataFrame(v,
+                          index=vjoint.index,
+                          columns=vjoint.columns)
+    ujoint = pd.DataFrame(u,
+                          index=list(train_samples),
+                          columns=ujoint.columns)
+    p = s_eig**2 / np.sum(s_eig**2)
+    eigvals = pd.Series(s_eig, index=rename_cols)
+    proportion_explained = pd.Series(p, index=rename_cols)
+    ord_res = OrdinationResults(
+            'rpca',
+            'rpca',
+            eigvals.copy(),
+            samples=ujoint.copy(),
+            features=vjoint.copy(),
+            proportion_explained=proportion_explained.copy())
+    # project test data into training data
+    if len(test_samples) > 0:
+        ord_res = transform(ord_res,
+                            [t[0] for t in tables_split],
+                            rclr_transform=False)
+    # save results
+    Udist = distance.cdist(ord_res.samples.copy(),
+                           ord_res.samples.copy())
+    U_dist_res = DistanceMatrix(Udist, ids=ord_res.samples.index)
+    cv_dist = pd.DataFrame(dists, ['mean_CV', 'std_CV']).T
+    cv_dist['run'] = 'tables_%i.n_components_%i.max_iterations_%i.n_test_%i' \
+                     % (len(tables), n_components,
+                        max_iterations, len(test_samples))
+    cv_dist['iteration'] = list(cv_dist.index.astype(int))
+    cv_dist.index.name = 'sampleid'
+
+    return ord_res, U_dist_res, cv_dist
+
+
+def transform(ordination: OrdinationResults,
+              tables: biom.Table,
+              subset_tables: bool = DEFAULT_MATCH,
+              rclr_transform: bool = DEFAULT_TRNSFRM) -> (
+        OrdinationResults):
+    """
+    Function to apply dimensionality reduction to table(s).
+    The table(s) is projected on the first principal components
+    previously extracted from a training set.
+
+    Parameters
+    ----------
+    ordination: OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+        produced from the training data.
+
+    tables: list of biom.Table, required
+        A list of at least one feature table in biom format containing
+        shared samples over which metric should be computed.
+
+    subset_tables: bool, optional : default is True
+        Subsets the input tables to contain only features used in the
+        training data. If set to False and the tables are not perfectly
+        matched a ValueError will be produced.
+
+    rclr_transform: bool, optional : default is True
+        If set to false the function will expect `tables` to be dataframes
+        already rclr transformed. This is used for internal functionality
+        in the joint-rpca function.
+
+    Returns
+    -------
+    OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+        with both the input training data and new test data.
+
+    Raises
+    ------
+    ValueError
+        `ValueError: The input tables do not contain all
+        the features in the ordination.`.
+
+    ValueError
+        `ValueError: Removing # features(s) in table(s)
+        but not the ordination.`.
+
+    ValueError
+        `ValueError: Features in the input table(s) not in
+        the features in the ordination.  Either set subset_tables to
+        True or match the tables to the ordination.`.
+    """
+
+    # extract current U & V matrix
+    Udf = ordination.samples.copy()
+    Vdf = ordination.features.copy()
+    s_eig = ordination.eigvals.copy().values
+    # rclr each table [if needed]
+    rclr_table_df = []
+    if rclr_transform:
+        for table_n in tables:
+            rclr_tmp = matrix_rclr(table_n.matrix_data.toarray().T)
+            rclr_table_df.append(pd.DataFrame(rclr_tmp,
+                                              table_n.ids(),
+                                              table_n.ids('observation')))
+    else:
+        for table_n in tables:
+            rclr_table_df.append(table_n)
+    rclr_table_df = pd.concat(rclr_table_df, axis=1).T
+    # ensure feature IDs match
+    shared_features = set(rclr_table_df.index) & set(Vdf.index)
+    if len(shared_features) < len(set(Vdf.index)):
+        raise ValueError('The input tables do not contain all'
+                         ' the features in the ordination.')
+    elif subset_tables:
+        unshared_N = len(set(rclr_table_df.index)) - len(shared_features)
+        warnings.warn('Removing %i features(s) in table(s)'
+                      ' but not the ordination.'
+                      % (unshared_N), RuntimeWarning)
+    else:
+        raise ValueError('Features in the input table(s) not in'
+                         ' the features in the ordination.'
+                         ' Either set subset_tables to True or'
+                         ' match the tables to the ordination.')
+    ordination.samples = transform_helper(Udf,
+                                          Vdf,
+                                          s_eig,
+                                          rclr_table_df)
+    return ordination
+
+
+def transform_helper(Udf, Vdf, s_eig, table_rclr_project):
+    # project new data into ordination
+    table_rclr_project = table_rclr_project.reindex(Vdf.index)
+    M_project = np.ma.array(table_rclr_project,
+                            mask=np.isnan(table_rclr_project)).T
+    M_project = M_project - M_project.mean(axis=1).reshape(-1, 1)
+    M_project = M_project - M_project.mean(axis=0)
+    U_projected = np.ma.dot(M_project, Vdf.values).data
+    U_projected /= np.linalg.norm(s_eig)
+    U_projected = pd.DataFrame(U_projected,
+                               table_rclr_project.columns,
+                               Udf.columns)
+    return pd.concat([Udf, U_projected])
+
+
+def rpca_transform(ordination: OrdinationResults,
+                   table: biom.Table,
+                   subset_tables: bool = DEFAULT_MATCH,
+                   rclr_transform: bool = DEFAULT_TRNSFRM) -> (
+        OrdinationResults):
+    """
+    To avoid confusion this helper function takes one input
+    to use in QIIME2.
+    """
+    ordination = transform(ordination, [table],
+                           subset_tables=subset_tables,
+                           rclr_transform=rclr_transform)
+    return ordination
+
+
+def feature_covariance_table(ordination, features_use=None):
+    """
+    Function to produce a feature by feature
+    covariance table from RPCA ordination
+    results.
+
+    Parameters
+    ----------
+    ordination: OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings
+    features_use: list, optional : default is None
+        A subset of features to use in the covariance generation.
+
+    Returns
+    -------
+    DataFrame
+        A feature by feature covariance table.
+
+    """
+    if features_use is not None:
+        vjoint = ordination.features.copy()
+        if len(set(features_use) - set(vjoint.index)) != 0:
+            raise ValueError('Feature subset given contains labels'
+                             ' not in the loadings.')
+        vjoint = vjoint.loc[features_use, :]
+    else:
+        vjoint = ordination.features
+    s = ordination.eigvals.values
+    Vs_joint = vjoint.values @ np.diag(s)**2 @ vjoint.values.T
+    joint_features = pd.DataFrame(Vs_joint,
+                                  vjoint.index,
+                                  vjoint.index)
+
+    return joint_features
+
+
+def feature_correlation_table(ordination: OrdinationResults) -> (pd.DataFrame):
+    """
+    Function to produce a feature by feature
+    correlation table from RPCA ordination
+    results. Note that the output can be very large in
+    file size because it is all omics features by all
+    omics features and is fully dense. If you would like to
+    get a subset, just subset the ordination with the function
+    `filter_ordination` in utils first.
+
+    Parameters
+    ----------
+    ordination: OrdinationResults
+        A joint-biplot of the (Robust Aitchison) RPCA feature loadings.
+
+    Returns
+    -------
+    DataFrame
+        A feature by feature correlation table.
+
+    """
+    joint_features = feature_covariance_table(ordination)
+    # this part of the function is taken from:
+    # https://gist.github.com/wiso/ce2a9919ded228838703c1c7c7dad13b
+    covariance = joint_features.values
+    v = np.sqrt(np.diag(covariance))
+    outer_v = np.outer(v, v)
+    correlation = covariance / outer_v
+    correlation[covariance == 0] = 0
+    # convert back to dataframe
+    correlation = pd.DataFrame(correlation,
+                               joint_features.index,
+                               joint_features.columns)
+    correlation.index.name = 'featureid'
+    return correlation

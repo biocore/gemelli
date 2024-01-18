@@ -1,5 +1,23 @@
 import qiime2.plugin.model as model
 from qiime2.plugin import ValidationError
+from qiime2.plugin import SemanticType
+from q2_types.feature_data import FeatureData
+
+
+class CVFormat(model.TextFileFormat):
+    def _validate(self, n_records=None):
+        with self.open() as fh:
+            # check the header column names
+            header = fh.readline()
+            comp_columns = [i for i, head in enumerate(header.split('\t'))
+                            if 'CV' in head]
+                        # ensure there at least two components
+            if len(comp_columns) < 1:
+                raise ValidationError('Not in CV format.')
+
+    def _validate_(self, level):
+        record_count_map = {'min': None, 'max': None}
+        self._validate(record_count_map[level])
 
 
 class TrajectoryFormat(model.TextFileFormat):
@@ -28,6 +46,21 @@ class TrajectoryFormat(model.TextFileFormat):
         self._validate(record_count_map[level])
 
 
+class CorrelationFormat(model.TextFileFormat):
+    def _validate(self, n_records=None):
+        with self.open() as fh:
+            # check the header column names
+            header = fh.readline()
+            comp_columns = [i for i, head in enumerate(header.split('\t'))]
+                        # ensure there at least two components
+            if len(comp_columns) < 1:
+                raise ValidationError('Not in correct format.')
+
+    def _validate_(self, level):
+        record_count_map = {'min': None, 'max': None}
+        self._validate(record_count_map[level])
+
+
 def is_float(str):
     try:
         float(str)
@@ -39,3 +72,11 @@ def is_float(str):
 TrajectoryDirectoryFormat = model.SingleFileDirectoryFormat(
     'TrajectoryDirectoryFormat', 'trajectory.tsv',
     TrajectoryFormat)
+
+CVDirectoryFormat = model.SingleFileDirectoryFormat(
+    'CVDirectoryFormat', 'cv.tsv',
+    CVFormat)
+
+CorrelationDirectoryFormat = model.SingleFileDirectoryFormat(
+    'CorrelationDirectoryFormat', 'Correlation.tsv',
+    CorrelationFormat)
