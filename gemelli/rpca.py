@@ -592,7 +592,24 @@ def rpca_table_processing(table: biom.Table,
     return table
 
 
+class JointOrdination:
+    def __init__(self, table_map, ordination):
+        self.table_map = table_map
+        self.ordination = ordination
+        self.feature_map = self._create_feature_map()
+
+    def _create_feature_map(self):
+        feature_map = dict()
+        for table_name, table in self.table_map.items():
+            # TODO: Check for overlaps
+            feature_map.update({
+                feat: table_name for feat in table.ids("observation")
+            })
+        return feature_map
+
+
 def joint_rpca(tables: biom.Table,
+               table_names: list = None,
                n_test_samples: int = DEFAULT_TESTS,
                sample_metadata: pd.DataFrame = DEFAULT_METACV,
                train_test_column: str = DEFAULT_COLCV,
@@ -601,10 +618,8 @@ def joint_rpca(tables: biom.Table,
                min_sample_count: int = DEFAULT_MSC,
                min_feature_count: int = DEFAULT_MFC,
                min_feature_frequency: float = DEFAULT_MFF,
-               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS) -> (
-        OrdinationResults,
-        DistanceMatrix,
-        pd.DataFrame):
+               max_iterations: int = DEFAULT_OPTSPACE_ITERATIONS
+    ) -> (JointOrdination, DistanceMatrix, pd.DataFrame):
     """
     Performs joint-RPCA across data tables
     with shared samples.
@@ -685,6 +700,12 @@ def joint_rpca(tables: biom.Table,
 
     """
 
+    if table_names is None:
+        table_names = [f'table.{i}' for i, _ in enumerate(tables)]
+    else:
+        if len(table_names) != len(tables):
+            raise ValueError('Length of tables and table names must match.')
+
     # filter each table
     for n, table_n in enumerate(tables):
         if rclr_transform_tables:
@@ -749,7 +770,8 @@ def joint_rpca(tables: biom.Table,
                                                          max_iterations,
                                                          test_samples,
                                                          train_samples)
-    return ord_res, U_dist_res, cv_dist
+    table_map = dict(zip(table_names, tables))
+    return JointOrdination(table_map, ord_res), U_dist_res, cv_dist
 
 
 def joint_optspace_helper(tables,
