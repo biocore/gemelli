@@ -37,6 +37,10 @@ jobs:
         shell: bash -l {0}
         run: conda install -c conda-forge coveralls flake8 nose
 
+      - name: Install gxx_linux-64
+        shell: bash -l {0}
+        run: conda install gxx_linux-64
+
       - name: Install gemelli
         shell: bash -l {0}
         run: pip install -e .
