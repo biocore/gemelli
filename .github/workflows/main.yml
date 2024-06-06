@@ -1,54 +1,74 @@
-# much of this is taken from the Empress main.yml file
+# configuration derived from q2-greengenes2
 name: Main CI
 
-on:
-  pull_request:
-    branches:
-      - master
-      - phylo-rclr
-  push:
-    branches:
-      - master
-      - phylo-rclr
+on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-linux:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 5
+      matrix:
+        os: ["ubuntu-latest", "macos-latest"]
 
     steps:
-      - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-          fetch-depth: 0
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install QIIME 2 ${{ matrix.os }}
+      if: matrix.os == 'macos-latest'
+      shell: bash -l {0}
+      run: |
+        wget -q https://raw.githubusercontent.com/qiime2/environment-files/master/latest/staging/qiime2-latest-py38-osx-conda.yml
+        conda env create -q -n test-env --file qiime2-latest-py38-osx-conda.yml
+    - name: Install QIIME 2 ${{ matrix.os }}
+      if: matrix.os == 'ubuntu-latest'
+      shell: bash -l {0}
+      run: |
+        wget -q https://raw.githubusercontent.com/qiime2/environment-files/master/latest/staging/qiime2-latest-py38-linux-conda.yml
+        conda env create -q -n test-env --file qiime2-latest-py38-linux-conda.yml
+    - name: Install gemelli
+      shell: bash -l {0}
+      run: |
+        source activate test-env
+        conda install -c conda-forge coveralls flake8 nose
+        pip install -e . 
+    - name: Lint with flake8
+      shell: bash -l {0}
+      run: |
+        source activate test-env
+        flake8 gemelli/*.py gemelli/tests/*.py setup.py
+    - name: Test with nose
+      shell: bash -l {0}
+      run: |
+        source activate test-env
+        nosetests -v gemelli --with-coverage --cover-package=gemelli
 
-      - name: Download Q2 file
-        run: wget -q https://raw.githubusercontent.com/qiime2/environment-files/master/latest/staging/qiime2-latest-py36-linux-conda.yml
-
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: q2
-          environment-file: qiime2-latest-py36-linux-conda.yml
-
-      - name: Install conda reqs
-        shell: bash -l {0}
-        run: conda install --file ci/conda_requirements.txt -c biocore
-
-      - name: Install auxillary CI packages
-        shell: bash -l {0}
-        run: conda install -c conda-forge coveralls flake8 nose
-
-      - name: Install gxx_linux-64
-        shell: bash -l {0}
-        run: conda install gxx_linux-64
-
-      - name: Install gemelli
-        shell: bash -l {0}
-        run: pip install -e .
-
-      - name: Check style
-        shell: bash -l {0}
-        run: flake8 gemelli/*.py gemelli/tests/*.py setup.py
-
-      - name: Run tests & coverage
-        shell: bash -l {0}
-        run: nosetests -v gemelli --with-coverage --cover-package=gemelli
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: flake8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: install dependencies
+      shell: bash -l {0}
+      run: |
+        python -m pip install --upgrade pip
+    - name: Check out repository code
+      uses: actions/checkout@v2
+    - name: lint
+      shell: bash -l {0}
+      run: |
+        pip install -q flake8
+        flake8 gemelli/*.py gemelli/tests/*.py setup.py
