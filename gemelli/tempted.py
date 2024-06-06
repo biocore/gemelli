@@ -482,22 +482,22 @@ def tempted(table: biom.Table,
     # run TEMPTED
     if svd_centralized:
         tempted_res = tempted_helper(tensor.individual_id_tables_centralized,
-                                    tensor.individual_id_state_orders,
-                                    tensor.feature_order,
-                                    n_components=n_components,
-                                    smooth=smooth,
-                                    resolution=resolution,
-                                    maxiter=max_iterations,
-                                    epsilon=epsilon)
+                                     tensor.individual_id_state_orders,
+                                     tensor.feature_order,
+                                     n_components=n_components,
+                                     smooth=smooth,
+                                     resolution=resolution,
+                                     maxiter=max_iterations,
+                                     epsilon=epsilon)
     else:
         tempted_res = tempted_helper(tensor.individual_id_tables,
-                                    tensor.individual_id_state_orders,
-                                    tensor.feature_order,
-                                    n_components=n_components,
-                                    smooth=smooth,
-                                    resolution=resolution,
-                                    maxiter=max_iterations,
-                                    epsilon=epsilon)     
+                                     tensor.individual_id_state_orders,
+                                     tensor.feature_order,
+                                     n_components=n_components,
+                                     smooth=smooth,
+                                     resolution=resolution,
+                                     maxiter=max_iterations,
+                                     epsilon=epsilon)
     (individual_loadings,
      feature_loadings,
      state_loadings,
