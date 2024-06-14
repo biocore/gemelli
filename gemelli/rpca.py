@@ -579,15 +579,25 @@ def rpca_table_processing(table: biom.Table,
         return (np.sum(val > 0) / n_samples) > (min_feature_frequency / 100)
 
     # filter and import table for each filter above
-    table = table.filter(observation_filter, axis='observation')
-    table = table.filter(frequency_filter, axis='observation')
-    table = table.filter(sample_filter, axis='sample')
-
+    if min_feature_count is not None:
+        table = table.filter(observation_filter,
+                             axis='observation',
+                             inplace=False)
+    if min_feature_frequency is not None:
+        table = table.filter(frequency_filter,
+                             axis='observation',
+                             inplace=False)
+    if min_sample_count is not None:
+        table = table.filter(sample_filter,
+                             axis='sample',
+                             inplace=False)
     # check the table after filtering
     if len(table.ids()) != len(set(table.ids())):
         raise ValueError('Data-table contains duplicate sample IDs')
     if len(table.ids('observation')) != len(set(table.ids('observation'))):
         raise ValueError('Data-table contains duplicate feature IDs')
+    # ensure empty samples / features are removed
+    table = table.remove_empty()
 
     return table
 
