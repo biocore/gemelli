@@ -1,0 +1,6 @@
+sampleid	mean_CV	std_CV	run	iteration
+0	21.78555068271148	0.0	tables_2.n_components_3.max_iterations_5.n_test_100	0
+1	6.783428677035793	0.0	tables_2.n_components_3.max_iterations_5.n_test_100	1
+2	2.140807373370005	3.1401849173675503e-16	tables_2.n_components_3.max_iterations_5.n_test_100	2
+3	0.6573914592867285	0.0	tables_2.n_components_3.max_iterations_5.n_test_100	3
+4	0.5380065330053954	0.0	tables_2.n_components_3.max_iterations_5.n_test_100	4

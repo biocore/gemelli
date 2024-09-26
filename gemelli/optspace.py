@@ -374,10 +374,8 @@ class OptSpace(object):
             S_shared = np.diag(S_shared)
             S_shared = S_shared / np.linalg.norm(S_shared)
             U_shared = np.average(sample_loadings, axis=0)
-            U_shared -= U_shared.mean(0)
             feature_loadings = [(S_shared).dot(v_i.T).T
                                 for v_i in feature_loadings]
-
         # compensates the smaller average size of
         # observed values vs. missing
         S_shared = S_shared / rescal_param
