@@ -749,7 +749,7 @@ def joint_rpca(tables: biom.Table,
         test_samples = sorted(list(shared_all_samples))[:n_test_samples]
         train_samples = list(set(shared_all_samples) - set(test_samples))
     else:
-        sample_metadata = sample_metadata.loc[shared_all_samples, :]
+        sample_metadata = sample_metadata.loc[list(shared_all_samples), :]
         train_samples = sample_metadata[train_test_column] == 'train'
         test_samples = sample_metadata[train_test_column] == 'test'
         train_samples = sample_metadata[train_samples].index

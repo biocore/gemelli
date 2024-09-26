@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 import unittest
-from pandas.testing import assert_series_equal
+from numpy import allclose
 
 
 def assert_ordinationresults_equal(o1, o2, precision=5, verbose=False):
@@ -84,8 +84,8 @@ def assert_ordinationresults_equal(o1, o2, precision=5, verbose=False):
             try:
                 # First, just try comparing the two PCs and seeing if their
                 # values are approximately equal.
-                assert_series_equal(res_series, exp_series, check_names=False,
-                                    check_less_precise=precision)
+                allclose(res_series.values,
+                         exp_series.values)
             except AssertionError:
                 # It's fine for any of the "PC"s (i.e. columns in the
                 # OrdinationResults) to be off by a factor of -1, since
@@ -95,8 +95,8 @@ def assert_ordinationresults_equal(o1, o2, precision=5, verbose=False):
                 # negating one of the series, and seeing if
                 # that makes them approximately equal.
                 # (If they're *still* not equal, this test will fail.)
-                assert_series_equal(-res_series, exp_series, check_names=False,
-                                    check_less_precise=precision)
+                allclose(-1 * res_series.values,
+                         exp_series.values)
             if verbose:
                 print("PC {} for the {} ordination matches.".format(col_index,
                                                                     aspect))
