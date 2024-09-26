@@ -746,7 +746,19 @@ def joint_rpca(tables: biom.Table,
                                                       pd.DataFrame):
         sample_metadata = sample_metadata.to_dataframe()
     if sample_metadata is None or train_test_column is None:
-        test_samples = sorted(list(shared_all_samples))[:n_test_samples]
+        # choose samples based on RPCA loadings on first table
+        # a somewhat intelligent way of making sure the test
+        # samples are representative of the data.
+        ord_sort, _ = optspace_helper(rclr_tables[0].T.values,
+                                      rclr_tables[0].index,
+                                      rclr_tables[0].columns,
+                                      n_components=n_components)
+        ord_sort = list(ord_sort.samples.iloc[:, 0].sort_values().index)
+        test_samples = np.round(np.linspace(0,
+                                            len(ord_sort) - 1,
+                                            n_test_samples)
+                                ).astype(int)
+        test_samples = [ord_sort[i] for i in test_samples]
         train_samples = list(set(shared_all_samples) - set(test_samples))
     else:
         sample_metadata = sample_metadata.loc[list(shared_all_samples), :]
