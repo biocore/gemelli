@@ -588,7 +588,7 @@ def matrix_closure(mat):
     """
 
     mat = np.atleast_2d(mat)
-    with np.errstate(divide='ignore', invalid='ignore'): 
+    with np.errstate(divide='ignore', invalid='ignore'):
         mat = mat / mat.sum(axis=1, keepdims=True)
 
     return mat.squeeze()
