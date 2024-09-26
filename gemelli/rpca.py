@@ -909,9 +909,10 @@ def transform(ordination: OrdinationResults,
                          ' the features in the ordination.')
     elif subset_tables:
         unshared_N = len(set(rclr_table_df.index)) - len(shared_features)
-        warnings.warn('Removing %i features(s) in table(s)'
-                      ' but not the ordination.'
-                      % (unshared_N), RuntimeWarning)
+        if unshared_N != 0:
+            warnings.warn('Removing %i features(s) in table(s)'
+                        ' but not the ordination.'
+                        % (unshared_N), RuntimeWarning)
     else:
         raise ValueError('Features in the input table(s) not in'
                          ' the features in the ordination.'
