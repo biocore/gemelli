@@ -14,6 +14,7 @@ from gemelli.tempted import (freg_rkhs,
                              tempted_helper,
                              tempted_transform,
                              tempted)
+from gemelli.rpca import (rpca_table_processing)
 from gemelli.preprocessing import build_sparse
 from numpy.testing import assert_allclose
 
@@ -87,6 +88,25 @@ class TestTempted(unittest.TestCase):
         Kmat_res = bernoulli_kernel(np.linspace(0, 1, num=3),
                                     np.linspace(0, 1, num=3))
         assert_allclose(Kmat_exp, Kmat_res, atol=1e-3)
+
+    def test_tempted_rpca_table_processing(self):
+        """
+        Test that filter is bypassed
+        for tempted in rpca_table_processing.
+        """
+
+        # import table
+        in_table = get_data_path('test-small.biom', '../q2/tests/data')
+        table_exp = load_table(in_table)
+        # filter table
+        table_res = rpca_table_processing(table_exp,
+                                          min_sample_count=None,
+                                          min_feature_count=None,
+                                          min_feature_frequency=None)
+        self.assertEqual(len(table_exp.ids('sample')),
+                         len(table_res.ids('sample')))
+        self.assertEqual(len(table_exp.ids('observation')),
+                         len(table_res.ids('observation')))
 
     def test_tempted(self):
         """
