@@ -505,7 +505,7 @@ def tempted(table: biom.Table,
      eigenvalues,
      prop_explained) = tempted_res
     # re-order TEMPTED results by prop_explained
-    new_order = np.argsort(prop_explained)
+    new_order = np.argsort(prop_explained)[::-1]
     individual_loadings = individual_loadings.iloc[:, new_order]
     feature_loadings = feature_loadings.iloc[:, new_order]
     state_loadings = state_loadings.iloc[:, new_order]

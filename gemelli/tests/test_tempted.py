@@ -192,6 +192,7 @@ class TestTempted(unittest.TestCase):
         ord_res, tdf_, dist_, vdf_ = tempted(table, sample_metadata,
                                              'host_subject_id',
                                              'time_points')
+        self.assertTrue(all(np.diff(ord_res.proportion_explained.values) < 0))
         # project same data as test
         ord_p = tempted_transform(ord_res, tdf_, vdf_,
                                   table,
@@ -200,6 +201,9 @@ class TestTempted(unittest.TestCase):
                                   'time_points')
         # make sure the projection is close
         assert_ordinationresults_equal(ord_p, ord_res, precision=0)
+        # make sure eigvals are ordered correctly
+        print(ord_res.eigvals.values)
+        print(ord_res.proportion_explained.values)
 
     def test_tempted_projection(self):
         """
