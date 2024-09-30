@@ -1,4 +1,15 @@
 
+v0.0.12 (2024-10-01)
+
+### Bug fixes
+
+* Joint-RPCA re-centering bug.
+    * see issue #97
+* Updated for the newest version of Pandas.
+    * see issue #96
+* Reduce unecessary numpy warnings regarding log on unseen data.
+    * see issue #78
+
 v0.0.11 (2024-06-24)
 
 ### Bug fixes
