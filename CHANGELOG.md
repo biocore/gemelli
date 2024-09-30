@@ -9,6 +9,8 @@ v0.0.12 (2024-10-01)
     * see issue #96
 * Reduce unecessary numpy warnings regarding log on unseen data.
     * see issue #78
+* Fix filter and ordering with TEMPTED
+    * see issue #92 and issue #93
 
 v0.0.11 (2024-06-24)
 
