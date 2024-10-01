@@ -596,8 +596,9 @@ def rpca_table_processing(table: biom.Table,
         raise ValueError('Data-table contains duplicate sample IDs')
     if len(table.ids('observation')) != len(set(table.ids('observation'))):
         raise ValueError('Data-table contains duplicate feature IDs')
-    # ensure empty samples / features are removed
-    table = table.remove_empty()
+    if min_sample_count is not None:
+        # ensure empty samples / features are removed
+        table = table.remove_empty(inplace=False)
 
     return table
 
@@ -746,10 +747,22 @@ def joint_rpca(tables: biom.Table,
                                                       pd.DataFrame):
         sample_metadata = sample_metadata.to_dataframe()
     if sample_metadata is None or train_test_column is None:
-        test_samples = sorted(list(shared_all_samples))[:n_test_samples]
+        # choose samples based on RPCA loadings on first table
+        # a somewhat intelligent way of making sure the test
+        # samples are representative of the data.
+        ord_sort, _ = optspace_helper(rclr_tables[0].T.values,
+                                      rclr_tables[0].index,
+                                      rclr_tables[0].columns,
+                                      n_components=n_components)
+        ord_sort = list(ord_sort.samples.iloc[:, 0].sort_values().index)
+        test_samples = np.round(np.linspace(0,
+                                            len(ord_sort) - 1,
+                                            n_test_samples)
+                                ).astype(int)
+        test_samples = [ord_sort[i] for i in test_samples]
         train_samples = list(set(shared_all_samples) - set(test_samples))
     else:
-        sample_metadata = sample_metadata.loc[shared_all_samples, :]
+        sample_metadata = sample_metadata.loc[list(shared_all_samples), :]
         train_samples = sample_metadata[train_test_column] == 'train'
         test_samples = sample_metadata[train_test_column] == 'test'
         train_samples = sample_metadata[train_samples].index
@@ -909,9 +922,10 @@ def transform(ordination: OrdinationResults,
                          ' the features in the ordination.')
     elif subset_tables:
         unshared_N = len(set(rclr_table_df.index)) - len(shared_features)
-        warnings.warn('Removing %i features(s) in table(s)'
-                      ' but not the ordination.'
-                      % (unshared_N), RuntimeWarning)
+        if unshared_N != 0:
+            warnings.warn('Removing %i features(s) in table(s)'
+                          ' but not the ordination.'
+                          % (unshared_N), RuntimeWarning)
     else:
         raise ValueError('Features in the input table(s) not in'
                          ' the features in the ordination.'

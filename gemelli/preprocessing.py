@@ -420,9 +420,11 @@ def matrix_rclr(mat, branch_lengths=None):
         raise ValueError('Data-matrix contains nans')
     # take the log of the sample centered data
     if branch_lengths is not None:
-        mat = np.log(matrix_closure(matrix_closure(mat) * branch_lengths))
+        with np.errstate(divide='ignore'):
+            mat = np.log(matrix_closure(matrix_closure(mat) * branch_lengths))
     else:
-        mat = np.log(matrix_closure(mat))
+        with np.errstate(divide='ignore'):
+            mat = np.log(matrix_closure(mat))
     # generate a mask of missing values
     mask = [True] * mat.shape[0] * mat.shape[1]
     mask = np.array(mat).reshape(mat.shape)
@@ -586,7 +588,8 @@ def matrix_closure(mat):
     """
 
     mat = np.atleast_2d(mat)
-    mat = mat / mat.sum(axis=1, keepdims=True)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mat = mat / mat.sum(axis=1, keepdims=True)
 
     return mat.squeeze()
 

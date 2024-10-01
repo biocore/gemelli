@@ -1,7 +1,7 @@
 import pandas as pd
 import qiime2
 import numpy as np
-import pandas.util.testing as pdt
+import pandas.testing as pdt
 from skbio.util import get_data_path
 from qiime2.plugin.testing import TestPluginBase
 from gemelli.q2._format import TrajectoryFormat
