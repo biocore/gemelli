@@ -598,7 +598,7 @@ def rpca_table_processing(table: biom.Table,
         raise ValueError('Data-table contains duplicate feature IDs')
     if min_sample_count is not None:
         # ensure empty samples / features are removed
-        table = table.remove_empty()
+        table = table.remove_empty(inplace=False)
 
     return table
 
