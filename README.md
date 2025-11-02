@@ -1,7 +1,7 @@
 
 # Gemelli
 
-Gemelli is a tool box for running Robust Aitchison PCA (RPCA), Joint Robust Aitchison PCA (Joint-RPCA), TEMPoral TEnsor Decomposition (TEMPTED), and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
+Gemelli is a tool box for running Robust Aitchison PCA (RPCA), Joint Robust PCA (Joint-RPCA), TEMPoral TEnsor Decomposition (TEMPTED), and Compositional Tensor Factorization (CTF) on _sparse_ compositional omics datasets.
 
 RPCA can be used on cross-sectional datasets where each subject is sampled only once. CTF can be used on repeated-measure data where each subject is sampled multiple times (e.g. longitudinal sampling). TEMPTED is specifically designed for longitundal (time series) repeated measure studies, especially when samples are irregularly sampled across subjects. Joint-RPCA allows for the exploration of multiple omics datasets with shared samples at once. All these methods are [_unsupervised_](https://en.wikipedia.org/wiki/Unsupervised_learning) and aim to describe sample/subject variation and the biological features that separate them.
 
