@@ -23,7 +23,9 @@ from gemelli._defaults import DEFAULT_MTD
 from skbio.stats.composition import clr
 try:
     # scikit-bio newer versions
-    from skbio.diversity._util import vectorize_counts_and_tree as _vectorize_counts_and_tree
+    from skbio.diversity._util import (
+        vectorize_counts_and_tree as _vectorize_counts_and_tree,
+    )
 except ImportError:
     # scikit-bio older versions
     from skbio.diversity._util import _vectorize_counts_and_tree
