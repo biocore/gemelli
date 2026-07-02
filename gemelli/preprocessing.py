@@ -21,7 +21,12 @@ from .base import _BaseConstruct
 from inspect import getfullargspec
 from gemelli._defaults import DEFAULT_MTD
 from skbio.stats.composition import clr
-from skbio.diversity._util import _vectorize_counts_and_tree
+try:
+    # scikit-bio newer versions
+    from skbio.diversity._util import vectorize_counts_and_tree as _vectorize_counts_and_tree
+except ImportError:
+    # scikit-bio older versions
+    from skbio.diversity._util import _vectorize_counts_and_tree
 from bp import parse_newick, to_skbio_treenode
 from scipy.sparse.linalg import svds
 # import QIIME2 if in a Q2env otherwise set type to str
@@ -30,8 +35,6 @@ try:
 except ImportError:
     # python does not check but technically this is the type
     NewickFormat = str
-
-
 VALID_TAXONOMY_COLUMN_NAMES = ('taxon', 'taxonomy')
 
 
