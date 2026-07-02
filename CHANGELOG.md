@@ -1,3 +1,10 @@
+v0.0.13 (2026-03-02)
+
+### Bug fixes
+
+* Update dependency updates
+    * See issue #117
+    * All back-compatible
 
 v0.0.12 (2024-10-01)
 
