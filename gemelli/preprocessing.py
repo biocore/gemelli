@@ -369,7 +369,7 @@ def tensor_rclr(T, branch_lengths=None):
                           + [1] + conditions_index[:-1])
         # transpose to flatten
         T = T.transpose(forward_T)
-        M = T.reshape(np.product(T.shape[:len(T.shape) - 1]),
+        M = T.reshape(np.prod(T.shape[:len(T.shape) - 1]),
                       T.shape[-1])
         with np.errstate(divide='ignore', invalid='ignore'):
             M_tensor_rclr = matrix_rclr(M, branch_lengths=branch_lengths)
