@@ -9,13 +9,20 @@ import pandas as pd
 from urllib.parse import quote
 from skbio import DistanceMatrix
 from gemelli.utils import qc_rarefaction as _qc_rarefaction
-import pkg_resources
 import seaborn as sns
 import itertools
 import matplotlib.pyplot as plt
-
-TEMPLATES = pkg_resources.resource_filename('gemelli', 'q2')
-
+# fix old and new dependency chnages
+try:
+    from importlib.resources import files
+    TEMPLATES = files("gemelli").joinpath("q2")
+except ImportError:
+    try:
+        from importlib_resources import files
+        TEMPLATES = files("gemelli").joinpath("q2")
+    except ImportError:
+        import pkg_resources
+        TEMPLATES = pkg_resources.resource_filename("gemelli", "q2")
 
 def qc_rarefy(output_dir: str,
               table: biom.Table,
