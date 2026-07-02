@@ -83,6 +83,11 @@ def create_pos_cntrl_test_table(feature_prefix='',
 class Testqc(unittest.TestCase):
 
     def setUp(self):
+        # The positive/negative control tables are built with Subsample(),
+        # which draws from the global numpy RNG. Seed it so the controls are
+        # deterministic and the significance checks below are reproducible on
+        # CI (otherwise a borderline random draw can flip the p-value).
+        np.random.seed(0)
         btneg, btpos = create_pos_cntrl_test_table()
         self.btneg = Artifact.import_data("FeatureTable[Frequency]",
                                           btneg)
