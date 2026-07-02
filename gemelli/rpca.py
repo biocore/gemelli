@@ -931,10 +931,18 @@ def transform(ordination: OrdinationResults,
                          ' the features in the ordination.'
                          ' Either set subset_tables to True or'
                          ' match the tables to the ordination.')
-    ordination.samples = transform_helper(Udf,
-                                          Vdf,
-                                          s_eig,
-                                          rclr_table_df)
+    projected_samples = transform_helper(Udf,
+                                         Vdf,
+                                         s_eig,
+                                         rclr_table_df)
+    ordination.samples = projected_samples
+    # In skbio >= 0.7, sample_ids is stored as a separate attribute at
+    # construction and is not re-derived when .samples is reassigned, so it
+    # must be updated explicitly to match the projected samples. Older skbio
+    # versions derive the ids from the .samples index and have no such
+    # attribute, so this is skipped there (back-compatible).
+    if hasattr(ordination, 'sample_ids'):
+        ordination.sample_ids = list(projected_samples.index)
     return ordination
 
 
