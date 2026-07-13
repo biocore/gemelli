@@ -84,7 +84,6 @@ Martino, C. and Shenhav, L. et al. Context-aware dimensionality reduction deconv
 }
 ```
 
-
 ## Citation for RPCA
 
 ```
@@ -107,7 +106,6 @@ Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Pert
 	journal = {mSystems}
 }
 ```
-
 
 ## Citation for Phylogenetic RPCA
 
@@ -137,20 +135,40 @@ Martino, C. et al. A Novel Sparse Compositional Technique Reveals Microbial Pert
 ## Citation for TEMPTED
 
 ```
-Shi, p. et al. Time-Informed Dimensionality Reduction for Longitudinal Microbiome Studies. bioRxiv, (2023)
+Shi, p. et al. TEMPTED: time-informed dimensionality reduction for longitudinal microbiome studies. Genome Biology, (2024)
 ```
 
 ```
-@ARTICLE{Shi2023,
+@ARTICLE{Shi2024,
   author = {Shi, Pixu and Martino, Cameron and Han, Rungang and Janssen,
             Stefan and Buck, Gregory and Serrano, Myrna and Owzar, Kouros and
             Knight, Rob and Shenhav, Liat and Zhang, Anru R},
-  title = {{Time-Informed} Dimensionality Reduction for Longitudinal
-           Microbiome Studies},
-  year =  {2023},
-  doi = {10.1101/2023.07.26.550749},
-  URL = {https://www.biorxiv.org/content/10.1101/2023.07.26.550749v1},
-  journal = {bioRxiv},
+  title = {TEMPTED: time-informed dimensionality reduction for longitudinal microbiome studies},
+  year =  {2024},
+  doi = {10.1186/s13059-024-03453-x},
+  URL = {https://link.springer.com/article/10.1186/s13059-024-03453-x},
+  journal = {Genome Biology},
+}
+```
+
+## Citation for Joint-RPCA
+
+```
+Cordazzo Vargas, b. et al. Joint-RPCA: Domain-Aware Multi-Omics Integration for Systems Microbiology. Molecular Systems Biology, (2026)
+```
+
+```
+@ARTICLE{CordazzoVargas2026,
+  author = {Cordazzo Vargas, Bianca and Martino, Cameron and Dilmore, Amanda Hazel and Metcalf,
+            Jessica and Burcham, Zachary and Lahti, Leo and Bektanov, Aituar and Borman, Tuomas and
+            Salomaa, Veikko and Niiranen, Teemu and Havulinna, Aki and Gregor, Rachel and Eyal, Stav
+            and Meijler, Michael and Mizrahi, Itzhak and Song, Se and Bartko, Andrew and Dorrestein, Pieter
+            and Morton, James and McDonald, Daniel and Knight, Rob and Shenhav, Liat},
+  title = {Joint-RPCA: Domain-Aware Multi-Omics Integration for Systems Microbiology},
+  year =  {2026},
+  doi = {},
+  URL = {},
+  journal = {Molecular Systems Biology},
 }
 ```
 

@@ -780,8 +780,9 @@ def tempted_helper(individual_id_tables,
         individual_loadings.iloc[:, s] = a_hat
         feature_loadings.iloc[:, s] = b_hat
         state_loadings.iloc[:, s] = phi_hat.flatten()
-        lambda_coeff[s] = lambda_coeff_
-        rsquared[s] = 1 - resid / (y.size * y.var())
+        lambda_coeff[s] = np.asarray(lambda_coeff_).squeeze().item()
+        rsquared_ = 1 - resid / (y.size * y.var())
+        rsquared[s] = np.asarray(rsquared_).squeeze()
         # update data
         for i, (individual_id, m) in enumerate(tables_update.items()):
             temp = tipos[i]

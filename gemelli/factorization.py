@@ -183,7 +183,7 @@ class TensorFactorization(_BaseImpute):
             raise ValueError('Input data is should be type numpy.ndarray')
         # ensure the data contains missing values.
         # other methods would be better in the case of fully dense data
-        n_entries = np.product(tensor.shape)
+        n_entries = np.prod(tensor.shape)
         if self.check_dense:
             if (np.count_nonzero(tensor) == n_entries and
                     np.count_nonzero(~np.isnan(tensor)) == n_entries):
